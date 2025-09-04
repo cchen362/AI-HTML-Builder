@@ -1,0 +1,140 @@
+.split-pane {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+
+.split-pane-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  cursor: ew-resize;
+  background: transparent;
+  pointer-events: auto;
+}
+
+.split-pane-left,
+.split-pane-right {
+  height: 100%;
+  overflow: hidden;
+  transition: none; /* Remove transitions during dragging */
+}
+
+.split-pane-left.dragging,
+.split-pane-right.dragging {
+  pointer-events: none; /* Prevent content interference during drag */
+  user-select: none;
+}
+
+.split-pane-left.dragging *,
+.split-pane-right.dragging * {
+  pointer-events: none !important; /* Disable all child element events during drag */
+  user-select: none !important;
+}
+
+.split-pane-left.dragging iframe,
+.split-pane-right.dragging iframe {
+  pointer-events: none !important; /* Specifically disable iframe events during drag */
+}
+
+.split-pane-divider {
+  width: 8px;
+  background: #e5e5e5;
+  cursor: ew-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  position: relative;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.split-pane-divider:hover {
+  background: #4A90E2;
+  width: 10px;
+}
+
+.split-pane-divider.dragging {
+  background: #003366;
+  width: 10px;
+  box-shadow: 0 0 10px rgba(0, 51, 102, 0.3);
+  z-index: 10000;
+}
+
+/* Ensure no interference from content during drag */
+.split-pane.dragging {
+  cursor: ew-resize !important;
+}
+
+.split-pane.dragging * {
+  cursor: ew-resize !important;
+}
+
+.divider-handle {
+  width: 100%;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+}
+
+.divider-dots {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+}
+
+.divider-dots span {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.8);
+  display: block;
+}
+
+.split-pane-divider:hover .divider-dots span {
+  background: white;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .split-pane {
+    flex-direction: column;
+  }
+  
+  .split-pane-left,
+  .split-pane-right {
+    width: 100% !important;
+  }
+  
+  .split-pane-left {
+    height: 50% !important;
+  }
+  
+  .split-pane-right {
+    height: 50% !important;
+  }
+  
+  .split-pane-divider {
+    width: 100%;
+    height: 6px;
+    cursor: ns-resize;
+    flex-direction: row;
+  }
+  
+  .divider-handle {
+    width: 40px;
+    height: 100%;
+  }
+  
+  .divider-dots {
+    flex-direction: row;
+  }
+}

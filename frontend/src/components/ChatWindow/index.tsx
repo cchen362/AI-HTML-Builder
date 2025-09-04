@@ -1,0 +1,46 @@
+import React from 'react';
+import MessageList from './MessageList';
+import ChatInput from './ChatInput';
+import { Message } from '../../types';
+import './ChatWindow.css';
+
+interface ChatWindowProps {
+  sessionId: string;
+  messages: Message[];
+  onSendMessage: (message: string, files?: File[]) => void;
+  isProcessing?: boolean;
+}
+
+const ChatWindow: React.FC<ChatWindowProps> = ({
+  sessionId,
+  messages,
+  onSendMessage,
+  isProcessing = false
+}) => {
+  return (
+    <div className="chat-window">
+      <div className="chat-header">
+        <h2>AI HTML Builder</h2>
+        <div className="session-info">
+          <span className="session-id">Session: {sessionId.slice(0, 8)}...</span>
+          <div className={`status-indicator ${isProcessing ? 'processing' : 'ready'}`}>
+            {isProcessing ? 'Generating...' : 'Ready'}
+          </div>
+        </div>
+      </div>
+      
+      <MessageList 
+        messages={messages} 
+        isProcessing={isProcessing}
+      />
+      
+      <ChatInput 
+        onSendMessage={onSendMessage}
+        isProcessing={isProcessing}
+        placeholder="Describe the HTML you want to create..."
+      />
+    </div>
+  );
+};
+
+export default ChatWindow;
