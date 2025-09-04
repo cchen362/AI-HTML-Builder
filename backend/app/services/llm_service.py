@@ -37,11 +37,21 @@ class LLMService:
             # Build input text from messages for GPT-5 Responses API
             input_text = self._build_input_from_messages(messages)
             
+            # Determine reasoning effort based on content complexity
+            reasoning_effort = "low"
+            verbosity = "medium"
+            
+            # Analyze input complexity to adjust model parameters
+            if self._is_complex_document(user_input, context):
+                reasoning_effort = "medium"  # More reasoning for complex layouts
+                verbosity = "high"  # More detailed HTML for complex content
+                logger.info("Using enhanced parameters for complex document")
+            
             response = await self.client.responses.create(
                 model=self.model,
                 input=input_text,
-                reasoning={"effort": "low"},  # Fast response for HTML generation
-                text={"verbosity": "medium"}  # Balanced verbosity for HTML content
+                reasoning={"effort": reasoning_effort},
+                text={"verbosity": verbosity}
             )
             
             html_output = response.output_text.strip()
@@ -59,10 +69,10 @@ class LLMService:
             return self._get_fallback_html(user_input)
     
     def _get_default_system_prompt(self) -> str:
-        """Default system prompt for HTML generation"""
-        return """You are an expert HTML/CSS developer creating single-file HTML documents.
+        """Enhanced system prompt for HTML generation with complex document handling"""
+        return """You are an expert HTML/CSS developer creating single-file HTML documents with advanced layout capabilities.
 
-REQUIREMENTS:
+CORE REQUIREMENTS:
 1. Generate complete, valid HTML5 documents
 2. All CSS must be inline in <style> tags
 3. All JavaScript must be inline in <script> tags
@@ -70,23 +80,45 @@ REQUIREMENTS:
 5. Mobile-responsive by default using viewport meta tag
 6. Use semantic HTML elements
 
-IMPORTANT - CONVERSATION HANDLING:
+ADVANCED DOCUMENT HANDLING:
+- For complex documents (reports, assessments, multi-section content):
+  * Use proper document structure with header, main, sections, and footer
+  * Implement clear visual hierarchy with consistent spacing
+  * Use appropriate typography scales for different content levels
+  * Apply consistent margin/padding patterns throughout
+  * Ensure content flows logically and is easy to scan
+
+CONVERSATION HANDLING:
 - If this is a follow-up request, carefully read the user's modification request
 - Apply ONLY the requested changes to the existing design
 - Maintain all existing content unless specifically asked to change it
 - Pay close attention to specific details like URLs, text content, colors, layout changes
 - Do NOT regenerate the entire page from scratch - modify the existing one
 
-DEFAULT STYLING (unless user specifies otherwise):
+STYLING GUIDELINES:
 - Colors: Navy blue (#003366), Light blue (#4A90E2), White (#FFFFFF), Grey (#E5E5E5)
 - Font stack: 'Benton Sans', Arial, sans-serif
-- Clean, minimal UI with proper spacing
-- Professional typography with readable line heights
+- Typography: Use proper heading hierarchy (h1-h6), readable line-height (1.5-1.6)
+- Spacing: Consistent vertical rhythm with 1rem, 1.5rem, 2rem increments
+- Layout: Use CSS Grid and Flexbox for complex layouts
+- Interactive elements: Add subtle hover effects and transitions
+
+COMPLEX DOCUMENT PATTERNS:
+- Reports/Assessments: Use tabbed sections, expandable content, side navigation
+- Lists/Tables: Proper styling with alternating row colors, responsive behavior
+- Forms: Clear field grouping, validation styling, accessible labels
+- Cards/Panels: Consistent shadow, border-radius, and spacing
+- Navigation: Sticky headers, breadcrumbs for long documents
 
 CSS FRAMEWORK DECISION:
-- Use vanilla CSS for simple layouts
-- Only if user requests complex UI components (data tables, advanced grids, modals), 
-  include minimal Tailwind utilities inline
+- Use modern CSS features: Grid, Flexbox, CSS custom properties
+- For complex components: Implement custom CSS rather than framework dependencies
+- Ensure IE11+ compatibility while leveraging modern features progressively
+
+PERFORMANCE OPTIMIZATION:
+- Minimize CSS redundancy
+- Use efficient selectors
+- Optimize for fast rendering
 
 OUTPUT FORMAT:
 Return only the complete HTML document starting with <!DOCTYPE html>"""
@@ -143,6 +175,46 @@ Please modify the existing HTML accordingly. Make sure to incorporate the reques
                 input_parts.append(f"Assistant: {content}")
         
         return "\n\n".join(input_parts)
+    
+    def _is_complex_document(self, user_input: str, context: List[Dict[str, Any]]) -> bool:
+        """Determine if the document requires complex layout handling"""
+        complexity_indicators = [
+            # Document types
+            'impact assessment', 'report', 'assessment', 'analysis', 'evaluation',
+            'documentation', 'proposal', 'specification', 'requirements',
+            
+            # Layout complexity
+            'table', 'chart', 'graph', 'tabs', 'sections', 'columns',
+            'navigation', 'sidebar', 'dashboard', 'multi-page',
+            
+            # Content complexity
+            'multiple sections', 'structured data', 'detailed layout',
+            'complex formatting', 'professional document', 'technical document'
+        ]
+        
+        # Check user input for complexity indicators
+        input_lower = user_input.lower()
+        complexity_score = sum(1 for indicator in complexity_indicators if indicator in input_lower)
+        
+        # Check context for existing complex content
+        context_complexity = 0
+        for msg in context[-3:]:  # Check last 3 messages
+            if msg.get('html_output'):
+                html_content = msg['html_output'].lower()
+                # Look for complex HTML structures
+                if any(tag in html_content for tag in ['<table>', '<nav>', '<section>', '<aside>', '<grid']):
+                    context_complexity += 2
+                if len(html_content) > 5000:  # Large HTML indicates complexity
+                    context_complexity += 1
+        
+        # Determine complexity
+        total_complexity = complexity_score + context_complexity
+        is_complex = total_complexity >= 2
+        
+        if is_complex:
+            logger.info(f"Complex document detected: score={complexity_score}, context={context_complexity}")
+        
+        return is_complex
     
     def _summarize_html_for_context(self, html_content: str) -> str:
         """Create a summary of HTML content for context without including the full HTML"""

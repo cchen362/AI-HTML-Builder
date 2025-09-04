@@ -98,7 +98,13 @@ class WebSocketHandler:
                     await self._send_error("Invalid message format")
                 except Exception as e:
                     logger.error("Message processing error", session_id=self.session_id, error=str(e))
-                    await self._send_error("Message processing failed")
+                    # Only try to send error if connection is still active
+                    try:
+                        await self._send_error("Message processing failed")
+                    except Exception:
+                        # If sending error fails, break the loop to prevent spam
+                        logger.info("Connection lost, stopping message processing", session_id=self.session_id)
+                        break
                     
         except Exception as e:
             logger.error("WebSocket connection error", session_id=self.session_id, error=str(e))
@@ -273,7 +279,10 @@ class WebSocketHandler:
             "timestamp": int(datetime.utcnow().timestamp())
         }
         
-        await manager.send_personal_message(error_msg, self.session_id)
+        # Try to send error message, if it fails the connection is likely broken
+        success = await manager.send_personal_message(error_msg, self.session_id)
+        if not success:
+            raise Exception("Failed to send error message - connection broken")
 
 # WebSocket endpoint
 async def websocket_endpoint(websocket: WebSocket, session_id: str):
