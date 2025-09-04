@@ -93,25 +93,41 @@ export const useWebSocket = (sessionId: string): UseWebSocketReturn => {
               if (htmlOutput) {
                 setCurrentHtml(htmlOutput);
                 
-                // Add AI response to messages with better content
-                let messageContent = "I've generated the HTML content! Check the preview on the right.";
-                
-                // Try to determine what was created based on the HTML content
-                if (htmlOutput.toLowerCase().includes('business card')) {
-                  messageContent = "I've created a business card for you! Check the preview on the right.";
-                } else if (htmlOutput.toLowerCase().includes('landing')) {
-                  messageContent = "I've created a landing page for you! Check the preview on the right.";
-                } else if (htmlOutput.toLowerCase().includes('pricing')) {
-                  messageContent = "I've created a pricing table for you! Check the preview on the right.";
-                }
-                
-                const aiMessage: Message = {
-                  id: `ai-${Date.now()}`,
-                  content: messageContent,
-                  sender: 'ai',
-                  timestamp: Date.now()
-                };
-                setMessages(prev => [...prev, aiMessage]);
+                // Only add AI response message if we don't already have one for this iteration
+                // Check if the last message is from AI and avoid duplicates
+                setMessages(prev => {
+                  const lastMessage = prev[prev.length - 1];
+                  if (lastMessage && lastMessage.sender === 'ai') {
+                    // Don't add another AI message if the last one was already from AI
+                    return prev;
+                  }
+                  
+                  // Generate a more descriptive response based on the HTML content
+                  let messageContent = "Here's your generated HTML content!";
+                  
+                  // Analyze HTML content for better messaging
+                  const htmlLower = htmlOutput.toLowerCase();
+                  if (htmlLower.includes('business card')) {
+                    messageContent = "I've created a professional business card for you!";
+                  } else if (htmlLower.includes('landing page') || htmlLower.includes('hero')) {
+                    messageContent = "I've built a landing page with your specifications!";
+                  } else if (htmlLower.includes('portfolio')) {
+                    messageContent = "Your portfolio page is ready!";
+                  } else if (htmlLower.includes('pricing') || htmlLower.includes('plan')) {
+                    messageContent = "I've created a pricing table for you!";
+                  } else if (htmlLower.includes('form') || htmlLower.includes('input')) {
+                    messageContent = "I've built a form based on your requirements!";
+                  }
+                  
+                  const aiMessage: Message = {
+                    id: `ai-${Date.now()}`,
+                    content: messageContent,
+                    sender: 'ai',
+                    timestamp: Date.now()
+                  };
+                  
+                  return [...prev, aiMessage];
+                });
               } else {
                 console.warn('Received update message without HTML content:', data);
                 setError('Received empty HTML content from server');

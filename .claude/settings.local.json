@@ -56,7 +56,15 @@
       "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop\\AI-HTML-Builder\\frontend\\src\\hooks/**)",
       "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop\\AI-HTML-Builder\\backend/**)",
       "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop\\AI-HTML-Builder/**)",
-      "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop\\AI-HTML-Builder\\frontend\\src\\components\\Layout/**)"
+      "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop\\AI-HTML-Builder\\frontend\\src\\components\\Layout/**)",
+      "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop/**)",
+      "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop/**)",
+      "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop\\AI-HTML-Builder\\backend/**)",
+      "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop\\AI-HTML-Builder\\backend\\app\\services/**)",
+      "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop\\AI-HTML-Builder\\frontend\\src\\hooks/**)",
+      "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop\\AI-HTML-Builder\\frontend\\src\\components\\HtmlViewer/**)",
+      "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop\\AI-HTML-Builder/**)",
+      "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop/**)"
     ],
     "deny": [],
     "ask": []

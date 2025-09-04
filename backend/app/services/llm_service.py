@@ -10,7 +10,7 @@ logger = structlog.get_logger()
 class LLMService:
     def __init__(self):
         self.client = openai.AsyncOpenAI(api_key=settings.openai_api_key)
-        self.model = "gpt-4o-mini"  # Using GPT-4o-mini as specified in docs
+        self.model = "gpt-5-mini"  # Using GPT-5-mini as specified in docs
         
     async def generate_html(
         self,
@@ -34,20 +34,22 @@ class LLMService:
                 model=self.model
             )
             
-            response = await self.client.chat.completions.create(
+            # Build input text from messages for GPT-5 Responses API
+            input_text = self._build_input_from_messages(messages)
+            
+            response = await self.client.responses.create(
                 model=self.model,
-                messages=messages,
-                max_tokens=4000,
-                temperature=0.7,
-                stream=False
+                input=input_text,
+                reasoning={"effort": "low"},  # Fast response for HTML generation
+                text={"verbosity": "medium"}  # Balanced verbosity for HTML content
             )
             
-            html_output = response.choices[0].message.content.strip()
+            html_output = response.output_text.strip()
             
             logger.info(
                 "HTML generated successfully",
                 output_length=len(html_output),
-                tokens_used=response.usage.total_tokens if response.usage else 0
+                tokens_used=response.usage.total_tokens if hasattr(response, 'usage') and response.usage else 0
             )
             
             return html_output
@@ -124,6 +126,23 @@ Please modify the existing HTML accordingly. Make sure to incorporate the reques
         messages.append({"role": "user", "content": enhanced_input})
         
         return messages
+    
+    def _build_input_from_messages(self, messages: List[Dict[str, str]]) -> str:
+        """Convert messages array to input text for GPT-5 Responses API"""
+        input_parts = []
+        
+        for message in messages:
+            role = message.get("role", "")
+            content = message.get("content", "")
+            
+            if role == "system":
+                input_parts.append(f"System Instructions: {content}")
+            elif role == "user":
+                input_parts.append(f"User: {content}")
+            elif role == "assistant":
+                input_parts.append(f"Assistant: {content}")
+        
+        return "\n\n".join(input_parts)
     
     def _summarize_html_for_context(self, html_content: str) -> str:
         """Create a summary of HTML content for context without including the full HTML"""
