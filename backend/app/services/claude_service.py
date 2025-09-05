@@ -71,8 +71,8 @@ class ClaudeService:
             # Build simple message structure
             system_prompt, messages = self._build_simple_messages(user_input, context)
             
-            # Simple parameters for optimal output
-            max_tokens = 6000
+            # Enhanced parameters for iterative editing and larger outputs
+            max_tokens = 8000  # Increased for larger HTML documents and context
             temperature = 0.7
             
             logger.info(
@@ -134,38 +134,88 @@ class ClaudeService:
 
     def _get_simple_system_prompt(self) -> str:
         """
-        Simplified system prompt that mirrors successful direct Claude console usage
-        Focused on single HTML output without complex parsing requirements
+        Enhanced system prompt that supports both new creation and iterative editing
         """
-        return """You are an expert HTML/CSS designer who creates professional single-file HTML documents.
+        return """You are an expert HTML/CSS designer who creates and modifies professional single-file HTML documents.
 
-Create a complete, production-ready HTML file with:
+For NEW requests: Create a complete, production-ready HTML file with:
 - All CSS inline in <style> tags
-- All JavaScript inline in <script> tags (if needed)
+- All JavaScript inline in <script> tags (if needed)  
 - Mobile-responsive design
-- Professional appearance using blue, white, and grey brand colors
+- Professional appearance using blue (#003366, #0066CF), white, and grey brand colors
 - Clean, minimal UI elements
 - Modern design principles
 
-Return ONLY the complete HTML document starting with <!DOCTYPE html> - no explanations or additional text."""
+For MODIFICATION requests: Update the existing HTML while preserving:
+- Overall structure and design consistency
+- Brand colors and styling approach
+- Responsive behavior
+- All inline CSS/JS approach
+- Any interactive elements (tabs, buttons, etc.)
+
+IMPORTANT: 
+- Always return ONLY the complete HTML document starting with <!DOCTYPE html>
+- No explanations, markdown formatting, or additional text
+- Ensure all modifications integrate seamlessly with existing design
+- Maintain professional quality throughout"""
 
     def _build_simple_messages(self, user_input: str, context: List[Dict[str, Any]]) -> tuple[str, List[Dict[str, str]]]:
-        """Build ultra-simple message structure that mirrors direct console usage"""
+        """Build message structure with comprehensive context for iterative editing"""
         system_prompt = self._get_simple_system_prompt()
         messages = []
         
-        # Minimal context - only add if there's an existing design to modify
+        # Enhanced context handling for iterative editing
         if context and len(context) > 0:
-            last_msg = context[-1]
-            if last_msg.get("sender") == "assistant" and last_msg.get("html_output"):
-                # Only mention there was a previous design if user is asking for modifications
-                if any(word in user_input.lower() for word in ["change", "modify", "update", "adjust", "fix"]):
-                    messages.append({"role": "assistant", "content": "I previously created an HTML document."})
+            # Find the last assistant message with HTML output
+            last_html = None
+            last_conversation = None
+            
+            for msg in reversed(context):
+                if msg.get("sender") == "assistant":
+                    if msg.get("html_output") and not last_html:
+                        last_html = msg["html_output"]
+                    if msg.get("conversation") and not last_conversation:
+                        last_conversation = msg["conversation"]
+                    if last_html and last_conversation:
+                        break
+            
+            # Include conversation history for context (last 3 exchanges for efficiency)
+            conversation_pairs = []
+            for i in range(len(context) - 1, -1, -1):
+                msg = context[i]
+                if msg.get("sender") == "user":
+                    # Find corresponding assistant response
+                    for j in range(i + 1, len(context)):
+                        if context[j].get("sender") == "assistant":
+                            user_content = msg.get("content", "")
+                            assistant_content = context[j].get("conversation", "I created a design for you.")
+                            conversation_pairs.insert(0, (user_content, assistant_content))
+                            break
+                
+                # Limit to last 3 exchanges to manage token usage
+                if len(conversation_pairs) >= 3:
+                    break
+            
+            # Add conversation history
+            for user_msg, assistant_msg in conversation_pairs:
+                messages.append({"role": "user", "content": user_msg})
+                messages.append({"role": "assistant", "content": assistant_msg})
+            
+            # If user is asking for modifications, include current HTML context
+            modification_words = ["change", "modify", "update", "adjust", "fix", "edit", "improve", "enhance", "make", "add", "remove", "alter"]
+            if any(word in user_input.lower() for word in modification_words) and last_html:
+                # Extract key structural information from current HTML
+                html_summary = self._summarize_html_structure(last_html)
+                context_message = f"Here's the current HTML structure I'm working with:\n{html_summary}"
+                messages.append({"role": "assistant", "content": context_message})
         
         # Add current request exactly as user provided
         messages.append({"role": "user", "content": user_input})
         
-        logger.info("[CLAUDE MESSAGES] Built message structure", message_count=len(messages), has_system=True)
+        logger.info("[CLAUDE MESSAGES] Built enhanced message structure", 
+                   message_count=len(messages), 
+                   has_system=True, 
+                   has_context=len(context) > 0)
         return system_prompt, messages
 
     def _parse_simple_response(self, response_text: str) -> str:
@@ -193,6 +243,49 @@ Return ONLY the complete HTML document starting with <!DOCTYPE html> - no explan
             logger.error("[CLAUDE PARSE] Failed to parse response", error=str(e))
             return self._create_fallback_html("Parse error occurred")
     
+    def _summarize_html_structure(self, html_content: str) -> str:
+        """Create a concise summary of HTML structure for context"""
+        if not html_content:
+            return "No previous HTML structure available."
+        
+        try:
+            # Extract key structural elements
+            title = self._extract_title(html_content)
+            
+            # Count major sections
+            section_count = len(re.findall(r'<(section|div class="[^"]*section[^"]*"|article|main)', html_content, re.IGNORECASE))
+            
+            # Check for key features
+            has_nav = '<nav' in html_content.lower() or 'navbar' in html_content.lower()
+            has_header = '<header' in html_content.lower()
+            has_footer = '<footer' in html_content.lower()
+            has_tabs = 'tab' in html_content.lower() and ('onclick' in html_content.lower() or 'javascript' in html_content.lower())
+            has_grid = 'display: grid' in html_content.lower() or 'grid-template' in html_content.lower()
+            has_gradients = 'gradient' in html_content.lower()
+            
+            # Extract color scheme
+            blue_colors = re.findall(r'#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3}', html_content)
+            primary_colors = [color for color in blue_colors if '003366' in color or '0066CF' in color or '4A90E2' in color]
+            
+            # Build summary
+            features = []
+            if has_nav: features.append("navigation menu")
+            if has_header: features.append("header section")
+            if has_tabs: features.append("interactive tabs")
+            if has_grid: features.append("CSS Grid layout")
+            if has_gradients: features.append("gradient backgrounds")
+            if section_count > 0: features.append(f"{section_count} main sections")
+            if primary_colors: features.append("blue brand color scheme")
+            
+            feature_text = ", ".join(features[:6])  # Limit to avoid token bloat
+            
+            return f"Current page: '{title}' with {feature_text}."
+        
+        except Exception as e:
+            logger.warning("Failed to summarize HTML structure", error=str(e))
+            title = self._extract_title(html_content) 
+            return f"Current page: '{title}' (analysis unavailable)."
+
     def _generate_simple_conversation(self, html_output: str, user_input: str) -> str:
         """Generate simple conversation response about the created HTML"""
         title = self._extract_title(html_output)
