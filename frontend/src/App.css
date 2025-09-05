@@ -260,6 +260,11 @@
   flex-shrink: 0;
 }
 
+.viewer-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
 .view-controls {
   display: flex;
   gap: 0.5rem;
@@ -286,6 +291,7 @@
   background: #f0f0f0;
 }
 
+.fullscreen-btn,
 .export-btn {
   background: #4A90E2;
   color: white;
@@ -298,10 +304,19 @@
   transition: background 0.2s;
 }
 
+.fullscreen-btn {
+  background: #28a745;
+}
+
+.fullscreen-btn:hover:not(:disabled) {
+  background: #218838;
+}
+
 .export-btn:hover:not(:disabled) {
   background: #3a7bc8;
 }
 
+.fullscreen-btn:disabled,
 .export-btn:disabled {
   background: #ccc;
   cursor: not-allowed;

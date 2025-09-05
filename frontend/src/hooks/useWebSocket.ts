@@ -13,11 +13,12 @@ interface WebSocketMessage {
     content?: string;
     html_output?: string;
     htmlOutput?: string;
+    conversation?: string;
     error?: string;
     progress?: number;
     message?: string;
     session_id?: string;
-    messages?: any[];
+    messages?: Message[];
     current_html?: string;
     iteration_count?: number;
   };
@@ -41,7 +42,7 @@ export const useWebSocket = (sessionId: string): UseWebSocketReturn => {
   const [error, setError] = useState<string | null>(null);
   
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const reconnectAttempts = useRef(0);
   const maxReconnectAttempts = 5;
   
@@ -72,11 +73,11 @@ export const useWebSocket = (sessionId: string): UseWebSocketReturn => {
             case 'sync':
               // Handle initial session sync
               if (data.payload.messages) {
-                const syncedMessages = data.payload.messages.map((msg: any, index: number) => ({
+                const syncedMessages = data.payload.messages.map((msg, index: number) => ({
                   id: `${msg.timestamp || Date.now()}-${index}`,
-                  content: msg.content || msg.html_output || 'No content',
+                  content: msg.content || 'No content',
                   sender: msg.sender === 'user' ? 'user' as const : 'ai' as const,
-                  timestamp: new Date(msg.timestamp).getTime() || Date.now()
+                  timestamp: msg.timestamp || Date.now()
                 }));
                 setMessages(syncedMessages);
               }
@@ -85,43 +86,47 @@ export const useWebSocket = (sessionId: string): UseWebSocketReturn => {
               }
               break;
               
-            case 'update':
-              // Handle HTML updates
+            case 'update': {
+              // Handle HTML updates with dual response architecture
               const htmlOutput = data.payload.htmlOutput || data.payload.html_output;
+              const conversation = data.payload.conversation;
+              
               console.log('Received HTML update:', htmlOutput ? htmlOutput.substring(0, 200) + '...' : 'No HTML content');
+              console.log('Received conversation:', conversation || 'No conversation content');
               
               if (htmlOutput) {
                 setCurrentHtml(htmlOutput);
-                
-                // Only add AI response message if we don't already have one for this iteration
-                // Check if the last message is from AI and avoid duplicates
+              }
+              
+              // Add AI conversation response if provided
+              if (conversation) {
                 setMessages(prev => {
                   const lastMessage = prev[prev.length - 1];
+                  // Only add if last message wasn't from AI to avoid duplicates
                   if (lastMessage && lastMessage.sender === 'ai') {
-                    // Don't add another AI message if the last one was already from AI
                     return prev;
-                  }
-                  
-                  // Generate a more descriptive response based on the HTML content
-                  let messageContent = "Here's your generated HTML content!";
-                  
-                  // Analyze HTML content for better messaging
-                  const htmlLower = htmlOutput.toLowerCase();
-                  if (htmlLower.includes('business card')) {
-                    messageContent = "I've created a professional business card for you!";
-                  } else if (htmlLower.includes('landing page') || htmlLower.includes('hero')) {
-                    messageContent = "I've built a landing page with your specifications!";
-                  } else if (htmlLower.includes('portfolio')) {
-                    messageContent = "Your portfolio page is ready!";
-                  } else if (htmlLower.includes('pricing') || htmlLower.includes('plan')) {
-                    messageContent = "I've created a pricing table for you!";
-                  } else if (htmlLower.includes('form') || htmlLower.includes('input')) {
-                    messageContent = "I've built a form based on your requirements!";
                   }
                   
                   const aiMessage: Message = {
                     id: `ai-${Date.now()}`,
-                    content: messageContent,
+                    content: conversation,
+                    sender: 'ai',
+                    timestamp: Date.now()
+                  };
+                  
+                  return [...prev, aiMessage];
+                });
+              } else if (htmlOutput) {
+                // Fallback to simple confirmation if no conversation provided
+                setMessages(prev => {
+                  const lastMessage = prev[prev.length - 1];
+                  if (lastMessage && lastMessage.sender === 'ai') {
+                    return prev;
+                  }
+                  
+                  const aiMessage: Message = {
+                    id: `ai-${Date.now()}`,
+                    content: "I've generated the HTML content for you. You can see it in the preview panel!",
                     sender: 'ai',
                     timestamp: Date.now()
                   };
@@ -129,11 +134,13 @@ export const useWebSocket = (sessionId: string): UseWebSocketReturn => {
                   return [...prev, aiMessage];
                 });
               } else {
-                console.warn('Received update message without HTML content:', data);
-                setError('Received empty HTML content from server');
+                console.warn('Received update message without HTML or conversation content:', data);
+                setError('Received empty content from server');
               }
+              
               setIsProcessing(false);
               break;
+            }
               
             case 'status':
               // Handle status updates (keep processing state active)
@@ -218,6 +225,7 @@ export const useWebSocket = (sessionId: string): UseWebSocketReturn => {
       setIsProcessing(false);
     }
   }, []);
+
   
   // Connect on mount
   useEffect(() => {

@@ -10,7 +10,7 @@ logger = structlog.get_logger()
 class LLMService:
     def __init__(self):
         self.client = openai.AsyncOpenAI(api_key=settings.openai_api_key)
-        self.model = "gpt-5-mini"  # Using GPT-5-mini as specified in docs
+        self.model = "gpt-4o"  # Using GPT-4o for best HTML generation capabilities
         
     async def generate_html(
         self,
@@ -34,144 +34,148 @@ class LLMService:
                 model=self.model
             )
             
-            # Build input text from messages for GPT-5 Responses API
-            input_text = self._build_input_from_messages(messages)
-            
-            # Determine reasoning effort based on content complexity
-            reasoning_effort = "low"
-            verbosity = "medium"
+            # Determine model parameters based on content complexity
+            max_tokens = 4000
+            temperature = 0.1  # Low temperature for consistent styling
             
             # Analyze input complexity to adjust model parameters
             if self._is_complex_document(user_input, context):
-                reasoning_effort = "medium"  # More reasoning for complex layouts
-                verbosity = "high"  # More detailed HTML for complex content
+                max_tokens = 8000  # More tokens for complex layouts
+                temperature = 0.2  # Slightly higher for creative layouts
                 logger.info("Using enhanced parameters for complex document")
             
-            response = await self.client.responses.create(
+            response = await self.client.chat.completions.create(
                 model=self.model,
-                input=input_text,
-                reasoning={"effort": reasoning_effort},
-                text={"verbosity": verbosity}
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                stream=False
             )
             
-            html_output = response.output_text.strip()
+            raw_output = response.choices[0].message.content.strip()
+            
+            # Parse dual response format
+            html_output, conversation = self._parse_dual_response(raw_output)
             
             logger.info(
                 "HTML generated successfully",
-                output_length=len(html_output),
-                tokens_used=response.usage.total_tokens if hasattr(response, 'usage') and response.usage else 0
+                html_length=len(html_output),
+                conversation_length=len(conversation) if conversation else 0,
+                tokens_used=response.usage.total_tokens if response.usage else 0
             )
             
-            return html_output
+            # Return as dict for dual response handling
+            return {
+                "html_output": html_output,
+                "conversation": conversation
+            }
             
         except Exception as e:
             logger.error("HTML generation failed", error=str(e))
-            return self._get_fallback_html(user_input)
+            fallback_html = self._get_fallback_html(user_input)
+            return {
+                "html_output": fallback_html,
+                "conversation": f"I encountered an error while generating your content, but I've created a fallback page with your request: '{user_input}'. Please try again or rephrase your request."
+            }
     
     def _get_default_system_prompt(self) -> str:
-        """Enhanced system prompt with professional baseline styling for all document types"""
-        return """You are an expert HTML/CSS developer creating professionally styled single-file HTML documents.
+        """Creative UI/UX designer system prompt for dual response architecture"""
+        return """You are an expert UI/UX designer and HTML architect who creates stunning, professional web experiences. You transform user requests into visually compelling, production-ready single-file HTML documents.
 
-CORE REQUIREMENTS:
-1. Generate complete, valid HTML5 documents
-2. All CSS must be inline in <style> tags
-3. All JavaScript must be inline in <script> tags
-4. No external dependencies or CDN links
-5. Mobile-responsive by default using viewport meta tag
-6. Use semantic HTML elements
+CORE PHILOSOPHY:
+- Interpret user requests creatively, not literally
+- Create professional, polished content that exceeds expectations
+- Apply advanced design principles and modern web standards
+- Make intelligent design decisions based on context and purpose
 
-PROFESSIONAL BASELINE STYLING (MANDATORY FOR ALL DOCUMENTS):
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
+CRITICAL OUTPUT FORMAT:
+You MUST always provide exactly this dual format:
 
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    line-height: 1.6;
-    color: #333;
-    background-color: #f8f9fa;
-}
+**HTML_OUTPUT:**
+<!DOCTYPE html>
+[Complete, production-ready HTML document with no explanations]
 
-PROFESSIONAL COLOR PALETTE:
-- Primary: #2c5aa0 (professional blue)
-- Primary Dark: #1e3d72
-- Background: #f8f9fa (light gray)
-- White: #ffffff
-- Success: #28a745
-- Warning: #ffc107
-- Danger: #dc3545
-- Light borders: #e9ecef, #dee2e6
+**CONVERSATION:**
+[Thoughtful, contextual explanation of your design decisions and what you created]
 
-UNIVERSAL LAYOUT PATTERNS:
-1. HEADERS: Use gradient backgrounds, professional typography
-   - background: linear-gradient(135deg, #2c5aa0 0%, #1e3d72 100%)
-   - Large readable fonts (2.5rem for h1, scaled down appropriately)
-   - White text with subtle opacity variations
+TECHNICAL REQUIREMENTS (Non-negotiable):
+- Single, self-contained HTML file only
+- All CSS inline in <style> tags (no external stylesheets)
+- All JavaScript inline in <script> tags (no external libraries)
+- Mobile-responsive design with proper viewport meta tag
+- Semantic HTML5 structure
+- WCAG AA accessibility compliance
 
-2. CONTAINERS: 
-   - max-width: 1200px, centered with margin: 0 auto
-   - padding: 20px for mobile-first approach
+DESIGN SYSTEM:
+Primary Colors: 
+- Navy Blue (#003366) - authority, trust
+- Bright Blue (#0066CF) - primary actions, links
+- Light Blue (#66A9E2) - secondary elements
+- Sky Blue (#B4EBFF) - subtle backgrounds
 
-3. SECTIONS:
-   - background: white
-   - border-radius: 8px
-   - box-shadow: 0 2px 10px rgba(0,0,0,0.1)
-   - margin-bottom: 30px
+Accent Colors:
+- Yellow (#FFB900) - highlights, warnings
+- Green (#28DC6E) - success, positive actions
+- Wine (#7D1941) - premium features
+- Charcoal (#152835) - text, strong contrast
 
-4. SECTION HEADERS:
-   - background-color: #e9ecef
-   - padding: 20px 30px
-   - border-bottom: 1px solid #dee2e6
-   - h2 color: #2c5aa0, font-size: 1.5rem, font-weight: 500
+Typography:
+- Primary: 'Segoe UI', system fonts for readability
+- Hierarchy: Clear size relationships (h1: 2.5rem, h2: 2rem, etc.)
+- Line height: 1.6 for body text, 1.2 for headings
+- Letter spacing: -0.02em for headings
 
-5. CONTENT AREAS:
-   - padding: 30px
-   - Proper spacing between elements
+LAYOUT PRINCIPLES:
+- Use CSS Grid and Flexbox for modern layouts
+- Consistent spacing scale: 8px, 16px, 24px, 32px, 48px, 64px
+- Card-based design with subtle shadows and rounded corners
+- Generous whitespace for breathing room
+- Responsive breakpoints: mobile (320px+), tablet (768px+), desktop (1024px+)
 
-6. INTERACTIVE ELEMENTS:
-   - Cards: border: 2px solid #e9ecef, hover effects with #2c5aa0
-   - Buttons: Professional styling with proper padding and transitions
-   - Tabs: Clean design with active states using #2c5aa0
+INTERACTIVE ELEMENTS:
+- Smooth transitions (0.3s ease-in-out)
+- Hover states with subtle color/shadow changes
+- Focus indicators for accessibility
+- Loading states and micro-interactions where appropriate
 
-7. HIGHLIGHT BOXES:
-   - Warning: background #fff3cd, border-left: 4px solid #ffc107
-   - Success: background #d4edda, border-left: 4px solid #28a745
-   - Error: background #f8d7da, border-left: 4px solid #dc3545
-   - Info: background #e6f3ff, border: 2px solid #2c5aa0
+CONTENT INTELLIGENCE:
+- Interpret vague requests creatively ("make a website" → determine optimal type based on context)
+- Generate realistic, professional content (not Lorem Ipsum)
+- Use appropriate imagery descriptions and placeholders
+- Create logical information architecture
+- Apply copywriting best practices
 
-CONVERSATION HANDLING:
-- If this is a follow-up request, carefully read the user's modification request
-- Apply ONLY the requested changes to the existing design
-- Maintain all existing content unless specifically asked to change it
-- Pay close attention to specific details like URLs, text content, colors, layout changes
-- Do NOT regenerate the entire page from scratch - modify the existing one
+CONTEXT-AWARE DESIGN:
+- Business sites: Professional, trustworthy, clear CTAs
+- Personal sites: Creative, expressive, personality-driven
+- Reports/Documents: Clean, scannable, data-focused
+- Landing pages: Conversion-optimized, compelling headlines
+- Portfolios: Visual-first, project showcases
 
-DOCUMENT-SPECIFIC ENHANCEMENTS:
-- Business Cards: Use card layouts with professional styling
-- Forms: Proper field grouping with consistent spacing and validation styling
-- Tables: Clean styling with alternating row colors and responsive behavior
-- Reports/Assessments: Implement tabbed navigation, option cards, pros/cons sections
-- Landing Pages: Hero sections with gradient backgrounds, feature grids
-- Documentation: Clean typography hierarchy with proper spacing
+ITERATIVE IMPROVEMENTS:
+- When modifying existing content, preserve successful elements
+- Make targeted improvements rather than complete rewrites
+- Maintain visual consistency across iterations
+- Build upon previous design decisions intelligently
 
-RESPONSIVE DESIGN:
-@media (max-width: 768px) {
-    - Adjust font sizes proportionally
-    - Convert multi-column layouts to single columns
-    - Maintain readability and professional appearance
-}
+CONVERSATION GUIDELINES:
+- Explain your design reasoning and creative choices
+- Highlight key features and interactions you've included
+- Mention accessibility or usability considerations
+- Be conversational but professional
+- Avoid generic phrases like "I've generated" or "You can see"
 
-CSS BEST PRACTICES:
-- Use modern CSS features: Grid, Flexbox, CSS custom properties
-- Consistent spacing with rem units
-- Subtle transitions for interactive elements (all 0.3s ease)
-- Professional hover effects without being distracting
+EXAMPLE OUTPUT STRUCTURE:
+**HTML_OUTPUT:**
+<!DOCTYPE html>
+<html lang="en">
+[Complete document]
+</html>
 
-OUTPUT FORMAT:
-Return only the complete HTML document starting with <!DOCTYPE html>
-ALWAYS apply the professional baseline styling regardless of document type."""
+**CONVERSATION:**
+I've designed a modern [type] with [key features]. The layout uses [design approach] to [achieve goal]. I included [specific elements] to enhance [user experience aspect]. The color scheme emphasizes [design intention] while maintaining excellent readability and accessibility.
+
+REMEMBER: Always be creative, professional, and exceed user expectations with thoughtful design decisions."""
     
     def _build_messages(
         self,
@@ -182,13 +186,22 @@ ALWAYS apply the professional baseline styling regardless of document type."""
         """Build message array for OpenAI API"""
         messages = [{"role": "system", "content": system_prompt}]
         
-        # Add context messages (keep last 8 messages to manage token usage)
-        recent_context = context[-8:] if len(context) > 8 else context
+        # Add context messages (smart context management for large text)
+        # For complex content, prioritize the most recent messages and any file uploads
+        context_limit = 6  # Reduce for complex docs to save tokens
+        if self._is_complex_document(user_input, context):
+            context_limit = 4
+        
+        recent_context = context[-context_limit:] if len(context) > context_limit else context
         
         for msg in recent_context:
             if msg.get("sender") == "user" and msg.get("content"):
                 content = msg.get("content", "").strip()
                 if content:
+                    # Truncate very long user messages to prevent token overflow
+                    if len(content) > 3000:  # ~750 tokens
+                        content = content[:3000] + "...[content truncated]"
+                        logger.info("Truncated long user message", original_length=len(msg.get("content", "")))
                     messages.append({"role": "user", "content": content})
             elif msg.get("sender") == "assistant":
                 # For assistant messages, provide a summary rather than full HTML
@@ -197,34 +210,31 @@ ALWAYS apply the professional baseline styling regardless of document type."""
                     html_summary = self._summarize_html_for_context(msg.get("html_output", ""))
                     messages.append({"role": "assistant", "content": html_summary})
         
-        # Add current user input with explicit instruction for iteration
+        # Add current user input with smart enhancement based on content length
+        current_input_length = len(user_input)
+        
         if len(recent_context) > 0:
-            enhanced_input = f"""Based on our previous conversation, {user_input}
+            if current_input_length > 2000:  # Large input (like file content)
+                enhanced_input = f"""Process this content and create styled HTML:
+{user_input}
+
+Apply professional styling with the design system specified in the system prompt."""
+            else:
+                enhanced_input = f"""Based on our previous conversation, {user_input}
 
 Please modify the existing HTML accordingly. Make sure to incorporate the requested changes while maintaining the overall structure and styling."""
         else:
             enhanced_input = user_input
+        
+        # Final truncation if the enhanced input is too long
+        if len(enhanced_input) > 4000:  # ~1000 tokens
+            enhanced_input = enhanced_input[:4000] + "...[content truncated for processing]"
+            logger.info("Truncated enhanced input", original_length=len(enhanced_input))
             
         messages.append({"role": "user", "content": enhanced_input})
         
         return messages
     
-    def _build_input_from_messages(self, messages: List[Dict[str, str]]) -> str:
-        """Convert messages array to input text for GPT-5 Responses API"""
-        input_parts = []
-        
-        for message in messages:
-            role = message.get("role", "")
-            content = message.get("content", "")
-            
-            if role == "system":
-                input_parts.append(f"System Instructions: {content}")
-            elif role == "user":
-                input_parts.append(f"User: {content}")
-            elif role == "assistant":
-                input_parts.append(f"Assistant: {content}")
-        
-        return "\n\n".join(input_parts)
     
     def _is_complex_document(self, user_input: str, context: List[Dict[str, Any]]) -> bool:
         """Determine if the document requires complex layout handling"""
@@ -265,6 +275,128 @@ Please modify the existing HTML accordingly. Make sure to incorporate the reques
             logger.info(f"Complex document detected: score={complexity_score}, context={context_complexity}")
         
         return is_complex
+    
+    def _clean_html_output(self, html_output: str) -> str:
+        """Clean HTML output to remove preambles and unwanted text using 2024 best practices"""
+        if not html_output:
+            return html_output
+            
+        # Remove common preambles and explanations
+        preamble_patterns = [
+            r'^.*?(?=<!DOCTYPE html>)',  # Remove everything before DOCTYPE
+            r'```html\s*',  # Remove markdown code block start
+            r'\s*```$',     # Remove markdown code block end
+            r'^Here\'s.*?:\s*',  # "Here's your HTML:"
+            r'^I\'ve created.*?:\s*',  # "I've created a webpage:"
+            r'^This document.*?:\s*',  # "This document contains:"
+            r'^The following.*?:\s*',   # "The following HTML:"
+            r'^\*\*.*?\*\*\s*',        # **Bold headers**
+        ]
+        
+        cleaned_output = html_output
+        for pattern in preamble_patterns:
+            cleaned_output = re.sub(pattern, '', cleaned_output, flags=re.IGNORECASE | re.MULTILINE)
+        
+        # Ensure it starts with DOCTYPE
+        if not cleaned_output.strip().startswith('<!DOCTYPE'):
+            # Try to find DOCTYPE in the content
+            doctype_match = re.search(r'<!DOCTYPE html>.*', cleaned_output, re.DOTALL | re.IGNORECASE)
+            if doctype_match:
+                cleaned_output = doctype_match.group(0)
+        
+        # Remove any trailing explanations after </html>
+        html_end = cleaned_output.lower().rfind('</html>')
+        if html_end != -1:
+            # Find the actual end including potential whitespace
+            actual_end = html_end + len('</html>')
+            # Keep only content up to </html> plus minimal whitespace
+            cleaned_output = cleaned_output[:actual_end].rstrip() + '\n'
+        
+        logger.info("Cleaned HTML output", 
+                   original_length=len(html_output), 
+                   cleaned_length=len(cleaned_output),
+                   had_preamble=len(html_output) != len(cleaned_output))
+        
+        return cleaned_output.strip()
+    
+    def _parse_dual_response(self, raw_output: str) -> tuple[str, str]:
+        """Parse the dual response format to extract HTML and conversation"""
+        try:
+            # Enhanced parsing for multiple format variations
+            patterns = [
+                # Standard format with **markers**
+                (r'\*\*HTML_OUTPUT:\*\*\s*\n(.*?)(?=\n\s*\*\*CONVERSATION:\*\*|$)', r'\*\*CONVERSATION:\*\*\s*\n(.*?)$'),
+                # Standard format without markers
+                (r'HTML_OUTPUT:\s*\n(.*?)(?=\n\s*CONVERSATION:|$)', r'CONVERSATION:\s*\n(.*?)$'),
+                # Alternative formats
+                (r'```html\s*\n(.*?)\n```.*?(?=CONVERSATION|$)', r'CONVERSATION:\s*\n(.*?)$'),
+            ]
+            
+            for html_pattern, conv_pattern in patterns:
+                html_match = re.search(html_pattern, raw_output, re.DOTALL | re.IGNORECASE)
+                conversation_match = re.search(conv_pattern, raw_output, re.DOTALL | re.IGNORECASE)
+                
+                if html_match and conversation_match:
+                    html_output = html_match.group(1).strip()
+                    conversation = conversation_match.group(1).strip()
+                    
+                    # Clean the HTML output
+                    html_output = self._clean_html_output(html_output)
+                    
+                    # Validate HTML structure
+                    if html_output.strip().startswith('<!DOCTYPE html>'):
+                        logger.info("Successfully parsed dual response format")
+                        return html_output, conversation
+            
+            # Enhanced fallback parsing
+            # Try to find any HTML content in the response
+            doctype_match = re.search(r'<!DOCTYPE html>.*?</html>', raw_output, re.DOTALL | re.IGNORECASE)
+            if doctype_match:
+                html_output = self._clean_html_output(doctype_match.group(0))
+                
+                # Try to find conversational text after HTML or before HTML
+                conversation_candidates = []
+                
+                # Look for text before HTML
+                before_html = raw_output[:raw_output.find('<!DOCTYPE html>')].strip()
+                if before_html and len(before_html) > 10 and not before_html.startswith('<'):
+                    conversation_candidates.append(before_html)
+                
+                # Look for text after HTML
+                after_html = raw_output[raw_output.rfind('</html>') + 7:].strip()
+                if after_html and len(after_html) > 10:
+                    conversation_candidates.append(after_html)
+                
+                # Choose the most suitable conversation text
+                conversation = ""
+                for candidate in conversation_candidates:
+                    if len(candidate) > 20 and not candidate.startswith('<'):
+                        # Clean up the conversation text
+                        candidate = re.sub(r'^(CONVERSATION:|\*\*CONVERSATION:\*\*)', '', candidate).strip()
+                        if candidate:
+                            conversation = candidate
+                            break
+                
+                if not conversation:
+                    conversation = "I've created a professional webpage tailored to your requirements. The design includes modern styling, responsive layout, and thoughtful user experience elements."
+                
+                logger.info("Parsed HTML with extracted conversation")
+                return html_output, conversation
+            
+            # If we still can't find HTML, try to clean the raw output
+            cleaned_output = self._clean_html_output(raw_output)
+            if cleaned_output.strip().startswith('<!DOCTYPE html>'):
+                conversation = "I've generated the HTML content with professional styling and responsive design. Check out the preview!"
+                logger.info("Parsed cleaned HTML with default conversation")
+                return cleaned_output, conversation
+            
+            # Last resort: return raw output with helpful message
+            logger.warning("Could not parse dual response format, using fallback")
+            return self._get_fallback_html("Unable to parse response"), "I encountered an issue parsing the response. Please try rephrasing your request or being more specific about what you'd like to create."
+            
+        except Exception as e:
+            logger.error("Failed to parse dual response", error=str(e))
+            return self._get_fallback_html("Parse error"), "I had trouble understanding that request. Could you please try again with more details about what you'd like to create?"
     
     def _summarize_html_for_context(self, html_content: str) -> str:
         """Create a summary of HTML content for context without including the full HTML"""
@@ -392,400 +524,6 @@ Please modify the existing HTML accordingly. Make sure to incorporate the reques
 </body>
 </html>"""
     
-    async def process_file_content(self, file_content: str, filename: str) -> str:
-        """Process uploaded file content into HTML"""
-        try:
-            file_prompt = f"""Convert the following document content into structured HTML:
-- Preserve headings as <h1> to <h6> tags
-- Convert lists to <ul> or <ol>
-- Maintain paragraph structure
-- Convert tables to HTML tables
-- Apply default styling per system requirements
-
-File: {filename}
-Content: {file_content}"""
-            
-            return await self.generate_html(file_prompt, [])
-            
-        except Exception as e:
-            logger.error("File processing failed", filename=filename, error=str(e))
-            return self._get_fallback_html(f"Processed content from {filename}")
-    
-    def get_template_html(self, template_name: str) -> str:
-        """Get predefined template HTML"""
-        templates = {
-            "Landing Page": self._get_landing_page_template(),
-            "Impact Assessment": self._get_impact_assessment_template(),
-            "Newsletter": self._get_newsletter_template(),
-            "Documentation": self._get_documentation_template()
-        }
-        
-        return templates.get(template_name, self._get_landing_page_template())
-    
-    def _get_landing_page_template(self) -> str:
-        """Landing page template"""
-        return """<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Professional Landing Page</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Benton Sans', Arial, sans-serif; line-height: 1.6; color: #333; }
-        .hero { background: linear-gradient(135deg, #003366, #4A90E2); color: white; padding: 4rem 2rem; text-align: center; }
-        .hero h1 { font-size: 3rem; margin-bottom: 1rem; }
-        .hero p { font-size: 1.2rem; margin-bottom: 2rem; }
-        .btn { background: #4A90E2; color: white; padding: 1rem 2rem; border: none; border-radius: 5px; font-size: 1rem; cursor: pointer; }
-        .features { padding: 4rem 2rem; max-width: 1200px; margin: 0 auto; }
-        .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; }
-        .feature { background: #f8f9fa; padding: 2rem; border-radius: 8px; text-align: center; }
-    </style>
-</head>
-<body>
-    <section class="hero">
-        <h1>Welcome to Our Service</h1>
-        <p>Transform your business with our innovative solutions</p>
-        <button class="btn">Get Started</button>
-    </section>
-    <section class="features">
-        <div class="feature-grid">
-            <div class="feature">
-                <h3>Feature One</h3>
-                <p>Description of your first key feature</p>
-            </div>
-            <div class="feature">
-                <h3>Feature Two</h3>
-                <p>Description of your second key feature</p>
-            </div>
-            <div class="feature">
-                <h3>Feature Three</h3>
-                <p>Description of your third key feature</p>
-            </div>
-        </div>
-    </section>
-</body>
-</html>"""
-    
-    def _get_impact_assessment_template(self) -> str:
-        """Professional impact assessment template with baseline styling"""
-        return """<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Impact Assessment Report</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background-color: #f8f9fa;
-        }
-        
-        .header {
-            background: linear-gradient(135deg, #2c5aa0 0%, #1e3d72 100%);
-            color: white;
-            padding: 40px 0;
-            margin-bottom: 30px;
-            border-radius: 8px;
-        }
-        
-        .header-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-        
-        .header h1 {
-            font-size: 2.5rem;
-            font-weight: 300;
-            margin-bottom: 10px;
-        }
-        
-        .header p {
-            font-size: 1.1rem;
-            opacity: 0.9;
-        }
-        
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-        
-        .section {
-            background: white;
-            margin-bottom: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        
-        .nav-tabs {
-            display: flex;
-            background-color: #f8f9fa;
-            border-radius: 8px 8px 0 0;
-            overflow: hidden;
-        }
-        
-        .nav-tab {
-            flex: 1;
-            padding: 15px 20px;
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            color: #6c757d;
-        }
-        
-        .nav-tab.active {
-            background-color: #2c5aa0;
-            color: white;
-        }
-        
-        .tab-content {
-            display: none;
-            padding: 30px;
-        }
-        
-        .tab-content.active { display: block; }
-        
-        .problem-highlight {
-            background-color: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 20px;
-            margin: 20px 0;
-            border-radius: 0 4px 4px 0;
-        }
-        
-        .solution-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 20px;
-            margin: 20px 0;
-        }
-        
-        .option-card {
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            padding: 20px;
-            transition: all 0.3s ease;
-        }
-        
-        .option-card:hover {
-            border-color: #2c5aa0;
-            box-shadow: 0 4px 15px rgba(44, 90, 160, 0.1);
-        }
-        
-        .option-card.recommended {
-            border-color: #2c5aa0;
-            background-color: #f8f9ff;
-        }
-        
-        .option-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-        
-        .option-number {
-            background-color: #2c5aa0;
-            color: white;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            margin-right: 15px;
-        }
-        
-        .recommended-badge {
-            background-color: #28a745;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 500;
-            margin-left: auto;
-        }
-        
-        .pros-cons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-top: 15px;
-        }
-        
-        .pros, .cons {
-            padding: 15px;
-            border-radius: 6px;
-        }
-        
-        .pros {
-            background-color: #d4edda;
-            border-left: 4px solid #28a745;
-        }
-        
-        .cons {
-            background-color: #f8d7da;
-            border-left: 4px solid #dc3545;
-        }
-        
-        .pros h4, .cons h4 {
-            margin-bottom: 8px;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .pros h4 { color: #155724; }
-        .cons h4 { color: #721c24; }
-        
-        .risk-item {
-            background-color: #fff5f5;
-            border-left: 4px solid #e53e3e;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 0 4px 4px 0;
-        }
-        
-        .alternative-highlight {
-            background-color: #e6f3ff;
-            border: 2px solid #2c5aa0;
-            border-radius: 8px;
-            padding: 25px;
-            margin: 20px 0;
-        }
-        
-        .alternative-highlight h3 {
-            color: #2c5aa0;
-            margin-bottom: 15px;
-        }
-        
-        @media (max-width: 768px) {
-            .header h1 { font-size: 2rem; }
-            .solution-grid { grid-template-columns: 1fr; }
-            .pros-cons { grid-template-columns: 1fr; }
-            .nav-tabs { flex-direction: column; }
-        }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>Impact Assessment Report</h1>
-        <p>Comprehensive Analysis & Recommendations</p>
-    </div>
-    <div class="container">
-        <div class="tabs">
-            <button class="tab active" onclick="showTab('problem')">Problem Statement</button>
-            <button class="tab" onclick="showTab('solutions')">Technical Solutions</button>
-            <button class="tab" onclick="showTab('risks')">Risk Analysis</button>
-            <button class="tab" onclick="showTab('recommendations')">Recommendations</button>
-        </div>
-        <div id="problem" class="tab-content">
-            <h2>Problem Statement</h2>
-            <p>Detailed analysis of the current challenges and issues.</p>
-        </div>
-        <div id="solutions" class="tab-content" style="display:none;">
-            <h2>Technical Solutions</h2>
-            <div class="solution-card">
-                <h3>Solution A</h3>
-                <p><strong>Pros:</strong> Benefits and advantages</p>
-                <p><strong>Cons:</strong> Limitations and drawbacks</p>
-            </div>
-        </div>
-        <div id="risks" class="tab-content" style="display:none;">
-            <h2>Risk Analysis</h2>
-            <div class="risk-item">
-                <h4>Risk Item 1</h4>
-                <p>Description and mitigation strategies</p>
-            </div>
-        </div>
-        <div id="recommendations" class="tab-content" style="display:none;">
-            <h2>Executive Recommendations</h2>
-            <p>Key recommendations based on the analysis.</p>
-        </div>
-    </div>
-    <script>
-        function showTab(tabName) {
-            const contents = document.querySelectorAll('.tab-content');
-            const tabs = document.querySelectorAll('.tab');
-            contents.forEach(content => content.style.display = 'none');
-            tabs.forEach(tab => tab.classList.remove('active'));
-            document.getElementById(tabName).style.display = 'block';
-            event.target.classList.add('active');
-        }
-    </script>
-</body>
-</html>"""
-    
-    def _get_newsletter_template(self) -> str:
-        """Newsletter template"""
-        return """<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Newsletter</title>
-    <style>
-        body { font-family: 'Benton Sans', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; }
-        .header { background: #003366; color: white; padding: 2rem; text-align: center; }
-        .article { padding: 2rem; border-bottom: 1px solid #e5e5e5; }
-        .footer { background: #f8f9fa; padding: 2rem; text-align: center; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>Newsletter Title</h1>
-        <p>Your monthly update</p>
-    </div>
-    <div class="article">
-        <h2>Article Title</h2>
-        <p>Newsletter content goes here...</p>
-    </div>
-    <div class="footer">
-        <p>© 2025 Your Company</p>
-    </div>
-</body>
-</html>"""
-    
-    def _get_documentation_template(self) -> str:
-        """Documentation template"""
-        return """<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Documentation</title>
-    <style>
-        body { font-family: 'Benton Sans', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; }
-        .sidebar { width: 250px; background: #003366; color: white; height: 100vh; position: fixed; padding: 1rem; }
-        .sidebar ul { list-style: none; }
-        .sidebar a { color: #4A90E2; text-decoration: none; }
-        .content { margin-left: 270px; padding: 2rem; }
-    </style>
-</head>
-<body>
-    <nav class="sidebar">
-        <h2>Documentation</h2>
-        <ul>
-            <li><a href="#intro">Introduction</a></li>
-            <li><a href="#guide">User Guide</a></li>
-            <li><a href="#api">API Reference</a></li>
-        </ul>
-    </nav>
-    <main class="content">
-        <h1 id="intro">Introduction</h1>
-        <p>Welcome to the documentation.</p>
-        <h1 id="guide">User Guide</h1>
-        <p>How to use this system.</p>
-        <h1 id="api">API Reference</h1>
-        <p>API documentation.</p>
-    </main>
-</body>
-</html>"""
 
 # Global LLM service instance
 llm_service = LLMService()

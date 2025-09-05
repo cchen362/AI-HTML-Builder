@@ -1,9 +1,8 @@
-import React, { useState, useRef, KeyboardEvent } from 'react';
-import { FileInfo } from '../../types';
+import React, { useState, useRef, useEffect, type KeyboardEvent } from 'react';
 import './ChatInput.css';
 
 interface ChatInputProps {
-  onSendMessage: (message: string, files?: File[]) => void;
+  onSendMessage: (message: string) => void;
   isProcessing?: boolean;
   placeholder?: string;
 }
@@ -11,19 +10,32 @@ interface ChatInputProps {
 const ChatInput: React.FC<ChatInputProps> = ({ 
   onSendMessage, 
   isProcessing = false,
-  placeholder = "Describe the HTML you want to create..."
+  placeholder = "Tell me what kind of website, page, or content you'd like to create. Be as detailed or creative as you want - I'll design something professional and polished for you!"
 }) => {
   const [message, setMessage] = useState('');
-  const [dragActive, setDragActive] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (message.trim() && !isProcessing) {
       onSendMessage(message.trim());
       setMessage('');
+      // Reset textarea height
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+      }
     }
   };
+
+  // Auto-resize textarea based on content
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      const maxHeight = Math.min(textarea.scrollHeight, window.innerHeight * 0.4); // 40% max height
+      textarea.style.height = `${Math.max(maxHeight, 120)}px`; // 120px minimum
+    }
+  }, [message]);
 
   const handleKeyPress = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
@@ -32,109 +44,47 @@ const ChatInput: React.FC<ChatInputProps> = ({
     }
   };
 
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const files = Array.from(e.dataTransfer.files);
-      handleFileUpload(files);
-    }
-  };
-
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const files = Array.from(e.target.files);
-      handleFileUpload(files);
-    }
-  };
-
-  const handleFileUpload = (files: File[]) => {
-    const validTypes = ['.txt', '.md', '.docx'];
-    const validFiles = files.filter(file => {
-      const extension = '.' + file.name.split('.').pop()?.toLowerCase();
-      return validTypes.includes(extension) && file.size <= 50 * 1024 * 1024; // 50MB
-    });
-
-    if (validFiles.length > 0) {
-      onSendMessage('', validFiles);
-    }
-  };
-
   return (
     <form 
-      className={`chat-input ${dragActive ? 'drag-active' : ''}`}
+      className="chat-input"
       onSubmit={handleSubmit}
-      onDragEnter={handleDrag}
-      onDragLeave={handleDrag}
-      onDragOver={handleDrag}
-      onDrop={handleDrop}
     >
       <div className="input-container">
         <textarea
+          ref={textareaRef}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyPress}
           placeholder={placeholder}
           disabled={isProcessing}
-          rows={3}
-          className="message-input"
+          className="message-input expandable"
         />
         
         <div className="input-actions">
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isProcessing}
-            className="file-button"
-            title="Upload file (.txt, .md, .docx)"
-          >
-            📎
-          </button>
-          
           <button
             type="submit"
             disabled={!message.trim() || isProcessing}
             className="send-button"
             title="Send message (Ctrl+Enter)"
           >
-            {isProcessing ? '⏳' : '→'}
+            {isProcessing ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="animate-spin">
+                <path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" />
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M2,21L23,12L2,3V10L17,12L2,14V21Z" />
+              </svg>
+            )}
           </button>
         </div>
       </div>
 
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileInput}
-        accept=".txt,.md,.docx"
-        multiple
-        style={{ display: 'none' }}
-      />
-
       <div className="input-help">
-        Drop files here or click 📎 to upload • Ctrl+Enter to send
+        <span>✨ Try: "Create a landing page for my photography business" or paste your content to style</span>
+        <span>•</span>
+        <span>Ctrl+Enter to send</span>
       </div>
-
-      {dragActive && (
-        <div className="drag-overlay">
-          <div className="drag-message">
-            Drop your files here
-            <div className="drag-info">Supports .txt, .md, .docx (max 50MB)</div>
-          </div>
-        </div>
-      )}
     </form>
   );
 };

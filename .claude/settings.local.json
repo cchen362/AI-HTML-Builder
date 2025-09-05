@@ -69,7 +69,20 @@
       "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop\\AI-HTML-Builder\\backend\\app\\api/**)",
       "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop\\AI-HTML-Builder\\backend\\app\\api/**)",
       "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop\\AI-HTML-Builder\\backend\\app\\services/**)",
-      "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop\\AI-HTML-Builder\\backend\\app\\services/**)"
+      "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop\\AI-HTML-Builder\\backend\\app\\services/**)",
+      "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop/**)",
+      "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop/**)",
+      "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop/**)",
+      "Bash(npm run build:*)",
+      "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop/**)",
+      "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop/**)",
+      "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop/**)",
+      "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop/**)",
+      "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop/**)",
+      "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop/**)",
+      "Bash(find:*)",
+      "Read(//c/Users/cchen362/OneDrive/Desktop/**)",
+      "Bash(npm run lint)"
     ],
     "deny": [],
     "ask": []

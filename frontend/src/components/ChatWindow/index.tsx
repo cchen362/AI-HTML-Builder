@@ -1,7 +1,7 @@
 import React from 'react';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
-import { Message } from '../../types';
+import type { Message } from '../../types';
 import './ChatWindow.css';
 
 interface ChatWindowProps {

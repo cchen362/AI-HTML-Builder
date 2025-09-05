@@ -194,16 +194,20 @@ class WebSocketHandler:
             # Send status update
             await self._send_status("Generating HTML...", 50)
             
-            # Generate HTML using LLM service
-            html_output = await llm_service.generate_html(
+            # Generate HTML using LLM service (now returns dict with dual response)
+            llm_response = await llm_service.generate_html(
                 llm_input,
                 self.session.messages
             )
+            
+            html_output = llm_response.get("html_output", "")
+            conversation = llm_response.get("conversation", "")
             
             # Add assistant message to session
             assistant_message = {
                 "type": "update",
                 "html_output": html_output,
+                "conversation": conversation,
                 "timestamp": datetime.utcnow().isoformat(),
                 "sender": "assistant"
             }
@@ -214,8 +218,8 @@ class WebSocketHandler:
             # Save session to Redis
             await redis_service.update_session(self.session)
             
-            # Send HTML update to client
-            await self._send_html_update(html_output)
+            # Send dual response update to client
+            await self._send_dual_response_update(html_output, conversation)
             
             # Send completion status
             await self._send_status("Complete!", 100)
@@ -242,12 +246,13 @@ class WebSocketHandler:
         rate_limit["requests"] = rate_limit.get("requests", 0) + 1
         return True
     
-    async def _send_html_update(self, html_output: str):
-        """Send HTML update to client"""
+    async def _send_dual_response_update(self, html_output: str, conversation: str):
+        """Send dual response update to client"""
         update_message = {
             "type": "update",
             "payload": {
                 "html_output": html_output,
+                "conversation": conversation,
                 "iteration": self.session.iteration_count
             },
             "timestamp": int(datetime.utcnow().timestamp())
