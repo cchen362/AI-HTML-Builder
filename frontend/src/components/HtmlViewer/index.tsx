@@ -40,6 +40,7 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
         onFullscreen={handleFullscreen}
         onExport={onExport}
         isFullscreen={isFullscreen}
+        htmlContent={htmlContent}
       />
 
       <div className="viewer-content">

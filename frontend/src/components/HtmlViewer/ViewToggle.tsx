@@ -5,17 +5,27 @@ interface ViewToggleProps {
   viewMode: 'rendered' | 'code';
   onToggle: (mode: 'rendered' | 'code') => void;
   onFullscreen?: () => void;
+  onNewTab?: () => void;
   onExport?: () => void;
   isFullscreen?: boolean;
+  htmlContent?: string;
 }
 
 const ViewToggle: React.FC<ViewToggleProps> = ({
   viewMode,
   onToggle,
-  onFullscreen,
   onExport,
-  isFullscreen = false
+  htmlContent = ""
 }) => {
+  const handleOpenNewTab = () => {
+    if (htmlContent) {
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      // Clean up the blob URL after a delay
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+  };
   return (
     <div className="view-toggle">
       <div className="toggle-buttons">
@@ -36,13 +46,13 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
       </div>
 
       <div className="action-buttons">
-        {onFullscreen && (
+        {htmlContent && (
           <button
-            className="action-btn"
-            onClick={onFullscreen}
-            title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+            className="action-btn fullscreen"
+            onClick={handleOpenNewTab}
+            title="Open in new tab"
           >
-            {isFullscreen ? '🗗' : '🗖'}
+            🔗 Full Screen
           </button>
         )}
         

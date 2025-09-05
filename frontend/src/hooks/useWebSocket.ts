@@ -98,8 +98,8 @@ export const useWebSocket = (sessionId: string): UseWebSocketReturn => {
                 setCurrentHtml(htmlOutput);
               }
               
-              // Add AI conversation response if provided
-              if (conversation) {
+              // Only render conversation if provided by server - no fallbacks
+              if (conversation && conversation.trim()) {
                 setMessages(prev => {
                   const lastMessage = prev[prev.length - 1];
                   // Only add if last message wasn't from AI to avoid duplicates
@@ -109,31 +109,17 @@ export const useWebSocket = (sessionId: string): UseWebSocketReturn => {
                   
                   const aiMessage: Message = {
                     id: `ai-${Date.now()}`,
-                    content: conversation,
+                    content: conversation.trim(),
                     sender: 'ai',
                     timestamp: Date.now()
                   };
                   
                   return [...prev, aiMessage];
                 });
-              } else if (htmlOutput) {
-                // Fallback to simple confirmation if no conversation provided
-                setMessages(prev => {
-                  const lastMessage = prev[prev.length - 1];
-                  if (lastMessage && lastMessage.sender === 'ai') {
-                    return prev;
-                  }
-                  
-                  const aiMessage: Message = {
-                    id: `ai-${Date.now()}`,
-                    content: "I've generated the HTML content for you. You can see it in the preview panel!",
-                    sender: 'ai',
-                    timestamp: Date.now()
-                  };
-                  
-                  return [...prev, aiMessage];
-                });
-              } else {
+              }
+              
+              // Show error only if we have neither HTML nor conversation
+              if (!htmlOutput && !conversation) {
                 console.warn('Received update message without HTML or conversation content:', data);
                 setError('Received empty content from server');
               }

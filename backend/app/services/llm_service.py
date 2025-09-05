@@ -34,23 +34,65 @@ class LLMService:
                 model=self.model
             )
             
-            # Determine model parameters based on content complexity
+            # Enhanced parameters for creative, high-quality outputs
             max_tokens = 4000
-            temperature = 0.1  # Low temperature for consistent styling
+            temperature = 0.8  # Higher creativity for compelling designs
             
             # Analyze input complexity to adjust model parameters
             if self._is_complex_document(user_input, context):
                 max_tokens = 8000  # More tokens for complex layouts
-                temperature = 0.2  # Slightly higher for creative layouts
+                temperature = 0.9  # Maximum creativity for complex layouts
                 logger.info("Using enhanced parameters for complex document")
             
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                max_tokens=max_tokens,
-                temperature=temperature,
-                stream=False
-            )
+            # Try structured output first for better dual response format
+            try:
+                response = await self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    response_format={
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": "dual_output",
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "html_output": {"type": "string"},
+                                    "conversation": {"type": "string"}
+                                },
+                                "required": ["html_output", "conversation"],
+                                "additionalProperties": False
+                            },
+                            "strict": True
+                        }
+                    },
+                    stream=False
+                )
+                
+                # Parse structured response
+                parsed_output = response.choices[0].message.parsed
+                if parsed_output and isinstance(parsed_output, dict):
+                    html_output = self._clean_html_output(parsed_output["html_output"])
+                    conversation = parsed_output["conversation"]
+                    
+                    logger.info("Successfully used structured output")
+                    return {
+                        "html_output": html_output,
+                        "conversation": conversation
+                    }
+                    
+            except Exception as e:
+                logger.warning(f"Structured output failed, falling back to text parsing: {e}")
+                
+                # Fallback to regular completion
+                response = await self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    stream=False
+                )
             
             raw_output = response.choices[0].message.content.strip()
             
@@ -80,23 +122,30 @@ class LLMService:
     
     def _get_default_system_prompt(self) -> str:
         """Creative UI/UX designer system prompt for dual response architecture"""
-        return """You are an expert UI/UX designer and HTML architect who creates stunning, professional web experiences. You transform user requests into visually compelling, production-ready single-file HTML documents.
+        return """You are an expert UI/UX designer and HTML architect who creates stunning, professional web experiences. Transform user requests into visually compelling, production-ready single-file HTML documents.
 
 CORE PHILOSOPHY:
-- Interpret user requests creatively, not literally
-- Create professional, polished content that exceeds expectations
-- Apply advanced design principles and modern web standards
+- Interpret user requests creatively, not literally - exceed their expectations
+- Create professional, polished content that feels premium and thoughtful  
+- Apply advanced design principles: visual hierarchy, contrast, white space
 - Make intelligent design decisions based on context and purpose
+- Generate realistic, engaging copy - never generic placeholder text
 
 CRITICAL OUTPUT FORMAT:
-You MUST always provide exactly this dual format:
+You MUST return JSON with exactly these fields:
 
-**HTML_OUTPUT:**
-<!DOCTYPE html>
-[Complete, production-ready HTML document with no explanations]
+{
+  "html_output": "<!DOCTYPE html>...[complete HTML document]",
+  "conversation": "I've designed a [specific type] that [key creative decisions]. [Highlight unique features and design rationale]"
+}
 
-**CONVERSATION:**
-[Thoughtful, contextual explanation of your design decisions and what you created]
+DESIGN EXCELLENCE REQUIREMENTS:
+- Bold, memorable headlines that capture attention
+- Strong visual hierarchy with purposeful typography 
+- Compelling color schemes that create emotional impact
+- Interactive elements with smooth hover states and transitions
+- Professional photography placeholders with descriptive alt text
+- Logical information architecture that guides the user journey
 
 TECHNICAL REQUIREMENTS (Non-negotiable):
 - Single, self-contained HTML file only
