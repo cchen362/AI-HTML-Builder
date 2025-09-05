@@ -9,7 +9,7 @@ interface ChatInputProps {
 
 // Custom hook for auto-resize based on 2025 best practices
 const useAutosizeTextArea = (
-  textAreaRef: React.RefObject<HTMLTextAreaElement>,
+  textAreaRef: React.RefObject<HTMLTextAreaElement | null>,
   value: string
 ) => {
   useEffect(() => {
@@ -37,9 +37,10 @@ const useAutosizeTextArea = (
 const ChatInput: React.FC<ChatInputProps> = ({ 
   onSendMessage, 
   isProcessing = false,
-  placeholder = "Describe what you want to create, paste content to style, or request changes... Be creative!"
+  placeholder = "Describe what you want to create, or paste content to transform into HTML..."
 }) => {
   const [message, setMessage] = useState('');
+  const [showLargeContentHint, setShowLargeContentHint] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   // Use the custom hook for auto-resize
@@ -50,6 +51,19 @@ const ChatInput: React.FC<ChatInputProps> = ({
     if (message.trim() && !isProcessing) {
       onSendMessage(message.trim());
       setMessage('');
+      setShowLargeContentHint(false);
+    }
+  };
+
+  const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setMessage(value);
+    
+    // Show hint for large content
+    if (value.length > 500 && !showLargeContentHint) {
+      setShowLargeContentHint(true);
+    } else if (value.length <= 500 && showLargeContentHint) {
+      setShowLargeContentHint(false);
     }
   };
 
@@ -62,11 +76,18 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
   return (
     <form className="chat-input-container" onSubmit={handleSubmit}>
+      {showLargeContentHint && (
+        <div className="content-hint">
+          <span className="hint-icon">💡</span>
+          <span>I can see you've pasted detailed content - I'll transform this into beautiful HTML!</span>
+        </div>
+      )}
+      
       <div className="input-wrapper">
         <textarea
           ref={textareaRef}
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={handleMessageChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={isProcessing}

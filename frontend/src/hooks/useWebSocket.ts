@@ -8,7 +8,7 @@ interface Message {
 }
 
 interface WebSocketMessage {
-  type: 'chat' | 'update' | 'error' | 'status' | 'sync';
+  type: 'chat' | 'update' | 'dual_response' | 'thinking' | 'error' | 'status' | 'sync';
   payload: {
     content?: string;
     html_output?: string;
@@ -21,6 +21,13 @@ interface WebSocketMessage {
     messages?: Message[];
     current_html?: string;
     iteration_count?: number;
+    artifact?: {
+      id: string;
+      version: number;
+      title: string;
+      type: string;
+      changes: string[];
+    };
   };
   timestamp: number;
 }
@@ -86,27 +93,68 @@ export const useWebSocket = (sessionId: string): UseWebSocketReturn => {
               }
               break;
               
+            case 'dual_response': {
+              // Handle the new conversational dual response architecture
+              const htmlOutput = data.payload.htmlOutput;
+              const conversation = data.payload.conversation;
+              const artifact = data.payload.artifact;
+              
+              console.log('Received dual response:', {
+                htmlLength: htmlOutput?.length || 0,
+                conversationLength: conversation?.length || 0,
+                artifactVersion: artifact?.version,
+                changes: artifact?.changes
+              });
+              
+              // Update HTML artifact in rendering panel
+              if (htmlOutput) {
+                setCurrentHtml(htmlOutput);
+                console.log('Updated HTML artifact:', htmlOutput.substring(0, 100) + '...');
+              }
+              
+              // Add conversational response to chat
+              if (conversation && conversation.trim()) {
+                setMessages(prev => {
+                  const aiMessage: Message = {
+                    id: `ai-${Date.now()}-v${artifact?.version || 1}`,
+                    content: conversation.trim(),
+                    sender: 'ai',
+                    timestamp: Date.now()
+                  };
+                  
+                  console.log('Adding AI conversation message:', aiMessage.content.substring(0, 100) + '...');
+                  return [...prev, aiMessage];
+                });
+              }
+              
+              // Log artifact information
+              if (artifact) {
+                console.log('Artifact updated:', {
+                  title: artifact.title,
+                  version: artifact.version,
+                  type: artifact.type,
+                  changes: artifact.changes
+                });
+              }
+              
+              setIsProcessing(false);
+              setError(null);
+              break;
+            }
+
             case 'update': {
-              // Handle HTML updates with dual response architecture
+              // Legacy update handling for backward compatibility
               const htmlOutput = data.payload.htmlOutput || data.payload.html_output;
               const conversation = data.payload.conversation;
               
-              console.log('Received HTML update:', htmlOutput ? htmlOutput.substring(0, 200) + '...' : 'No HTML content');
-              console.log('Received conversation:', conversation || 'No conversation content');
+              console.log('Received legacy update:', htmlOutput ? htmlOutput.substring(0, 200) + '...' : 'No HTML content');
               
               if (htmlOutput) {
                 setCurrentHtml(htmlOutput);
               }
               
-              // Only render conversation if provided by server - no fallbacks
               if (conversation && conversation.trim()) {
                 setMessages(prev => {
-                  const lastMessage = prev[prev.length - 1];
-                  // Only add if last message wasn't from AI to avoid duplicates
-                  if (lastMessage && lastMessage.sender === 'ai') {
-                    return prev;
-                  }
-                  
                   const aiMessage: Message = {
                     id: `ai-${Date.now()}`,
                     content: conversation.trim(),
@@ -118,13 +166,16 @@ export const useWebSocket = (sessionId: string): UseWebSocketReturn => {
                 });
               }
               
-              // Show error only if we have neither HTML nor conversation
-              if (!htmlOutput && !conversation) {
-                console.warn('Received update message without HTML or conversation content:', data);
-                setError('Received empty content from server');
-              }
-              
               setIsProcessing(false);
+              break;
+            }
+
+            case 'thinking': {
+              // Handle thinking/progress status updates
+              console.log('AI is thinking:', data.payload.message);
+              // Keep processing state active during thinking
+              setIsProcessing(true);
+              setError(null);
               break;
             }
               

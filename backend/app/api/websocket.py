@@ -5,7 +5,8 @@ import asyncio
 import structlog
 from datetime import datetime
 from ..services.redis_service import redis_service
-from ..services.llm_service import llm_service
+from ..services.conversational_llm_service import conversational_llm_service, ConversationContext
+from ..services.artifact_manager import artifact_manager
 from ..models.session import Session
 from ..models.schemas import WebSocketMessage, MessageType
 from ..core.config import settings
@@ -159,7 +160,7 @@ class WebSocketHandler:
             content = message_data.get("content", "")
             attachments = message_data.get("attachments", [])
             
-            if not content.strip() and not attachments:
+            if not content.strip():
                 await self._send_error("Empty message")
                 return
             
@@ -177,56 +178,94 @@ class WebSocketHandler:
             user_message = {
                 "type": "chat",
                 "content": content,
-                "attachments": attachments,
                 "timestamp": datetime.utcnow().isoformat(),
                 "sender": "user"
             }
             self.session.add_message(user_message)
             
-            # Send status update
-            await self._send_status("Processing your request...", 10)
+            # Send thinking status for large content
+            if len(content) > 1000:
+                await self._send_thinking_status("I can see you've shared detailed content - let me analyze this and create something beautiful...")
             
-            # Prepare input for LLM
-            llm_input = content
-            if attachments:
-                llm_input = f"{content}\n\nAttached content:\n" + "\n\n".join(attachments)
+            # Send progress updates with conversational flair
+            await self._send_thinking_status("Understanding your requirements...")
+            await self._send_thinking_status("Designing the layout and visual hierarchy...")
+            await self._send_thinking_status("Adding interactive elements and responsive features...")
             
-            # Send status update
-            await self._send_status("Generating HTML...", 50)
-            
-            # Generate HTML using LLM service (now returns dict with dual response)
-            llm_response = await llm_service.generate_html(
-                llm_input,
-                self.session.messages
+            # Build conversation context
+            current_artifact = artifact_manager.get_current_artifact(self.session_id)
+            context = ConversationContext(
+                messages=self.session.messages,
+                session_id=self.session_id,
+                iteration_count=self.session.iteration_count,
+                current_html=current_artifact.html_content if current_artifact else None
             )
             
-            html_output = llm_response.get("html_output", "")
-            conversation = llm_response.get("conversation", "")
+            # Generate dual response using conversational LLM service
+            try:
+                dual_response = await conversational_llm_service.generate_dual_response(
+                    content,
+                    context
+                )
+                
+                logger.info("Dual response generated", 
+                           html_length=len(dual_response.html_output), 
+                           conversation_length=len(dual_response.conversation))
+                
+            except Exception as llm_error:
+                logger.error("Conversational LLM service error", error=str(llm_error), session_id=self.session_id)
+                # Create fallback response
+                from ..services.conversational_llm_service import DualResponse
+                dual_response = DualResponse(
+                    html_output=self._create_fallback_html(content),
+                    conversation=f"I encountered a technical issue while processing your request '{content}'. I've created a placeholder design - please try again for a fully custom solution!",
+                    metadata={"is_fallback": True}
+                )
+            
+            # Create or update artifact
+            if current_artifact:
+                artifact = artifact_manager.update_artifact(
+                    self.session_id,
+                    dual_response.html_output,
+                    dual_response.metadata.get('changes', []),
+                    dual_response.metadata
+                )
+            else:
+                artifact = artifact_manager.create_artifact(
+                    self.session_id,
+                    dual_response.html_output,
+                    dual_response.metadata
+                )
             
             # Add assistant message to session
             assistant_message = {
                 "type": "update",
-                "html_output": html_output,
-                "conversation": conversation,
+                "html_output": dual_response.html_output,
+                "conversation": dual_response.conversation,
+                "artifact_version": artifact.version,
                 "timestamp": datetime.utcnow().isoformat(),
                 "sender": "assistant"
             }
             self.session.add_message(assistant_message)
-            self.session.update_html(html_output)
+            self.session.update_html(dual_response.html_output)
             self.session.increment_iteration()
             
             # Save session to Redis
             await redis_service.update_session(self.session)
             
-            # Send dual response update to client
-            await self._send_dual_response_update(html_output, conversation)
+            # Send dual response with artifact information
+            await self._send_conversational_dual_response(
+                dual_response.html_output, 
+                dual_response.conversation,
+                artifact
+            )
             
             # Send completion status
-            await self._send_status("Complete!", 100)
+            await self._send_status("Ready for your next request!", 100)
             
         except Exception as e:
-            logger.error("Chat message handling failed", session_id=self.session_id, error=str(e))
-            await self._send_error("Failed to process message")
+            logger.error("Conversational chat message handling failed", session_id=self.session_id, error=str(e))
+            await self._send_error("I encountered an unexpected issue. Please try again with your request.")
     
     async def _check_rate_limit(self) -> bool:
         """Check if session is within rate limits"""
@@ -246,19 +285,99 @@ class WebSocketHandler:
         rate_limit["requests"] = rate_limit.get("requests", 0) + 1
         return True
     
-    async def _send_dual_response_update(self, html_output: str, conversation: str):
-        """Send dual response update to client"""
+    async def _send_conversational_dual_response(self, html_output: str, conversation: str, artifact):
+        """Send conversational dual response with artifact information to client"""
+        logger.info("Sending conversational dual response", 
+                   session_id=self.session_id,
+                   html_length=len(html_output),
+                   conversation_length=len(conversation),
+                   artifact_version=artifact.version)
+        
         update_message = {
-            "type": "update",
+            "type": "dual_response",
             "payload": {
-                "html_output": html_output,
-                "conversation": conversation,
+                "htmlOutput": html_output,  # HTML artifact for rendering panel
+                "conversation": conversation,  # Conversational response for chat
+                "artifact": {
+                    "id": artifact.id,
+                    "version": artifact.version,
+                    "title": artifact.title,
+                    "type": artifact.content_type,
+                    "changes": artifact.changes_from_previous or []
+                },
                 "iteration": self.session.iteration_count
             },
             "timestamp": int(datetime.utcnow().timestamp())
         }
         
         await manager.send_personal_message(update_message, self.session_id)
+    
+    async def _send_thinking_status(self, message: str):
+        """Send thinking status update with conversational flair"""
+        status_message = {
+            "type": "thinking",
+            "payload": {
+                "message": message,
+                "timestamp": int(datetime.utcnow().timestamp())
+            },
+            "timestamp": int(datetime.utcnow().timestamp())
+        }
+        
+        await manager.send_personal_message(status_message, self.session_id)
+    
+    def _create_fallback_html(self, user_request: str) -> str:
+        """Create fallback HTML when generation fails"""
+        return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI HTML Builder - Processing</title>
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            padding: 2rem; color: #152835;
+        }}
+        .container {{
+            max-width: 600px; background: white; border-radius: 16px; padding: 3rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1); text-align: center;
+        }}
+        .header {{
+            background: linear-gradient(135deg, #003366 0%, #0066CF 100%);
+            color: white; padding: 2rem; border-radius: 12px; margin-bottom: 2rem;
+        }}
+        .header h1 {{ font-size: 2rem; font-weight: 600; margin-bottom: 0.5rem; }}
+        .request-box {{
+            background: #e6f3ff; border: 2px solid #b4ebff; border-radius: 8px;
+            padding: 1.5rem; margin: 1.5rem 0;
+        }}
+        .request-box h3 {{ color: #003366; margin-bottom: 0.75rem; }}
+        .retry-button {{
+            background: linear-gradient(135deg, #0066CF 0%, #003366 100%);
+            color: white; padding: 1rem 2rem; border: none; border-radius: 8px;
+            font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease;
+        }}
+        .retry-button:hover {{ transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 102, 207, 0.3); }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>AI HTML Builder</h1>
+            <p>Conversational Design Assistant</p>
+        </div>
+        <div class="request-box">
+            <h3>Your Request</h3>
+            <p>"{user_request}"</p>
+        </div>
+        <p>I'm working on creating something amazing for you! This is a temporary placeholder.</p>
+        <button class="retry-button" onclick="location.reload()">Try Again</button>
+    </div>
+</body>
+</html>"""
     
     async def _send_status(self, message: str, progress: int):
         """Send status update to client"""

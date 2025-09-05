@@ -9,8 +9,33 @@ logger = structlog.get_logger()
 
 class LLMService:
     def __init__(self):
+        # Validate OpenAI API key
+        if not settings.openai_api_key:
+            logger.error("OpenAI API key not configured")
+            raise ValueError("OPENAI_API_KEY environment variable is required")
+        
+        if not settings.openai_api_key.startswith('sk-'):
+            logger.error("Invalid OpenAI API key format")
+            raise ValueError("OpenAI API key must start with 'sk-'")
+        
         self.client = openai.AsyncOpenAI(api_key=settings.openai_api_key)
         self.model = "gpt-4o"  # Using GPT-4o for best HTML generation capabilities
+        
+        logger.info("LLM service initialized", model=self.model)
+        
+    async def validate_connection(self) -> bool:
+        """Test OpenAI API connection"""
+        try:
+            response = await self.client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": "test"}],
+                max_tokens=1
+            )
+            logger.info("OpenAI API connection validated successfully")
+            return True
+        except Exception as e:
+            logger.error("OpenAI API connection failed", error=str(e))
+            return False
         
     async def generate_html(
         self,
@@ -112,8 +137,29 @@ class LLMService:
                 "conversation": conversation
             }
             
+        except openai.AuthenticationError as e:
+            logger.error("OpenAI authentication failed - check API key", error=str(e))
+            fallback_html = self._get_fallback_html(user_input)
+            return {
+                "html_output": fallback_html,
+                "conversation": "Authentication error with OpenAI API. Please check the API key configuration."
+            }
+        except openai.RateLimitError as e:
+            logger.error("OpenAI rate limit exceeded", error=str(e))
+            fallback_html = self._get_fallback_html(user_input)
+            return {
+                "html_output": fallback_html,
+                "conversation": "Rate limit exceeded. Please wait a moment and try again."
+            }
+        except openai.APIError as e:
+            logger.error("OpenAI API error", error=str(e), status_code=getattr(e, 'status_code', None))
+            fallback_html = self._get_fallback_html(user_input)
+            return {
+                "html_output": fallback_html,
+                "conversation": f"OpenAI API error occurred. Please try again. If the problem persists, the service may be temporarily unavailable."
+            }
         except Exception as e:
-            logger.error("HTML generation failed", error=str(e))
+            logger.error("HTML generation failed", error=str(e), user_input_length=len(user_input))
             fallback_html = self._get_fallback_html(user_input)
             return {
                 "html_output": fallback_html,
