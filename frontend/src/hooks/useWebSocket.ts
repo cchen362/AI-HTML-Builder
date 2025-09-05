@@ -147,13 +147,22 @@ export const useWebSocket = (sessionId: string): UseWebSocketReturn => {
               const htmlOutput = data.payload.htmlOutput || data.payload.html_output;
               const conversation = data.payload.conversation;
               
-              console.log('Received legacy update:', htmlOutput ? htmlOutput.substring(0, 200) + '...' : 'No HTML content');
+              console.log('Received legacy update message:');
+              console.log('- htmlOutput field:', data.payload.htmlOutput ? 'present' : 'missing');
+              console.log('- html_output field:', data.payload.html_output ? 'present' : 'missing'); 
+              console.log('- Final htmlOutput length:', htmlOutput ? htmlOutput.length : 0);
               
-              if (htmlOutput) {
+              if (htmlOutput && htmlOutput.length > 0) {
+                console.log('Setting currentHtml with content length:', htmlOutput.length);
                 setCurrentHtml(htmlOutput);
+                console.log('currentHtml state updated successfully');
+              } else {
+                console.log('ERROR: No HTML content found in update message');
+                console.log('Full payload:', JSON.stringify(data.payload, null, 2));
               }
               
               if (conversation && conversation.trim()) {
+                console.log('Adding conversation message:', conversation.substring(0, 100) + '...');
                 setMessages(prev => {
                   const aiMessage: Message = {
                     id: `ai-${Date.now()}`,
@@ -164,6 +173,8 @@ export const useWebSocket = (sessionId: string): UseWebSocketReturn => {
                   
                   return [...prev, aiMessage];
                 });
+              } else {
+                console.log('No conversation content in update message');
               }
               
               setIsProcessing(false);

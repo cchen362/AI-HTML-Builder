@@ -5,7 +5,7 @@ import asyncio
 import structlog
 from datetime import datetime
 from ..services.redis_service import redis_service
-from ..services.conversational_llm_service import conversational_llm_service, ConversationContext
+from ..services.claude_service import claude_service
 from ..services.artifact_manager import artifact_manager
 from ..models.session import Session
 from ..models.schemas import WebSocketMessage, MessageType
@@ -156,6 +156,7 @@ class WebSocketHandler:
     
     async def _handle_chat_message(self, message_data: dict):
         """Handle chat message and generate HTML response"""
+        logger.info("[DEBUG] WebSocket chat message received!", session_id=self.session_id, message_type=message_data.get("type"))
         try:
             content = message_data.get("content", "")
             attachments = message_data.get("attachments", [])
@@ -185,37 +186,34 @@ class WebSocketHandler:
             
             # Send thinking status for large content
             if len(content) > 1000:
-                await self._send_thinking_status("I can see you've shared detailed content - let me analyze this and create something beautiful...")
+                await self._send_thinking_status("I can see you've shared detailed content - analyzing with Claude Sonnet 4 for exceptional design...")
             
-            # Send progress updates with conversational flair
-            await self._send_thinking_status("Understanding your requirements...")
-            await self._send_thinking_status("Designing the layout and visual hierarchy...")
-            await self._send_thinking_status("Adding interactive elements and responsive features...")
+            # Send progress updates with Claude-powered approach
+            await self._send_thinking_status("🎨 Claude Sonnet 4 analyzing your creative vision...")
+            await self._send_thinking_status("✨ Designing professional layout with advanced visual hierarchy...")
+            await self._send_thinking_status("🚀 Adding responsive features and polished interactions...")
             
-            # Build conversation context
+            # Build simple context for Claude service
             current_artifact = artifact_manager.get_current_artifact(self.session_id)
-            context = ConversationContext(
-                messages=self.session.messages,
-                session_id=self.session_id,
-                iteration_count=self.session.iteration_count,
-                current_html=current_artifact.html_content if current_artifact else None
-            )
             
-            # Generate dual response using conversational LLM service
+            # Generate dual response using Claude Sonnet 4 service
+            logger.info("[DEBUG] About to call claude_service.generate_dual_response", session_id=self.session_id)
             try:
-                dual_response = await conversational_llm_service.generate_dual_response(
+                dual_response = claude_service.generate_dual_response(
                     content,
-                    context
+                    self.session.messages,  # Pass messages directly
+                    self.session_id
                 )
+                logger.info("Successfully received dual_response from claude_service", session_id=self.session_id)
                 
-                logger.info("Dual response generated", 
+                logger.info("Claude dual response generated", 
                            html_length=len(dual_response.html_output), 
                            conversation_length=len(dual_response.conversation))
                 
-            except Exception as llm_error:
-                logger.error("Conversational LLM service error", error=str(llm_error), session_id=self.session_id)
+            except Exception as claude_error:
+                logger.error("Claude service error", error=str(claude_error), session_id=self.session_id)
                 # Create fallback response
-                from ..services.conversational_llm_service import DualResponse
+                from ..services.claude_service import DualResponse
                 dual_response = DualResponse(
                     html_output=self._create_fallback_html(content),
                     conversation=f"I encountered a technical issue while processing your request '{content}'. I've created a placeholder design - please try again for a fully custom solution!",
@@ -411,5 +409,6 @@ class WebSocketHandler:
 # WebSocket endpoint
 async def websocket_endpoint(websocket: WebSocket, session_id: str):
     """WebSocket endpoint for real-time chat"""
+    logger.info("[DEBUG WEBSOCKET ENTRY] WebSocket endpoint called!", session_id=session_id)
     handler = WebSocketHandler(websocket, session_id)
     await handler.handle_connection()
