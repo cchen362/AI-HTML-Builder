@@ -201,12 +201,12 @@ IMPORTANT:
                 messages.append({"role": "user", "content": user_msg})
                 messages.append({"role": "assistant", "content": assistant_msg})
             
-            # If user is asking for modifications, include current HTML context
+            # If user is asking for modifications, include actual HTML content for precise editing
             modification_words = ["change", "modify", "update", "adjust", "fix", "edit", "improve", "enhance", "make", "add", "remove", "alter"]
             if any(word in user_input.lower() for word in modification_words) and last_html:
-                # Extract key structural information from current HTML
-                html_summary = self._summarize_html_structure(last_html)
-                context_message = f"Here's the current HTML structure I'm working with:\n{html_summary}"
+                # For targeted edits, provide the actual HTML content (truncated if too long)
+                html_content = self._prepare_html_for_context(last_html)
+                context_message = f"Here's the current HTML document that needs modification:\n\n```html\n{html_content}\n```\n\nPlease make ONLY the specific changes requested while preserving all other content and styling."
                 messages.append({"role": "assistant", "content": context_message})
         
         # Add current request exactly as user provided
@@ -243,6 +243,85 @@ IMPORTANT:
             logger.error("[CLAUDE PARSE] Failed to parse response", error=str(e))
             return self._create_fallback_html("Parse error occurred")
     
+    def _prepare_html_for_context(self, html_content: str) -> str:
+        """Prepare HTML content for context, managing token limits intelligently"""
+        if not html_content:
+            return "No HTML content available."
+        
+        try:
+            # Token limit for HTML context (roughly 4000 tokens = ~16000 characters)
+            MAX_HTML_CONTEXT_LENGTH = 15000
+            
+            if len(html_content) <= MAX_HTML_CONTEXT_LENGTH:
+                # Small enough to include in full
+                return html_content
+            
+            # For larger HTML, include critical sections
+            html_lower = html_content.lower()
+            
+            # Extract critical sections
+            sections = []
+            
+            # 1. Always include DOCTYPE and opening tags
+            doctype_match = re.search(r'(<!DOCTYPE.*?<head>.*?</head>)', html_content, re.DOTALL | re.IGNORECASE)
+            if doctype_match:
+                sections.append(doctype_match.group(1))
+            
+            # 2. Include body opening and main structure
+            body_start_match = re.search(r'<body[^>]*>', html_content, re.IGNORECASE)
+            if body_start_match:
+                body_start = body_start_match.end()
+                
+                # Find main content containers
+                main_containers = []
+                container_patterns = [
+                    r'<div class="container[^"]*"[^>]*>.*?</div>',
+                    r'<main[^>]*>.*?</main>',
+                    r'<section[^>]*>.*?</section>',
+                    r'<header[^>]*>.*?</header>'
+                ]
+                
+                for pattern in container_patterns:
+                    matches = re.finditer(pattern, html_content[body_start:], re.DOTALL | re.IGNORECASE)
+                    for match in matches:
+                        container_content = match.group(0)
+                        # Truncate individual containers if too long
+                        if len(container_content) > 3000:
+                            container_content = container_content[:3000] + "... [truncated]"
+                        main_containers.append(container_content)
+                        
+                        # Stop if we have enough content
+                        if sum(len(s) for s in sections + main_containers) > MAX_HTML_CONTEXT_LENGTH:
+                            break
+                    
+                    if sum(len(s) for s in sections + main_containers) > MAX_HTML_CONTEXT_LENGTH:
+                        break
+                
+                sections.extend(main_containers)
+            
+            # 3. Always include closing body and html tags
+            sections.append("</body>\n</html>")
+            
+            # Combine sections
+            context_html = '\n'.join(sections)
+            
+            # Final truncation if still too long
+            if len(context_html) > MAX_HTML_CONTEXT_LENGTH:
+                context_html = context_html[:MAX_HTML_CONTEXT_LENGTH] + "\n... [HTML truncated for context]"
+            
+            logger.info("Prepared HTML context for modification", 
+                       original_length=len(html_content), 
+                       context_length=len(context_html))
+            
+            return context_html
+        
+        except Exception as e:
+            logger.warning("Failed to prepare HTML context", error=str(e))
+            # Fallback to simple truncation
+            if len(html_content) > 15000:
+                return html_content[:15000] + "\n... [HTML truncated]"
+            return html_content
+
     def _summarize_html_structure(self, html_content: str) -> str:
         """Create a concise summary of HTML structure for context"""
         if not html_content:
