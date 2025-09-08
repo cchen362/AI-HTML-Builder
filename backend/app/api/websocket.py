@@ -7,9 +7,14 @@ from datetime import datetime
 from ..services.redis_service import redis_service
 from ..services.claude_service import claude_service
 from ..services.artifact_manager import artifact_manager
+from ..services.analytics_service import analytics_service
 from ..models.session import Session
 from ..models.schemas import WebSocketMessage, MessageType
+from ..models.analytics import AnalyticsEvent, OutputType, RequestType
 from ..core.config import settings
+import time
+import uuid
+import re
 
 logger = structlog.get_logger()
 
@@ -157,6 +162,11 @@ class WebSocketHandler:
     async def _handle_chat_message(self, message_data: dict):
         """Handle chat message and generate HTML response"""
         logger.info("[DEBUG] WebSocket chat message received!", session_id=self.session_id, message_type=message_data.get("type"))
+        
+        # Start timing for analytics
+        start_time = time.time()
+        event_id = str(uuid.uuid4())
+        
         try:
             content = message_data.get("content", "")
             attachments = message_data.get("attachments", [])
@@ -174,6 +184,9 @@ class WebSocketHandler:
             if self.session.iteration_count >= 15:
                 await self._send_error("Maximum iterations reached for this session")
                 return
+            
+            # Determine request type for analytics
+            request_type = self._classify_request_type(content, self.session.messages)
             
             # Add user message to session
             user_message = {
@@ -198,6 +211,10 @@ class WebSocketHandler:
             
             # Generate dual response using Claude Sonnet 4 service
             logger.info("[DEBUG] About to call claude_service.generate_dual_response", session_id=self.session_id)
+            claude_start_time = time.time()
+            success = True
+            error_message = None
+            
             try:
                 dual_response = claude_service.generate_dual_response(
                     content,
@@ -211,6 +228,8 @@ class WebSocketHandler:
                            conversation_length=len(dual_response.conversation))
                 
             except Exception as claude_error:
+                success = False
+                error_message = str(claude_error)
                 logger.error("Claude service error", error=str(claude_error), session_id=self.session_id)
                 # Create fallback response
                 from ..services.claude_service import DualResponse
@@ -219,6 +238,8 @@ class WebSocketHandler:
                     conversation=f"I encountered a technical issue while processing your request '{content}'. I've created a placeholder design - please try again for a fully custom solution!",
                     metadata={"is_fallback": True}
                 )
+            
+            claude_api_time = int((time.time() - claude_start_time) * 1000)  # ms
             
             # Create or update artifact
             if current_artifact:
@@ -250,6 +271,13 @@ class WebSocketHandler:
             
             # Save session to Redis
             await redis_service.update_session(self.session)
+            
+            # Record analytics event
+            total_response_time = int((time.time() - start_time) * 1000)
+            await self._record_analytics_event(
+                event_id, content, request_type, total_response_time, 
+                claude_api_time, dual_response, success, error_message
+            )
             
             # Send dual response with artifact information
             await self._send_conversational_dual_response(
@@ -405,6 +433,131 @@ class WebSocketHandler:
         success = await manager.send_personal_message(error_msg, self.session_id)
         if not success:
             raise Exception("Failed to send error message - connection broken")
+    
+    def _classify_request_type(self, content: str, message_history: list) -> RequestType:
+        """Classify the type of user request for analytics"""
+        content_lower = content.lower()
+        
+        # Check for modification keywords
+        modification_words = [
+            "change", "modify", "update", "adjust", "fix", "edit", "improve", 
+            "enhance", "make", "add", "remove", "alter", "delete", "replace"
+        ]
+        
+        if any(word in content_lower for word in modification_words) and len(message_history) > 1:
+            return RequestType.MODIFICATION
+        
+        # Check for clarification keywords
+        clarification_words = [
+            "what", "how", "why", "explain", "clarify", "understand", 
+            "meaning", "help me", "can you", "could you"
+        ]
+        
+        if any(word in content_lower for word in clarification_words):
+            return RequestType.CLARIFICATION
+        
+        # Default to creation for new requests
+        return RequestType.CREATION
+    
+    def _classify_output_type(self, html_content: str, user_input: str) -> OutputType:
+        """Classify the type of output generated"""
+        html_lower = html_content.lower()
+        input_lower = user_input.lower()
+        
+        # Check for specific keywords in both HTML and user input
+        if any(word in html_lower or word in input_lower for word in ["assessment", "impact assessment", "analysis"]):
+            return OutputType.IMPACT_ASSESSMENT
+        elif any(word in html_lower or word in input_lower for word in ["landing", "hero", "landing page"]):
+            return OutputType.LANDING_PAGE
+        elif any(word in html_lower or word in input_lower for word in ["newsletter", "email", "campaign"]):
+            return OutputType.NEWSLETTER
+        elif any(word in html_lower or word in input_lower for word in ["documentation", "docs", "guide", "manual"]):
+            return OutputType.DOCUMENTATION
+        elif any(word in html_lower or word in input_lower for word in ["dashboard", "admin panel", "control panel"]):
+            return OutputType.DASHBOARD
+        elif any(word in html_lower or word in input_lower for word in ["presentation", "slides", "pitch"]):
+            return OutputType.PRESENTATION
+        elif any(word in html_lower or word in input_lower for word in ["portfolio", "showcase", "gallery"]):
+            return OutputType.PORTFOLIO
+        elif any(word in html_lower or word in input_lower for word in ["article", "blog", "post"]):
+            return OutputType.ARTICLE
+        elif "fallback" in html_lower or "placeholder" in html_lower:
+            return OutputType.FALLBACK
+        else:
+            return OutputType.CUSTOM
+    
+    def _extract_html_title(self, html_content: str) -> str:
+        """Extract title from HTML content"""
+        title_match = re.search(r'<title>(.*?)</title>', html_content, re.IGNORECASE)
+        return title_match.group(1) if title_match else "Generated Page"
+    
+    async def _record_analytics_event(
+        self, event_id: str, user_input: str, request_type: RequestType,
+        total_response_time: int, claude_api_time: int, dual_response,
+        success: bool, error_message: str = None
+    ):
+        """Record analytics event for this interaction"""
+        try:
+            # Extract token usage from dual_response metadata
+            input_tokens = dual_response.metadata.get("input_tokens", 0) if hasattr(dual_response, 'metadata') else 0
+            output_tokens = dual_response.metadata.get("output_tokens", 0) if hasattr(dual_response, 'metadata') else 0
+            total_tokens = dual_response.metadata.get("tokens_used", input_tokens + output_tokens)
+            
+            # Classify output type
+            output_type = self._classify_output_type(dual_response.html_output, user_input)
+            
+            # Extract HTML title
+            html_title = self._extract_html_title(dual_response.html_output)
+            
+            # Detect if this is a modification
+            is_modification = request_type == RequestType.MODIFICATION
+            changes_detected = dual_response.metadata.get("changes", []) if hasattr(dual_response, 'metadata') else []
+            
+            # Create analytics event
+            analytics_event = AnalyticsEvent(
+                event_id=event_id,
+                session_id=self.session_id,
+                timestamp=datetime.utcnow(),
+                iteration_number=self.session.iteration_count + 1,  # Will be incremented after this
+                total_iterations=self.session.iteration_count + 1,
+                user_input=user_input,
+                user_input_length=len(user_input),
+                request_type=request_type,
+                response_time_ms=total_response_time,
+                claude_api_time_ms=claude_api_time,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                total_tokens=total_tokens,
+                output_type=output_type,
+                output_length=len(dual_response.html_output),
+                html_title=html_title,
+                is_modification=is_modification,
+                changes_detected=changes_detected,
+                success=success,
+                error_message=error_message,
+                model_used="claude-sonnet-4-20250514",
+                metadata={
+                    "user_agent": "websocket-client",
+                    "has_attachments": False,  # Could be extended for file uploads
+                    "session_start": self.session.created_at.isoformat()
+                }
+            )
+            
+            # Record the event
+            await analytics_service.record_event(analytics_event)
+            
+            logger.info("Analytics event recorded", 
+                       session_id=self.session_id, 
+                       event_id=event_id,
+                       output_type=output_type,
+                       response_time=total_response_time,
+                       tokens=total_tokens)
+            
+        except Exception as e:
+            # Don't fail the main request if analytics fail
+            logger.error("Failed to record analytics event", 
+                        session_id=self.session_id, 
+                        error=str(e))
 
 # WebSocket endpoint
 async def websocket_endpoint(websocket: WebSocket, session_id: str):

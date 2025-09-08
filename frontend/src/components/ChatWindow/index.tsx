@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
 import type { Message } from '../../types';
@@ -22,7 +23,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       <div className="chat-header">
         <h2>AI HTML Builder</h2>
         <div className="session-info">
-          <span className="session-id">Session: {sessionId.slice(0, 8)}...</span>
+          <div className="session-status-row">
+            <span className="session-id">Session: {sessionId.slice(0, 8)}...</span>
+            <Link to="/admin" className="admin-header-link">
+              🔐 Admin
+            </Link>
+          </div>
           <div className={`status-indicator ${isProcessing ? 'processing' : 'ready'}`}>
             {isProcessing ? 'Generating...' : 'Ready'}
           </div>

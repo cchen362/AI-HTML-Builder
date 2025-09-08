@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom'
 import SplitPane from './components/Layout/SplitPane'
 import ChatWindow from './components/ChatWindow'
+import AdminPage from './pages/AdminPage'
 import { useWebSocket } from './hooks/useWebSocket'
 import './App.css'
 
@@ -70,7 +72,8 @@ const HtmlViewer = React.memo(({
   </div>
 ))
 
-function App() {
+// Main chat application component
+const ChatApp = () => {
   const [sessionId] = useState(() => crypto.randomUUID())
   const [viewMode, setViewMode] = useState<'preview' | 'code'>('preview')
   
@@ -145,6 +148,17 @@ function App() {
         maxSize={70}
       />
     </div>
+  )
+}
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<ChatApp />} />
+        <Route path="/admin" element={<AdminPage />} />
+      </Routes>
+    </Router>
   )
 }
 

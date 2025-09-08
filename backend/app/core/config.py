@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     frontend_url: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
     backend_url: str = os.getenv("BACKEND_URL", "http://localhost:8000")
     
+    # JWT configuration for admin authentication
+    jwt_secret: str = os.getenv("JWT_SECRET", "ai-html-builder-jwt-secret-key-2025")
+    
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 settings = Settings()

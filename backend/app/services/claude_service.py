@@ -98,13 +98,19 @@ class ClaudeService:
             conversation = self._generate_simple_conversation(html_output, user_input)
             
             # Generate metadata
+            input_tokens = response.usage.input_tokens if response.usage else 0
+            output_tokens = response.usage.output_tokens if response.usage else 0
+            total_tokens = input_tokens + output_tokens
+            
             metadata = {
                 "model": self.model,
                 "title": self._extract_title(html_output),
                 "type": self._determine_type(html_output, user_input),
                 "timestamp": datetime.utcnow().isoformat(),
                 "version": 1,
-                "tokens_used": response.usage.input_tokens + response.usage.output_tokens if response.usage else 0
+                "tokens_used": total_tokens,
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens
             }
             
             logger.info(

@@ -47,3 +47,7 @@ class HealthResponse(BaseModel):
     timestamp: int
     redis: str
     version: str
+
+class BaseResponse(BaseModel):
+    success: bool
+    message: str

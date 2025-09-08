@@ -15,6 +15,11 @@ from .api.endpoints.upload import router as upload_router
 from .api.endpoints.export import router as export_router
 from .api.websocket import websocket_endpoint
 
+# Import admin endpoints
+from .api.admin.auth import router as admin_auth_router
+from .api.admin.dashboard import router as admin_dashboard_router
+from .api.admin.export import router as admin_export_router
+
 # Load environment variables
 load_dotenv()
 
@@ -57,6 +62,11 @@ app.add_middleware(
 app.include_router(health_router, prefix="/api", tags=["health"])
 app.include_router(upload_router, prefix="/api", tags=["upload"])
 app.include_router(export_router, prefix="/api", tags=["export"])
+
+# Include admin routers
+app.include_router(admin_auth_router, prefix="/api/admin", tags=["admin-auth"])
+app.include_router(admin_dashboard_router, prefix="/api/admin", tags=["admin-dashboard"])
+app.include_router(admin_export_router, prefix="/api/admin", tags=["admin-export"])
 
 # WebSocket endpoint
 @app.websocket("/ws/{session_id}")
