@@ -36,6 +36,77 @@
   opacity: 0.9;
 }
 
+/* Modern status indicator system */
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 0.3rem;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.status-indicator.ready {
+  background: linear-gradient(135deg, #00C851, #00A84F);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.status-indicator.ready::before {
+  content: "✓";
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.status-indicator.processing {
+  background: linear-gradient(135deg, #FF6B35, #F7931E);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.3);
+  animation: pulse-processing 2s infinite;
+}
+
+.status-indicator.processing::before {
+  content: "⚡";
+  font-size: 0.9rem;
+  animation: spin 1s linear infinite;
+}
+
+.status-indicator.disconnected {
+  background: linear-gradient(135deg, #FF4444, #CC0000);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.status-indicator.disconnected::before {
+  content: "⚠";
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+@keyframes pulse-processing {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 4px 16px rgba(255, 107, 53, 0.3);
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Legacy connection status - kept for compatibility */
 .connection-status {
   margin-top: 0.3rem;
   padding: 0.2rem 0.5rem;
@@ -388,6 +459,17 @@
   
   .message {
     max-width: 95%;
+  }
+  
+  /* Mobile-friendly status indicators */
+  .status-indicator {
+    font-size: 0.7rem;
+    padding: 0.3rem 0.6rem;
+    margin-top: 0.2rem;
+  }
+  
+  .session-status-row {
+    gap: 0.5rem;
   }
 }
 
