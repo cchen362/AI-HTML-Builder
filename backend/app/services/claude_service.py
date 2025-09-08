@@ -132,6 +132,36 @@ class ClaudeService:
             logger.error("Claude generation failed", error=str(e), user_input_length=len(user_input))
             return self._get_fallback_response(user_input, "I encountered an issue generating your content. Please try again!")
 
+    def _get_surgical_system_prompt(self) -> str:
+        """
+        System prompt optimized for surgical HTML editing
+        """
+        return """You are an expert HTML/CSS designer specializing in precise, targeted modifications to existing HTML documents.
+
+SURGICAL EDITING APPROACH:
+- When modifying existing HTML, make ONLY the specific changes requested
+- Preserve all existing styling, structure, and functionality not explicitly mentioned
+- Keep the same CSS classes, IDs, and JavaScript interactions intact
+- Maintain responsive design and brand consistency
+
+MODIFICATION GUIDELINES:
+1. Identify the exact section/element to modify (e.g., header title, specific div, particular section)
+2. Change only that targeted element while preserving everything else
+3. Keep all existing CSS styling unless specifically asked to change styling
+4. Maintain the same HTML structure and class names
+5. Preserve all interactive elements (tabs, buttons, JavaScript)
+
+BRAND CONSISTENCY:
+- Use existing blue colors (#003366, #0066CF) already in the document
+- Match existing typography and spacing
+- Keep the same design patterns and layout structure
+
+OUTPUT REQUIREMENTS:
+- Return ONLY the complete modified HTML document
+- No explanations or additional text
+- Ensure seamless integration with existing design
+- Maintain professional quality and accessibility"""
+
     def _get_simple_system_prompt(self) -> str:
         """
         Enhanced system prompt that supports both new creation and iterative editing
@@ -160,31 +190,77 @@ IMPORTANT:
 - Maintain professional quality throughout"""
 
     def _build_simple_messages(self, user_input: str, context: List[Dict[str, Any]]) -> tuple[str, List[Dict[str, str]]]:
-        """Build message structure with comprehensive context for iterative editing"""
-        system_prompt = self._get_simple_system_prompt()
+        """Build message structure optimized for surgical editing and prompt caching"""
+        
+        # Detect if this is a modification request
+        modification_words = ["change", "modify", "update", "adjust", "fix", "edit", "improve", "enhance", "make", "add", "remove", "alter", "delete"]
+        is_modification = any(word in user_input.lower() for word in modification_words)
+        
+        # Use surgical editing prompt for modifications
+        if is_modification and context and len(context) > 0:
+            system_prompt = self._get_surgical_system_prompt()
+            messages = self._build_surgical_edit_messages(user_input, context)
+            logger.info("[CLAUDE MESSAGES] Using surgical editing approach", 
+                       message_count=len(messages), 
+                       modification_detected=True)
+        else:
+            system_prompt = self._get_simple_system_prompt()
+            messages = self._build_creation_messages(user_input, context)
+            logger.info("[CLAUDE MESSAGES] Using creation approach", 
+                       message_count=len(messages), 
+                       modification_detected=False)
+        
+        return system_prompt, messages
+
+    def _build_surgical_edit_messages(self, user_input: str, context: List[Dict[str, Any]]) -> List[Dict[str, str]]:
+        """Build messages specifically for surgical editing with prompt caching"""
         messages = []
         
-        # Enhanced context handling for iterative editing
+        # Find the current HTML document
+        last_html = None
+        for msg in reversed(context):
+            if msg.get("sender") == "assistant" and msg.get("html_output"):
+                last_html = msg["html_output"]
+                break
+        
+        if last_html:
+            # Add HTML context with caching for efficiency
+            html_content = self._prepare_html_for_context(last_html)
+            
+            # Use prompt caching for the HTML document (it's likely to be reused)
+            cache_control_message = {
+                "role": "user", 
+                "content": [
+                    {
+                        "type": "text",
+                        "text": f"Current HTML document to modify:\n\n```html\n{html_content}\n```",
+                        "cache_control": {"type": "ephemeral"}  # Cache this HTML content
+                    }
+                ]
+            }
+            messages.append(cache_control_message)
+            
+            # Add instruction for surgical editing
+            messages.append({
+                "role": "assistant", 
+                "content": "I can see the current HTML document. I'll make precise modifications while preserving all existing styling and structure."
+            })
+        
+        # Add the specific modification request
+        messages.append({"role": "user", "content": user_input})
+        
+        return messages
+
+    def _build_creation_messages(self, user_input: str, context: List[Dict[str, Any]]) -> List[Dict[str, str]]:
+        """Build messages for new HTML creation"""
+        messages = []
+        
+        # Include limited conversation history for context (last 2 exchanges)
         if context and len(context) > 0:
-            # Find the last assistant message with HTML output
-            last_html = None
-            last_conversation = None
-            
-            for msg in reversed(context):
-                if msg.get("sender") == "assistant":
-                    if msg.get("html_output") and not last_html:
-                        last_html = msg["html_output"]
-                    if msg.get("conversation") and not last_conversation:
-                        last_conversation = msg["conversation"]
-                    if last_html and last_conversation:
-                        break
-            
-            # Include conversation history for context (last 3 exchanges for efficiency)
             conversation_pairs = []
             for i in range(len(context) - 1, -1, -1):
                 msg = context[i]
                 if msg.get("sender") == "user":
-                    # Find corresponding assistant response
                     for j in range(i + 1, len(context)):
                         if context[j].get("sender") == "assistant":
                             user_content = msg.get("content", "")
@@ -192,31 +268,18 @@ IMPORTANT:
                             conversation_pairs.insert(0, (user_content, assistant_content))
                             break
                 
-                # Limit to last 3 exchanges to manage token usage
-                if len(conversation_pairs) >= 3:
+                if len(conversation_pairs) >= 2:  # Reduced from 3 to 2 for efficiency
                     break
             
             # Add conversation history
             for user_msg, assistant_msg in conversation_pairs:
                 messages.append({"role": "user", "content": user_msg})
                 messages.append({"role": "assistant", "content": assistant_msg})
-            
-            # If user is asking for modifications, include actual HTML content for precise editing
-            modification_words = ["change", "modify", "update", "adjust", "fix", "edit", "improve", "enhance", "make", "add", "remove", "alter"]
-            if any(word in user_input.lower() for word in modification_words) and last_html:
-                # For targeted edits, provide the actual HTML content (truncated if too long)
-                html_content = self._prepare_html_for_context(last_html)
-                context_message = f"Here's the current HTML document that needs modification:\n\n```html\n{html_content}\n```\n\nPlease make ONLY the specific changes requested while preserving all other content and styling."
-                messages.append({"role": "assistant", "content": context_message})
         
-        # Add current request exactly as user provided
+        # Add current request
         messages.append({"role": "user", "content": user_input})
         
-        logger.info("[CLAUDE MESSAGES] Built enhanced message structure", 
-                   message_count=len(messages), 
-                   has_system=True, 
-                   has_context=len(context) > 0)
-        return system_prompt, messages
+        return messages
 
     def _parse_simple_response(self, response_text: str) -> str:
         """Simple parsing - expect pure HTML response"""
@@ -378,15 +441,29 @@ IMPORTANT:
             return f"I've created a professional webpage '{title}' with clean design, responsive layout, and modern styling that follows best practices for user experience."
 
     def _call_claude_with_retry(self, system_prompt: str, messages: List[Dict], max_tokens: int, temperature: float, max_retries: int = 3):
-        """Call Claude API with exponential backoff retry"""
+        """Call Claude API with exponential backoff retry and prompt caching"""
         for attempt in range(max_retries):
             try:
+                # Check if messages contain cache control (indicates surgical editing)
+                has_cache_control = any(
+                    isinstance(msg.get("content"), list) and 
+                    any(isinstance(content, dict) and content.get("cache_control") for content in msg["content"])
+                    for msg in messages
+                )
+                
+                # Prepare extra headers for prompt caching if needed
+                extra_headers = {}
+                if has_cache_control:
+                    extra_headers["anthropic-beta"] = "prompt-caching-2024-07-31"
+                    logger.info("[PROMPT CACHING] Using prompt caching for surgical editing")
+                
                 return self.client.messages.create(
                     model=self.model,
                     max_tokens=max_tokens,
                     temperature=temperature,
                     system=system_prompt,
-                    messages=messages
+                    messages=messages,
+                    extra_headers=extra_headers
                 )
             except anthropic.RateLimitError as e:
                 if attempt < max_retries - 1:
