@@ -72,7 +72,7 @@ class ClaudeService:
             system_prompt, messages = self._build_simple_messages(user_input, context)
             
             # Enhanced parameters for iterative editing and larger outputs
-            max_tokens = 8000  # Increased for larger HTML documents and context
+            max_tokens = 12000  # Increased for safety buffer with complex templates
             temperature = 0.7
             
             logger.info(
