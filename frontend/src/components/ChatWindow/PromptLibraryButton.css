@@ -1,39 +1,37 @@
-/* Prompt Library Button - fits seamlessly in the red rectangle area */
+/* Prompt Library Button - matches Admin/Export/Full Screen button design language */
 .prompt-library-button {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
-  background: white;
-  color: #6c757d;
-  font-size: 0.875rem;
-  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  background: #006FCF; /* Official brand bright blue */
+  color: white;
+  font-size: 0.9rem;
+  font-weight: bold;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease;
   white-space: nowrap;
-  height: 36px; /* Match the input field height proportion */
+  height: auto;
 }
 
 .prompt-library-button:hover:not(:disabled) {
-  border-color: #4A90E2;
-  color: #003366;
-  background: #f8f9ff;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(74, 144, 226, 0.15);
+  background: #00175A; /* Official brand deep blue */
+  transform: none; /* Remove transform to match other buttons */
+  box-shadow: none; /* Remove custom shadow to match other buttons */
 }
 
 .prompt-library-button:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: 0 1px 4px rgba(74, 144, 226, 0.2);
+  transform: none;
+  box-shadow: none;
 }
 
 .prompt-library-button:disabled {
-  opacity: 0.6;
+  background: #ccc;
   cursor: not-allowed;
-  background: #f8f9fa;
-  color: #adb5bd;
+  color: white;
+  opacity: 1; /* Match other disabled buttons */
 }
 
 .template-icon {
