@@ -140,6 +140,17 @@
   padding: 0 0.25rem;
 }
 
+.footer-left {
+  display: flex;
+  align-items: center;
+}
+
+.footer-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .char-count {
   font-weight: 500;
 }
@@ -176,6 +187,10 @@
     font-size: 0.8rem;
     margin-top: 0.5rem;
   }
+  
+  .footer-right {
+    gap: 0.75rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -200,5 +215,16 @@
     gap: 0.5rem;
     flex-direction: column;
     align-items: flex-start;
+  }
+  
+  .footer-left,
+  .footer-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .footer-right {
+    gap: 0.5rem;
+    margin-top: 0.5rem;
   }
 }

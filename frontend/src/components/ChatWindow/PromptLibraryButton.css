@@ -1,0 +1,70 @@
+/* Prompt Library Button - fits seamlessly in the red rectangle area */
+.prompt-library-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  background: white;
+  color: #6c757d;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  height: 36px; /* Match the input field height proportion */
+}
+
+.prompt-library-button:hover:not(:disabled) {
+  border-color: #4A90E2;
+  color: #003366;
+  background: #f8f9ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(74, 144, 226, 0.15);
+}
+
+.prompt-library-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(74, 144, 226, 0.2);
+}
+
+.prompt-library-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #f8f9fa;
+  color: #adb5bd;
+}
+
+.template-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .prompt-library-button {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.8rem;
+    height: 32px;
+  }
+  
+  .template-icon {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .prompt-library-button {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.75rem;
+    height: 28px;
+  }
+  
+  .template-icon {
+    width: 12px;
+    height: 12px;
+  }
+}

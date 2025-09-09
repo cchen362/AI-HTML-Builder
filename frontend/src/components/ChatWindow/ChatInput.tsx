@@ -1,4 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
+import PromptLibraryButton from './PromptLibraryButton';
+import PromptLibraryModal from './PromptLibraryModal';
+import type { PromptTemplate } from '../../data/promptTemplates';
 import './ChatInput.css';
 
 interface ChatInputProps {
@@ -37,10 +40,11 @@ const useAutosizeTextArea = (
 const ChatInput: React.FC<ChatInputProps> = ({ 
   onSendMessage, 
   isProcessing = false,
-  placeholder = "Describe what you want to create, or paste content to transform into HTML..."
+  placeholder = "Describe the HTML you want to create, or browse templates for inspiration..."
 }) => {
   const [message, setMessage] = useState('');
   const [showLargeContentHint, setShowLargeContentHint] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   // Use the custom hook for auto-resize
@@ -72,6 +76,27 @@ const ChatInput: React.FC<ChatInputProps> = ({
       e.preventDefault();
       handleSubmit(e);
     }
+  };
+
+  const handleTemplateSelect = (template: PromptTemplate) => {
+    const templateText = template.template.replace('{USER_CONTENT}', '');
+    setMessage(templateText);
+    // Focus the textarea after inserting template
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        // Position cursor at the placeholder location
+        const placeholderText = '[Your content here]';
+        const withPlaceholder = templateText.replace(/\n\n$/, `\n\n${placeholderText}`);
+        setMessage(withPlaceholder);
+        
+        // Select the placeholder text for easy replacement
+        const startPos = withPlaceholder.indexOf(placeholderText);
+        if (startPos !== -1) {
+          textareaRef.current.setSelectionRange(startPos, startPos + placeholderText.length);
+        }
+      }
+    }, 100);
   };
 
   return (
@@ -112,9 +137,23 @@ const ChatInput: React.FC<ChatInputProps> = ({
       </div>
       
       <div className="input-footer">
-        <span className="char-count">{message.length.toLocaleString()} chars</span>
-        <span className="help-text">Ctrl/Cmd + Enter to send</span>
+        <div className="footer-left">
+          <PromptLibraryButton 
+            onClick={() => setIsModalOpen(true)}
+            disabled={isProcessing}
+          />
+        </div>
+        <div className="footer-right">
+          <span className="char-count">{message.length.toLocaleString()} chars</span>
+          <span className="help-text">Ctrl/Cmd + Enter to send</span>
+        </div>
       </div>
+
+      <PromptLibraryModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSelectTemplate={handleTemplateSelect}
+      />
     </form>
   );
 };

@@ -43,7 +43,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       <ChatInput 
         onSendMessage={onSendMessage}
         isProcessing={isProcessing}
-        placeholder="Describe the HTML you want to create..."
+        placeholder="Describe the HTML you want to create, or browse templates for inspiration..."
       />
     </div>
   );
