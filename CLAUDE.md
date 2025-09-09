@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This is an AI-powered web application that enables users to generate styled HTML/CSS documents through natural language chat interactions and file uploads. The system uses OpenAI's latest GPT models to transform user inputs into professionally formatted, single-file HTML outputs with real-time preview and editing capabilities.
+This is an AI-powered web application that enables users to generate styled HTML/CSS documents through natural language chat interactions and file uploads. The system uses Anthropic's Claude Sonnet 4 to transform user inputs into professionally formatted, single-file HTML outputs with real-time preview and editing capabilities. Features include an admin dashboard, prompt templates library, and advanced session management.
 
 ## Quick Start Commands
 
@@ -31,18 +31,17 @@ podman run -d -p 6379:6379 --name redis redis:7-alpine
 
 ### Testing & Quality
 ```bash
-# Run all tests
-npm run test          # Frontend tests
-pytest backend/tests  # Backend tests
+# Run core tests
+python test_claude_integration.py  # Claude integration test
+python test_websocket.py           # WebSocket functionality test
 
 # Linting & Type checking
-npm run lint         # Frontend linting
-npm run typecheck    # TypeScript checking
+npm run lint         # Frontend linting (in frontend/ directory)
 ruff check backend/  # Python linting
 mypy backend/       # Python type checking
 
 # Build & Deploy
-npm run build                        # Frontend build
+npm run build                        # Frontend build (in frontend/ directory)
 podman build -t ai-html-builder .   # Container build
 podman-compose up -d                # Deploy with compose
 ```
@@ -50,16 +49,17 @@ podman-compose up -d                # Deploy with compose
 ## Technology Stack (Latest Versions - 2024/2025)
 
 ### Frontend
-- **React**: 19.1.0 (latest with enhanced concurrent rendering)
-- **TypeScript**: 5.4+ (latest type safety features)
-- **Vite**: 5.2+ (fast build tool)
-- **Node.js**: 22 LTS "Jod" (recommended for 2025, supported until April 2027)
+- **React**: 19.1.1 (latest with enhanced concurrent rendering)
+- **TypeScript**: 5.8.3 (latest type safety features)
+- **Vite**: 7.1.2 (fast build tool with latest optimizations)
+- **React Router**: 7.8.2 (modern routing solution)
 
 ### Backend
-- **FastAPI**: Latest 2024 version with enhanced async features
+- **FastAPI**: 0.111.0+ (enhanced async features)
 - **Python**: 3.11+ (balance of features and stability, 3.13 supported)
-- **Redis**: 7.4+ (latest stable with hash field expiration)
-- **OpenAI SDK**: Latest with GPT-4.1/GPT-5 support
+- **Redis**: 5.0.0+ (session management and caching)
+- **Anthropic SDK**: 0.25.0+ (Claude Sonnet 4 integration)
+- **WebSockets**: 12.0+ (real-time communication)
 
 ### Deployment
 - **Podman**: Container orchestration (preferred over Docker)
@@ -70,15 +70,17 @@ podman-compose up -d                # Deploy with compose
 ```
 Frontend (React 19) ←→ WebSocket/HTTP ←→ Backend (FastAPI)
                                               ↓
-                                        Redis + OpenAI API
+                                      Redis + Claude Sonnet 4 API
 ```
 
 ### Key Components
-1. **Chat Interface**: Natural language processing for HTML generation
+1. **Chat Interface**: Natural language processing for HTML generation with Claude Sonnet 4
 2. **HTML Viewer**: Live preview with toggle between rendered/code views  
 3. **File Upload**: Process .txt, .docx, .md files (50MB limit)
 4. **Session Management**: Redis-based isolation (1-hour timeout)
 5. **Export System**: Single-file HTML with inlined CSS/JS
+6. **Admin Dashboard**: Analytics, user management, and system monitoring
+7. **Prompt Templates Library**: Pre-built templates for common document types
 
 ## System Requirements & Constraints
 
@@ -90,7 +92,8 @@ Frontend (React 19) ←→ WebSocket/HTTP ←→ Backend (FastAPI)
 - **File Size Limit**: 50MB per upload
 
 ### Design Guidelines
-- **Colors**: Navy blue (#003366), Light blue (#4A90E2), White, Grey (#E5E5E5)
+- **Primary Colors**: Deep Blue (#00175A), Bright Blue (#006FCF), Light Blue (#66A9E2), Charcoal (#152835), Gray 6 (#A7A8AA), White (#FFFFFF)
+- **Accent Colors**: Sky Blue (#B4EEFF), Powder Blue (#F6F0FA), Yellow (#FFB900), Forest (#006469), Green (#28CD6E)
 - **Fonts**: 'Benton Sans' (primary), Arial (fallback)
 - **Mobile-first**: Responsive design with viewport meta tag
 - **No external dependencies**: All CSS/JS must be inline
@@ -152,7 +155,8 @@ main
 ### Environment Configuration
 ```bash
 # .env file structure
-OPENAI_API_KEY=sk-...                    # Your OpenAI API key
+ANTHROPIC_API_KEY=sk-ant-...            # Your Anthropic API key (required)
+OPENAI_API_KEY=sk-...                    # Your OpenAI API key (optional, for fallback)
 REDIS_URL=redis://localhost:6379         # Redis connection
 ENVIRONMENT=development|production       # Environment mode
 LOG_LEVEL=info                          # Logging level
@@ -161,13 +165,24 @@ SESSION_TIMEOUT=3600                    # 1 hour in seconds
 RATE_LIMIT_REQUESTS=30                  # Per minute
 RATE_LIMIT_WINDOW=60                    # Time window
 CORS_ORIGINS=["http://localhost:3000"]  # Allowed origins
+DEBUG=false                             # Enable debug mode
+FRONTEND_URL=http://localhost:3000      # Frontend URL for development
+BACKEND_URL=http://localhost:8000       # Backend URL for development
 ```
 
 ## System Prompts & LLM Configuration
 
+### Claude Sonnet 4 Integration
+The system uses Anthropic's Claude Sonnet 4 (model: claude-sonnet-4-20250514) for superior HTML/CSS generation with:
+- Advanced design understanding and aesthetic judgment
+- Professional color palette implementation
+- Modern CSS Grid and Flexbox layouts
+- Accessibility-compliant markup
+- Mobile-first responsive design
+
 ### Primary System Prompt Template
 ```markdown
-You are an expert HTML/CSS developer creating single-file HTML documents.
+You are an expert HTML/CSS developer creating single-file HTML documents with modern design principles.
 
 REQUIREMENTS:
 1. Generate complete, valid HTML5 documents
@@ -175,16 +190,25 @@ REQUIREMENTS:
 3. All JavaScript must be inline in <script> tags
 4. No external dependencies or CDN links
 5. Mobile-responsive with viewport meta tag
-6. Use semantic HTML elements
+6. Use semantic HTML elements and ARIA attributes
 
 DEFAULT STYLING (unless specified otherwise):
-- Colors: Navy blue (#003366), Light blue (#4A90E2), White, Grey
-- Font: 'Benton Sans', Arial, sans-serif  
-- Clean, minimal UI with proper spacing
-- Professional typography with readable line heights
+- Primary Colors: Deep Blue (#00175A), Bright Blue (#006FCF), Light Blue (#66A9E2)
+- Accent Colors: Sky Blue (#B4EEFF), Yellow (#FFB900), Forest Green (#006469)
+- Typography: 'Benton Sans', Arial, sans-serif with proper hierarchy
+- Layout: CSS Grid/Flexbox with professional spacing
+- Interactive: Smooth transitions and hover effects
 
 OUTPUT: Return only complete HTML starting with <!DOCTYPE html>
 ```
+
+### Prompt Templates Library
+The system includes a comprehensive prompt templates library (see prompt_templates.md) with pre-built templates for:
+- Impact Assessment Reports
+- Landing Pages
+- Technical Documentation
+- Newsletters
+- Business Presentations
 
 ## API Documentation
 
@@ -192,34 +216,48 @@ OUTPUT: Return only complete HTML starting with <!DOCTYPE html>
 - `POST /api/upload` - File upload with validation
 - `POST /api/export` - HTML export functionality  
 - `GET /api/health` - System health check
+- `POST /api/admin/auth` - Admin authentication
+- `GET /api/admin/dashboard` - Admin dashboard data
+- `POST /api/admin/export` - Admin export functionality
 
 ### WebSocket Protocol
 - Connection: `/ws/{session_id}`
 - Messages: JSON format with type, payload, timestamp
-- Events: chat, update, error, status
+- Events: chat, update, error, status, dual_response
+
+### Admin Features
+- **Authentication**: JWT-based admin login system
+- **Analytics**: Session tracking, usage metrics, performance monitoring
+- **Export Management**: Bulk export functionality for generated content
+- **User Management**: Session oversight and management tools
 
 ## Monitoring & Observability
 
 ### Health Checks
 - Application: `/api/health` endpoint
 - Redis connectivity: Ping every 30s
-- OpenAI API: Rate limit monitoring
+- Claude API: Rate limit monitoring and connection validation
 - Disk space: Check `/tmp` usage
+- WebSocket connections: Active session monitoring
 
 ### Key Metrics
 - Request count and duration
 - Active sessions and WebSocket connections
 - Error rates and response times
-- Token usage and API costs
+- Claude API token usage and costs
+- Admin dashboard analytics
+- User engagement and session success rates
 
 ## Troubleshooting
 
 ### Common Issues
 1. **WebSocket disconnections**: Automatic reconnection with exponential backoff
-2. **LLM API errors**: Fallback to simpler prompts, retry logic
+2. **Claude API errors**: Connection validation, retry logic with fallback prompts
 3. **File upload failures**: Size/type validation, clear error messages
 4. **Rate limiting**: Queue management with user feedback
 5. **Session expiration**: Graceful handling with new session creation
+6. **Admin authentication**: JWT token validation and refresh handling
+7. **Template loading**: Prompt library initialization and caching
 
 ### Performance Optimization
 - Code splitting for faster initial loads
@@ -263,8 +301,10 @@ Claude is encouraged to:
 - Research latest versions and best practices online
 - Stay updated with technology changes and security updates
 - Verify compatibility between different technology versions
-- Look up current OpenAI model capabilities and pricing
+- Look up current Anthropic Claude model capabilities and pricing
+- Monitor OpenAI developments for potential fallback integration
 - Check for breaking changes in dependencies
+- Review prompt engineering best practices for Claude Sonnet 4
 
 ## Support & Maintenance
 
@@ -285,9 +325,28 @@ Claude is encouraged to:
 
 ## Project Status
 
-✅ **Completed**: Technical design document review and structure initialization
-⏳ **In Progress**: Development environment setup
-🔄 **Next Steps**: Component implementation and testing setup
+✅ **Completed**: 
+- Core application architecture and functionality
+- Claude Sonnet 4 integration with dual-response system
+- Admin dashboard with authentication and analytics
+- Prompt templates library with pre-built templates
+- WebSocket-based real-time communication
+- File upload and processing system
+- Responsive React frontend with modern TypeScript
+- Redis session management and caching
+- Comprehensive testing framework cleanup
 
-**Last Updated**: January 2025
+⏳ **In Progress**: 
+- Performance optimization and monitoring enhancements
+- Additional prompt templates and design patterns
+- Advanced admin features and user management
+
+🔄 **Next Steps**: 
+- Production deployment optimization
+- Enhanced error handling and recovery
+- Extended prompt template library
+- Performance metrics dashboard
+
+**Last Updated**: September 2025
 **Claude Version**: Sonnet 4 (claude-sonnet-4-20250514)
+**LLM Provider**: Anthropic Claude Sonnet 4 (Primary), OpenAI GPT-4 (Fallback)
