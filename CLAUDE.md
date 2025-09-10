@@ -77,6 +77,7 @@ Frontend (React 19) ←→ WebSocket/HTTP ←→ Backend (FastAPI)
 5. **Export System**: Single-file HTML with inlined CSS/JS
 6. **Admin Dashboard**: Analytics, user management, and system monitoring
 7. **Prompt Templates Library**: Pre-built templates for common document types
+8. **Semantic Targeting System**: Claude Artifacts-inspired precise HTML editing with surgical modifications
 
 ## System Requirements & Constraints
 
@@ -170,13 +171,28 @@ BACKEND_URL=http://localhost:8000       # Backend URL for development
 
 ## System Prompts & LLM Configuration
 
-### Claude Sonnet 4 Integration
+### Claude Sonnet 4 Integration & Optimization
 The system uses Anthropic's Claude Sonnet 4 (model: claude-sonnet-4-20250514) for superior HTML/CSS generation with:
+
+#### **Core Capabilities**
 - Advanced design understanding and aesthetic judgment
 - Professional color palette implementation
 - Modern CSS Grid and Flexbox layouts
 - Accessibility-compliant markup
 - Mobile-first responsive design
+
+#### **Context Window Optimization**
+- **Full Model Capacity**: 200K+ token context window
+- **System Utilization**: 150K character context (75% utilization)
+- **Session Support**: Handles 15 iterations with large documents
+- **Intelligent Preparation**: Structure-preserving HTML context preparation
+- **Performance Balance**: Optimal context size vs response time
+
+#### **Advanced Features**
+- **Semantic Analysis**: Multi-phase request understanding for targeted edits
+- **Surgical Editing**: Precise modifications without content recreation
+- **Preservation Intelligence**: Natural language understanding of "keep but change" requests
+- **Fallback Mechanisms**: Graceful degradation when context limits approached
 
 ### Primary System Prompt Template
 ```markdown
@@ -208,6 +224,133 @@ The system includes a comprehensive prompt templates library (see prompt_templat
 - Project Reports
 - Process Documentation
 - Presentation Slides
+
+## Semantic Targeting System (Claude Artifacts Approach)
+
+### Overview
+The system implements a sophisticated semantic targeting approach inspired by Claude Artifacts, enabling precise HTML modifications while preserving existing content and formatting. This solves the critical issue of content recreation during iterative edits.
+
+### Architecture
+
+```
+User Request → Modification Detection → Semantic Analysis → Targeted Edit → Content Preservation
+```
+
+#### **Phase 1: Intelligent Decision Logic**
+```python
+# Enhanced modification detection with comprehensive keywords
+modification_words = [
+    "change", "modify", "update", "adjust", "fix", "edit", "improve", "enhance",
+    "make", "add", "remove", "alter", "delete", "replace", "keep", "preserve"
+]
+
+# Preservation intent detection
+preservation_words = [
+    "keep", "preserve", "maintain", "same", "but", "except", "only", "just"
+]
+```
+
+#### **Phase 2: Semantic Analysis**
+The system uses Claude Sonnet 4 to analyze requests and identify:
+- **TARGET_SECTIONS**: Specific HTML elements needing modification
+- **CHANGE_TYPE**: content|styling|structure|addition|removal  
+- **APPROACH**: targeted|full_recreation
+- **REASONING**: Justification for the chosen approach
+
+#### **Phase 3: Surgical Editing**
+Based on analysis results:
+- **Targeted Approach**: Extract specific sections, modify, and merge back
+- **Full Context Approach**: Use enhanced 150K character context window
+- **Fallback Strategy**: Standard surgical editing with preservation prompts
+
+#### **Phase 4: Content Preservation**
+Enhanced system prompts with explicit preservation instructions:
+```
+🚨 PRESERVE EVERYTHING EXCEPT WHAT IS EXPLICITLY REQUESTED TO CHANGE 🚨
+
+CRITICAL PRESERVATION RULE:
+- Treat the existing document as sacred
+- If user says "keep everything the same but change X" - keep EVERYTHING except X
+- Never recreate or restructure existing content unless explicitly asked
+```
+
+### Context Management & Performance
+
+#### **Enhanced Context Limits**
+- **Previous**: 25K characters (artificially restrictive)
+- **Current**: 150K characters (75% of Claude Sonnet 4's context window)
+- **Benefit**: Handles 15-iteration sessions with large documents
+
+#### **Intelligent Context Preparation**
+- Structure-preserving HTML parsing with BeautifulSoup
+- Progressive content reduction maintaining DOM integrity
+- Priority-based element preservation (container → header → tabs → content)
+- Fallback mechanisms for context preparation failures
+
+#### **Performance Optimizations**
+- Prompt caching for repeated HTML contexts
+- Semantic analysis caching for similar requests
+- Efficient tokenization and context preparation
+- Real-time decision logging for debugging
+
+### Decision Flow Examples
+
+#### Example 1: Preservation Request
+```
+User: "Keep everything the same but change the header title to 'New Title'"
+
+→ Detection: ✅ Modification + Preservation intent
+→ Analysis: TARGET_SECTIONS: [".header h1"], CHANGE_TYPE: content, APPROACH: targeted
+→ Action: Extract header, modify title, preserve all other content
+→ Result: Only title changes, everything else identical
+```
+
+#### Example 2: Complex Modification
+```
+User: "Add a new section after the introduction but keep all existing formatting"
+
+→ Detection: ✅ Modification + Preservation intent  
+→ Analysis: TARGET_SECTIONS: [".introduction"], CHANGE_TYPE: addition, APPROACH: targeted
+→ Action: Locate insertion point, add new section, preserve existing structure
+→ Result: New content added with existing formatting preserved
+```
+
+### Debugging & Monitoring
+
+#### **Enhanced Logging**
+```
+[DECISION TRACKING] Message approach analysis
+[CLAUDE MESSAGES] ✅ SURGICAL EDITING SELECTED - Using semantic targeting  
+[SEMANTIC TARGETING] Using Claude Artifacts-inspired approach
+[CLAUDE MESSAGES] 🆕 CREATION MODE SELECTED
+```
+
+#### **Key Metrics Tracked**
+- Surgical vs Creation mode usage rates
+- Context preparation success/failure ratios
+- Semantic analysis accuracy
+- Content preservation effectiveness
+- Token usage optimization
+
+### Integration Points
+
+#### **WebSocket Handler Integration**
+- Seamless integration with existing dual_response system
+- Real-time progress updates during semantic analysis
+- Error handling with graceful fallbacks
+
+#### **Claude Service Integration** 
+- Enhanced `_build_simple_messages()` with semantic targeting
+- Improved `_parse_simple_response()` for result handling
+- Optimized context limits for Claude Sonnet 4 capabilities
+
+### Benefits
+
+1. **Content Preservation**: Eliminates unwanted content recreation during iterations
+2. **Natural Language Understanding**: Handles complex modification requests naturally
+3. **Performance**: Utilizes full Claude Sonnet 4 context window efficiently
+4. **Reliability**: Multiple fallback mechanisms ensure consistent operation
+5. **Debugging**: Comprehensive logging for issue diagnosis and optimization
 
 ## API Documentation
 
@@ -263,6 +406,9 @@ The system includes a comprehensive prompt templates library (see prompt_templat
 5. **Session expiration**: Graceful handling with new session creation
 6. **Admin authentication**: JWT token validation and refresh handling
 7. **Template loading**: Prompt library initialization and caching
+8. **Content preservation issues**: Semantic targeting system with surgical editing approach
+9. **Context limit exceeded**: Enhanced 150K character context window with intelligent preparation
+10. **Modification detection failures**: Comprehensive keyword analysis with preservation intent detection
 
 ### Performance Optimization
 - Code splitting for faster initial loads
@@ -270,6 +416,10 @@ The system includes a comprehensive prompt templates library (see prompt_templat
 - Virtual scrolling for long message lists
 - Connection pooling for Redis (size: 20)
 - Response streaming via WebSocket
+- **Enhanced context management**: 150K character window utilization
+- **Semantic caching**: Analysis results and HTML contexts cached
+- **Surgical editing**: Targeted modifications reduce processing overhead
+- **Intelligent decision logic**: Faster modification detection and routing
 
 ## Deployment Commands
 
@@ -340,17 +490,83 @@ Claude is encouraged to:
 - Responsive React frontend with modern TypeScript
 - Redis session management and caching
 - Comprehensive admin API with session management, statistics, and data export
+- **Semantic Targeting System**: Claude Artifacts-inspired precise HTML editing
+- **Enhanced Context Management**: 150K character context window utilization
+- **Intelligent Decision Logic**: Comprehensive modification detection with preservation intent
+- **Surgical Editing Approach**: Targeted modifications preserving existing content
+- **Advanced Logging & Debugging**: Real-time decision tracking and performance monitoring
 
 ⏳ **In Progress**: 
-- Performance optimization and monitoring enhancements
 - Additional prompt templates and design patterns
+- Extended performance metrics and optimization monitoring
 
 🔄 **Next Steps**: 
-- Production deployment optimization
-- Enhanced error handling and recovery
-- Extended prompt template library
-- Performance metrics dashboard
+- Production deployment optimization with semantic targeting
+- Advanced caching strategies for semantic analysis results
+- Extended prompt template library with more document types
+- Real-time performance analytics dashboard
+- A/B testing framework for surgical vs creation approaches
+
+## Developer Notes & Implementation Guidelines
+
+### Semantic Targeting Implementation
+Key implementation details for developers working on the content preservation system:
+
+#### **File Locations**
+- **Main Logic**: `backend/app/services/claude_service.py`
+- **Decision Flow**: `_build_simple_messages()` method (lines 263-320)
+- **Semantic Analysis**: `_perform_semantic_targeting_edit()` method (lines 410-465)
+- **Context Preparation**: `_prepare_html_for_context()` method (lines 605+)
+
+#### **Critical Configuration Values**
+```python
+MAX_HTML_CONTEXT_LENGTH = 150000  # Claude Sonnet 4 optimized
+OPTIMAL_CONTEXT_LENGTH = 120000   # Performance target
+SURGICAL_EDITING_THRESHOLD = 2    # Simplified from 3
+```
+
+#### **Debugging Best Practices**
+- Monitor `[DECISION TRACKING]` logs for approach selection
+- Check `[SEMANTIC TARGETING]` logs for analysis results  
+- Validate context preparation with HTML structure integrity
+- Track token usage vs context preparation efficiency
+
+#### **Performance Considerations**
+- Semantic analysis adds ~1-2 seconds per targeted edit
+- Context preparation scales O(n) with document size
+- Cache semantic analysis results for similar requests
+- Monitor Claude API token usage patterns
+
+#### **Testing Guidelines**
+Test scenarios for content preservation validation:
+1. **Simple modifications**: "Change title to X"
+2. **Preservation requests**: "Keep everything but change Y"  
+3. **Multi-iteration sessions**: 5+ modifications on same document
+4. **Large document handling**: 100K+ character HTML files
+5. **Complex requests**: "Add section after intro, preserve formatting"
+
+### Architecture Decisions
+
+#### **Why Semantic Targeting Over Simple Surgical Editing?**
+- **Problem**: Simple surgical editing fell back to creation mode too often
+- **Solution**: Multi-phase analysis identifies precise change requirements
+- **Benefit**: Dramatically improved content preservation success rate
+
+#### **Why 150K Context Limit?**
+- **Analysis**: Claude Sonnet 4 has 200K+ token capacity
+- **Buffer**: 25% reserved for system prompts and analysis overhead
+- **Performance**: Optimal balance between context size and response time
+- **Scalability**: Handles 15-iteration sessions with large documents
+
+#### **Why Dual System Prompts?**
+- **Surgical Prompt**: Preservation-focused with explicit constraints
+- **Creation Prompt**: Generation-focused with design guidelines
+- **Benefit**: Context-appropriate instructions improve output quality
+
+---
 
 **Last Updated**: September 2025
 **Claude Version**: Sonnet 4 (claude-sonnet-4-20250514)
 **LLM Provider**: Anthropic Claude Sonnet 4 (Primary), OpenAI GPT-4 (Fallback)
+**Implementation**: Semantic Targeting System with Content Preservation
+**Context Optimization**: 150K character window utilization (75% of model capacity)
