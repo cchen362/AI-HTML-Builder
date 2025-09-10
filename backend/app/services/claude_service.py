@@ -11,6 +11,8 @@ import time
 from typing import List, Dict, Any, Optional, NamedTuple
 from datetime import datetime
 import structlog
+from bs4 import BeautifulSoup, NavigableString
+import html
 from ..core.config import settings
 
 logger = structlog.get_logger()
@@ -246,27 +248,99 @@ IMPORTANT:
 - Always include @media (prefers-color-scheme: dark) rules for comprehensive color scheme support"""
 
     def _build_simple_messages(self, user_input: str, context: List[Dict[str, Any]], color_scheme: str = "light") -> tuple[str, List[Dict[str, str]]]:
-        """Build message structure optimized for surgical editing and prompt caching"""
+        """Build message structure with intelligent surgical editing and fallback logic"""
         
         # Detect if this is a modification request
         modification_words = ["change", "modify", "update", "adjust", "fix", "edit", "improve", "enhance", "make", "add", "remove", "alter", "delete"]
         is_modification = any(word in user_input.lower() for word in modification_words)
         
-        # Use surgical editing prompt for modifications
-        if is_modification and context and len(context) > 0:
-            system_prompt = self._get_surgical_system_prompt(color_scheme)
-            messages = self._build_surgical_edit_messages(user_input, context)
-            logger.info("[CLAUDE MESSAGES] Using surgical editing approach", 
-                       message_count=len(messages), 
-                       modification_detected=True)
-        else:
-            system_prompt = self._get_simple_system_prompt(color_scheme)
-            messages = self._build_creation_messages(user_input, context)
-            logger.info("[CLAUDE MESSAGES] Using creation approach", 
-                       message_count=len(messages), 
-                       modification_detected=False)
+        # Enhanced decision logic for surgical editing
+        should_use_surgical_editing = (
+            is_modification and 
+            context and 
+            len(context) > 0 and
+            self._should_attempt_surgical_editing(context, user_input)
+        )
+        
+        if should_use_surgical_editing:
+            try:
+                system_prompt = self._get_surgical_system_prompt(color_scheme)
+                messages = self._build_surgical_edit_messages(user_input, context)
+                logger.info("[CLAUDE MESSAGES] Using surgical editing approach", 
+                           message_count=len(messages), 
+                           modification_detected=True)
+                return system_prompt, messages
+            except Exception as e:
+                logger.warning("Failed to build surgical editing messages, falling back to creation", error=str(e))
+                # Fall through to creation approach
+        
+        # Use creation approach (either by choice or fallback)
+        system_prompt = self._get_simple_system_prompt(color_scheme)
+        messages = self._build_creation_messages(user_input, context)
+        fallback_reason = "surgical editing failed" if should_use_surgical_editing else "not applicable"
+        logger.info("[CLAUDE MESSAGES] Using creation approach", 
+                   message_count=len(messages), 
+                   modification_detected=is_modification,
+                   fallback_reason=fallback_reason)
         
         return system_prompt, messages
+
+    def _should_attempt_surgical_editing(self, context: List[Dict[str, Any]], user_input: str) -> bool:
+        """Intelligent decision on whether to attempt surgical editing"""
+        try:
+            # Find the most recent HTML content
+            last_html = None
+            for msg in reversed(context):
+                if msg.get("sender") == "assistant" and msg.get("html_output"):
+                    last_html = msg["html_output"]
+                    break
+            
+            if not last_html:
+                return False
+            
+            # Don't use surgical editing for very small documents (likely to fit in context anyway)
+            if len(last_html) < 10000:
+                logger.info("Document too small for surgical editing", size=len(last_html))
+                return False
+            
+            # Don't use surgical editing for very large documents (context prep likely to fail)
+            if len(last_html) > 100000:
+                logger.info("Document too large for reliable surgical editing", size=len(last_html))
+                return False
+            
+            # Check if the request is for a simple, localized change
+            simple_changes = ["remove", "delete", "hide", "show", "color", "text", "title"]
+            request_lower = user_input.lower()
+            is_simple_change = any(word in request_lower for word in simple_changes)
+            
+            # Check if request mentions specific sections (good for surgical editing)
+            specific_sections = ["tab", "section", "header", "footer", "button", "link", "paragraph"]
+            mentions_specific_section = any(word in request_lower for word in specific_sections)
+            
+            # Prefer surgical editing for simple, specific changes
+            surgical_score = 0
+            if is_simple_change:
+                surgical_score += 2
+            if mentions_specific_section:
+                surgical_score += 2
+            if len(user_input.split()) <= 15:  # Short, specific requests
+                surgical_score += 1
+                
+            should_use = surgical_score >= 3
+            
+            logger.info("Surgical editing decision", 
+                       should_use=should_use,
+                       score=surgical_score,
+                       is_simple=is_simple_change,
+                       mentions_section=mentions_specific_section,
+                       html_size=len(last_html),
+                       request_length=len(user_input))
+            
+            return should_use
+            
+        except Exception as e:
+            logger.warning("Error in surgical editing decision logic", error=str(e))
+            return False
 
     def _build_surgical_edit_messages(self, user_input: str, context: List[Dict[str, Any]]) -> List[Dict[str, str]]:
         """Build messages specifically for surgical editing with prompt caching"""
@@ -363,83 +437,238 @@ IMPORTANT:
             return self._create_fallback_html("Parse error occurred")
     
     def _prepare_html_for_context(self, html_content: str) -> str:
-        """Prepare HTML content for context, managing token limits intelligently"""
+        """
+        Senior-level HTML context preparation with structure integrity preservation.
+        Uses intelligent DOM parsing and progressive content reduction.
+        """
         if not html_content:
             return "No HTML content available."
         
         try:
-            # Token limit for HTML context (roughly 4000 tokens = ~16000 characters)
-            MAX_HTML_CONTEXT_LENGTH = 15000
+            # Modern token limits - Claude Sonnet 4 can handle more context
+            MAX_HTML_CONTEXT_LENGTH = 25000  # Increased from 15000
+            OPTIMAL_CONTEXT_LENGTH = 20000    # Target for performance
             
-            if len(html_content) <= MAX_HTML_CONTEXT_LENGTH:
-                # Small enough to include in full
+            # If content fits comfortably, return as-is
+            if len(html_content) <= OPTIMAL_CONTEXT_LENGTH:
+                logger.info("HTML context fits within optimal size", 
+                           length=len(html_content))
                 return html_content
             
-            # For larger HTML, include critical sections
-            html_lower = html_content.lower()
+            # Parse HTML with BeautifulSoup for proper DOM handling
+            soup = BeautifulSoup(html_content, 'lxml')
             
-            # Extract critical sections
-            sections = []
+            # Create a structure-preserving context
+            context_soup = self._create_structure_preserving_context(
+                soup, MAX_HTML_CONTEXT_LENGTH
+            )
             
-            # 1. Always include DOCTYPE and opening tags
-            doctype_match = re.search(r'(<!DOCTYPE.*?<head>.*?</head>)', html_content, re.DOTALL | re.IGNORECASE)
-            if doctype_match:
-                sections.append(doctype_match.group(1))
+            # Convert back to string
+            context_html = str(context_soup)
             
-            # 2. Include body opening and main structure
-            body_start_match = re.search(r'<body[^>]*>', html_content, re.IGNORECASE)
-            if body_start_match:
-                body_start = body_start_match.end()
-                
-                # Find main content containers
-                main_containers = []
-                container_patterns = [
-                    r'<div class="container[^"]*"[^>]*>.*?</div>',
-                    r'<main[^>]*>.*?</main>',
-                    r'<section[^>]*>.*?</section>',
-                    r'<header[^>]*>.*?</header>'
-                ]
-                
-                for pattern in container_patterns:
-                    matches = re.finditer(pattern, html_content[body_start:], re.DOTALL | re.IGNORECASE)
-                    for match in matches:
-                        container_content = match.group(0)
-                        # Truncate individual containers if too long
-                        if len(container_content) > 3000:
-                            container_content = container_content[:3000] + "... [truncated]"
-                        main_containers.append(container_content)
-                        
-                        # Stop if we have enough content
-                        if sum(len(s) for s in sections + main_containers) > MAX_HTML_CONTEXT_LENGTH:
-                            break
-                    
-                    if sum(len(s) for s in sections + main_containers) > MAX_HTML_CONTEXT_LENGTH:
-                        break
-                
-                sections.extend(main_containers)
+            # Validate the result is well-formed HTML
+            if not self._is_valid_html_structure(context_html):
+                logger.warning("Generated context has structural issues, using fallback")
+                return self._fallback_html_preparation(html_content, MAX_HTML_CONTEXT_LENGTH)
             
-            # 3. Always include closing body and html tags
-            sections.append("</body>\n</html>")
-            
-            # Combine sections
-            context_html = '\n'.join(sections)
-            
-            # Final truncation if still too long
-            if len(context_html) > MAX_HTML_CONTEXT_LENGTH:
-                context_html = context_html[:MAX_HTML_CONTEXT_LENGTH] + "\n... [HTML truncated for context]"
-            
-            logger.info("Prepared HTML context for modification", 
+            logger.info("Prepared HTML context with structure preservation", 
                        original_length=len(html_content), 
-                       context_length=len(context_html))
+                       context_length=len(context_html),
+                       compression_ratio=f"{len(context_html)/len(html_content)*100:.1f}%")
             
             return context_html
         
         except Exception as e:
-            logger.warning("Failed to prepare HTML context", error=str(e))
-            # Fallback to simple truncation
-            if len(html_content) > 15000:
-                return html_content[:15000] + "\n... [HTML truncated]"
+            logger.warning("Advanced HTML context preparation failed", error=str(e))
+            return self._fallback_html_preparation(html_content, 25000)
+
+    def _create_structure_preserving_context(self, soup: BeautifulSoup, max_length: int) -> BeautifulSoup:
+        """
+        Create a new BeautifulSoup object with critical structure preserved
+        and content intelligently reduced to fit within token limits.
+        """
+        # Create new soup with basic structure
+        new_soup = BeautifulSoup('<!DOCTYPE html><html><head></head><body></body></html>', 'lxml')
+        new_html = new_soup.find('html')
+        new_head = new_soup.find('head')
+        new_body = new_soup.find('body')
+        
+        # 1. Preserve critical head elements
+        original_head = soup.find('head')
+        if original_head:
+            # Copy essential head elements
+            for tag_name in ['title', 'meta']:
+                for tag in original_head.find_all(tag_name):
+                    new_head.append(tag.extract() if tag.parent else tag)
+            
+            # Handle style tags with compression
+            for style in original_head.find_all('style'):
+                compressed_style = self._compress_css(style.string or '')
+                if compressed_style:
+                    new_style = new_soup.new_tag('style')
+                    new_style.string = compressed_style
+                    new_head.append(new_style)
+        
+        # 2. Preserve body structure with intelligent content reduction
+        original_body = soup.find('body')
+        if original_body:
+            # Copy body attributes
+            if original_body.attrs:
+                new_body.attrs.update(original_body.attrs)
+            
+            # Progressive content addition with size monitoring
+            current_length = len(str(new_soup))
+            budget_remaining = max_length - current_length - 1000  # Reserve 1000 chars for closing tags
+            
+            # Priority order for content preservation
+            content_priorities = [
+                ('.container', 'main container'),
+                ('.header', 'page header'),
+                ('.tab-container', 'tab interface'),
+                ('.tab-nav', 'tab navigation'),
+                ('.tab-content', 'tab content sections'),
+                ('h1, h2, h3', 'headings'),
+                ('.section-title', 'section titles'),
+                ('.subsection', 'subsections'),
+                ('.metrics-grid', 'metrics'),
+                ('.timeline', 'timeline elements'),
+                ('script', 'javascript functionality')
+            ]
+            
+            for selector, description in content_priorities:
+                if budget_remaining <= 500:  # Stop if budget too low
+                    logger.info(f"Budget exhausted, stopping at {description}")
+                    break
+                
+                elements = original_body.select(selector)
+                for element in elements:
+                    element_html = str(element)
+                    element_length = len(element_html)
+                    
+                    if element_length <= budget_remaining:
+                        # Element fits, add it
+                        new_element = BeautifulSoup(element_html, 'lxml').find()
+                        if new_element:
+                            new_body.append(new_element)
+                            budget_remaining -= element_length
+                            logger.debug(f"Added {description} element ({element_length} chars)")
+                    else:
+                        # Element too large, try to include a representative sample
+                        sample = self._create_representative_sample(element, budget_remaining - 200)
+                        if sample:
+                            new_body.append(sample)
+                            budget_remaining -= len(str(sample))
+                            logger.debug(f"Added sampled {description} ({len(str(sample))} chars)")
+        
+        return new_soup
+    
+    def _compress_css(self, css_content: str) -> str:
+        """Compress CSS while maintaining functionality"""
+        if not css_content:
+            return ""
+        
+        # Basic CSS minification
+        # Remove comments
+        css_content = re.sub(r'/\*.*?\*/', '', css_content, flags=re.DOTALL)
+        
+        # Remove excessive whitespace
+        css_content = re.sub(r'\s+', ' ', css_content)
+        
+        # Remove spaces around specific characters
+        css_content = re.sub(r'\s*([{}:;,>+~])\s*', r'\1', css_content)
+        
+        return css_content.strip()
+    
+    def _create_representative_sample(self, element, max_size: int) -> Optional[BeautifulSoup]:
+        """Create a representative sample of a large element"""
+        if max_size < 100:  # Too small to be useful
+            return None
+        
+        try:
+            # Create a simplified version with key attributes
+            tag_name = element.name
+            new_soup = BeautifulSoup('', 'lxml')
+            sample_element = new_soup.new_tag(tag_name)
+            
+            # Copy important attributes
+            if element.attrs:
+                for attr, value in element.attrs.items():
+                    if attr in ['class', 'id', 'data-*']:
+                        sample_element[attr] = value
+            
+            # Add a representative content sample
+            text_content = element.get_text(strip=True)
+            if text_content:
+                sample_text = text_content[:max_size//2] + "... [content truncated for context]"
+                sample_element.string = sample_text
+            
+            return sample_element
+        except Exception as e:
+            logger.debug(f"Failed to create representative sample: {e}")
+            return None
+    
+    def _is_valid_html_structure(self, html_content: str) -> bool:
+        """Validate that HTML has proper structure for surgical editing"""
+        try:
+            # Check for essential structural elements
+            required_elements = ['<!DOCTYPE', '<html', '<head', '<body']
+            for element in required_elements:
+                if element not in html_content:
+                    return False
+            
+            # Basic tag balance check for critical tags
+            critical_tags = ['html', 'head', 'body', 'div']
+            for tag in critical_tags:
+                open_count = html_content.count(f'<{tag}')
+                close_count = html_content.count(f'</{tag}>')
+                # Allow some imbalance due to self-closing or truncated content
+                if abs(open_count - close_count) > 2:
+                    logger.debug(f"Tag balance issue with {tag}: {open_count} opens, {close_count} closes")
+                    return False
+            
+            return True
+        except Exception as e:
+            logger.debug(f"HTML validation failed: {e}")
+            return False
+    
+    def _fallback_html_preparation(self, html_content: str, max_length: int) -> str:
+        """Fallback method using simple truncation with structure preservation"""
+        logger.info("Using fallback HTML preparation method")
+        
+        if len(html_content) <= max_length:
             return html_content
+        
+        try:
+            # Find a safe truncation point (after a closing tag)
+            truncate_point = max_length
+            
+            # Look backwards for a safe closing tag
+            for i in range(max_length - 1, max_length - 500, -1):
+                if i < len(html_content) and html_content[i] == '>' and html_content[i-1] != '/':
+                    # Check if this looks like a closing tag
+                    tag_start = html_content.rfind('<', max(0, i-50), i)
+                    if tag_start != -1 and html_content[tag_start:tag_start+2] == '</':
+                        truncate_point = i + 1
+                        break
+            
+            truncated = html_content[:truncate_point]
+            
+            # Ensure we have proper closing tags
+            if '</body>' not in truncated:
+                truncated += '\n</body>'
+            if '</html>' not in truncated:
+                truncated += '\n</html>'
+            
+            logger.info("Applied fallback truncation", 
+                       original_length=len(html_content),
+                       truncated_length=len(truncated))
+            
+            return truncated
+            
+        except Exception as e:
+            logger.warning(f"Fallback truncation failed: {e}")
+            # Last resort: simple truncation
+            return html_content[:max_length] + "\n... [HTML truncated]"
 
     def _summarize_html_structure(self, html_content: str) -> str:
         """Create a concise summary of HTML structure for context"""
