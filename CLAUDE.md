@@ -31,10 +31,6 @@ podman run -d -p 6379:6379 --name redis redis:7-alpine
 
 ### Testing & Quality
 ```bash
-# Run core tests
-python test_claude_integration.py  # Claude integration test
-python test_websocket.py           # WebSocket functionality test
-
 # Linting & Type checking
 npm run lint         # Frontend linting (in frontend/ directory)
 ruff check backend/  # Python linting
@@ -101,10 +97,12 @@ Frontend (React 19) ←→ WebSocket/HTTP ←→ Backend (FastAPI)
 ## Default Templates
 
 ### Available Templates
-1. **Landing Page**: Professional landing page with hero section, features, and CTA
-2. **Impact Assessment**: Professional report with tabbed navigation, solution cards, risk analysis
-3. **Newsletter**: Responsive email newsletter template  
-4. **Documentation**: Technical documentation with sidebar navigation
+1. **Impact Assessment Report**: Professional report with tabbed navigation and analysis sections
+2. **Technical Documentation**: Clean documentation site with sidebar navigation and code examples
+3. **Business Dashboard**: Interactive dashboard with charts, metrics, and data visualization
+4. **Project Report**: Structured project report with status, milestones, and team updates
+5. **Process Documentation**: Step-by-step process guide with workflows and decision trees
+6. **Presentation Slides**: Clean slide presentation with navigation and professional styling
 
 ### Impact Assessment Template Structure
 - Blue gradient header design
@@ -205,10 +203,11 @@ OUTPUT: Return only complete HTML starting with <!DOCTYPE html>
 ### Prompt Templates Library
 The system includes a comprehensive prompt templates library (see prompt_templates.md) with pre-built templates for:
 - Impact Assessment Reports
-- Landing Pages
 - Technical Documentation
-- Newsletters
-- Business Presentations
+- Business Dashboards
+- Project Reports
+- Process Documentation
+- Presentation Slides
 
 ## API Documentation
 
@@ -216,9 +215,15 @@ The system includes a comprehensive prompt templates library (see prompt_templat
 - `POST /api/upload` - File upload with validation
 - `POST /api/export` - HTML export functionality  
 - `GET /api/health` - System health check
-- `POST /api/admin/auth` - Admin authentication
-- `GET /api/admin/dashboard` - Admin dashboard data
-- `POST /api/admin/export` - Admin export functionality
+- `POST /api/admin/login` - Admin authentication
+- `POST /api/admin/logout` - Admin logout
+- `GET /api/admin/status` - Check admin authentication status
+- `GET /api/admin/verify` - Verify admin authentication
+- `GET /api/admin/sessions` - Get list of all sessions with analytics
+- `GET /api/admin/sessions/{session_id}` - Get detailed analytics for specific session
+- `GET /api/admin/stats` - Get overall system statistics
+- `GET /api/admin/overview` - Get dashboard overview with key metrics
+- `DELETE /api/admin/sessions/{session_id}` - Delete analytics data for specific session
 
 ### WebSocket Protocol
 - Connection: `/ws/{session_id}`
@@ -328,18 +333,17 @@ Claude is encouraged to:
 ✅ **Completed**: 
 - Core application architecture and functionality
 - Claude Sonnet 4 integration with dual-response system
-- Admin dashboard with authentication and analytics
-- Prompt templates library with pre-built templates
+- Admin dashboard with authentication and comprehensive analytics
+- Prompt templates library with 6 pre-built templates
 - WebSocket-based real-time communication
 - File upload and processing system
 - Responsive React frontend with modern TypeScript
 - Redis session management and caching
-- Comprehensive testing framework cleanup
+- Comprehensive admin API with session management, statistics, and data export
 
 ⏳ **In Progress**: 
 - Performance optimization and monitoring enhancements
 - Additional prompt templates and design patterns
-- Advanced admin features and user management
 
 🔄 **Next Steps**: 
 - Production deployment optimization

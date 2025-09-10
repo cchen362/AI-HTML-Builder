@@ -32,13 +32,13 @@ All templates should specify:
 ```
 Create a professional impact assessment report for: {USER_CONTENT}
 
-Structure with tabbed sections:
-- Problem Statement & Current State
-- Technical Solutions & Options Analysis
-- Risk Assessment & Mitigation Strategies  
-- Recommendations & Next Steps
+Organize into logical tabbed sections based on the actual content provided:
+- Create tabs only for themes that exist in the material
+- Use descriptive tab names that reflect the actual content
+- Present analysis and insights derived solely from the provided information
+- Include executive summary based on available data
 
-Include executive summary, detailed analysis with pros/cons for each solution, risk ratings (low/medium/high), and actionable recommendations with clear priorities.
+Focus on clear organization of existing information rather than generating additional content.
 ```
 
 ### 2. Technical Documentation
@@ -49,15 +49,13 @@ Include executive summary, detailed analysis with pros/cons for each solution, r
 ```
 Create comprehensive technical documentation for: {USER_CONTENT}
 
-Structure with:
-- Table of contents with sidebar navigation
-- Clear section hierarchy with proper headings
-- Code examples with syntax highlighting
-- Step-by-step procedures and explanations
-- API references or technical specifications
-- Troubleshooting and FAQ sections
+Structure the technical information provided:
+- Organize content with clear navigation based on available material
+- Present procedures, code examples, and specifications as documented
+- Include relevant sections that exist in the source content
+- Focus on developer-friendly presentation of the provided information
 
-Focus on developer-friendly layout with searchable content and easy navigation between sections.
+Design for easy navigation and understanding of the documented technical content.
 ```
 
 ### 3. Business Dashboard
@@ -68,15 +66,13 @@ Focus on developer-friendly layout with searchable content and easy navigation b
 ```
 Create an interactive business dashboard for: {USER_CONTENT}
 
-Include key components:
-- Executive summary with top-level KPI cards
-- Interactive charts and data visualizations
-- Filtering and sorting capabilities
-- Performance metrics with trend indicators
-- Data tables with key business insights
-- Status indicators and alerts for critical items
+Present the business data and metrics provided:
+- Organize key performance indicators and metrics from the source material
+- Create appropriate visualizations based on available data types
+- Include relevant analytical components that match the provided information
+- Focus on business stakeholder needs using the actual data available
 
-Design for business stakeholders with clear visual hierarchy and actionable insights at a glance.
+Design for clear visual hierarchy and actionable insights from the provided business information.
 ```
 
 ### 4. Project Report
@@ -87,16 +83,13 @@ Design for business stakeholders with clear visual hierarchy and actionable insi
 ```
 Create a comprehensive project report for: {USER_CONTENT}
 
-Include sections covering:
-- Executive summary with project overview and key achievements
-- Current status with progress indicators and completion percentages
-- Milestone timeline with major deliverables and dates
-- Team performance and resource allocation updates
-- Risk assessment with mitigation strategies
-- Budget status and resource utilization
-- Next steps and action items with priorities
+Organize the available project information into clear sections:
+- Structure based on the actual data and updates provided
+- Include relevant status indicators and progress metrics where available
+- Present timeline and milestone information as provided
+- Focus on stakeholder-relevant insights from the source material
 
-Format for project stakeholders with clear status indicators and actionable insights.
+Format for project stakeholders using the information available in the content.
 ```
 
 ### 5. Process Documentation
@@ -107,16 +100,13 @@ Format for project stakeholders with clear status indicators and actionable insi
 ```
 Create detailed process documentation for: {USER_CONTENT}
 
-Structure with:
-- Process overview and objectives
-- Step-by-step workflow with numbered actions
-- Decision points and branching logic
-- Role responsibilities and ownership matrix
-- Input requirements and expected outputs
-- Exception handling and escalation procedures
-- Quality checkpoints and validation steps
+Organize the process information provided:
+- Structure workflow steps and procedures as documented in the material
+- Present roles and responsibilities based on available information
+- Include decision points and requirements as specified
+- Focus on operational clarity using the provided details
 
-Focus on operational clarity with visual workflow indicators and easy-to-follow sequential steps.
+Design for easy-to-follow sequential understanding of the documented process.
 ```
 
 ### 6. Presentation Slides
@@ -127,14 +117,13 @@ Focus on operational clarity with visual workflow indicators and easy-to-follow 
 ```
 Create an engaging slide presentation covering: {USER_CONTENT}
 
-Design as professional slides with:
-- Title slide with agenda overview
-- Content slides with clear section headers
-- Key points with visual emphasis
-- Summary slide with conclusions and next steps
-- Navigation between slides and presenter notes
+Design as professional slides:
+- Organize content into logical slide sequence based on the material provided
+- Create appropriate slide structure that matches the content flow
+- Emphasize key points and insights from the source information
+- Include navigation and presenter notes for effective delivery
 
-Structure for business presentation with logical flow and engaging visual storytelling.
+Structure for business presentation with engaging visual storytelling of the provided content.
 ```
 
 ---
