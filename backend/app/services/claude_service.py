@@ -87,22 +87,55 @@ class ClaudeService:
                 temperature=temperature
             )
             
-            # Call Claude API with retry logic
-            response = self._call_claude_with_retry(system_prompt, messages, max_tokens, temperature)
-            
-            logger.info(
-                "[CLAUDE API RESPONSE] Received response from Claude",
-                response_length=len(response.content[0].text),
-                usage_tokens=response.usage.input_tokens + response.usage.output_tokens if response.usage else 0
-            )
-            
-            # Simple response parsing - expect pure HTML
-            html_output = self._parse_simple_response(response.content[0].text)
+            # Check if semantic targeting was already performed
+            if messages and len(messages) == 1 and messages[0].get("role") == "system":
+                semantic_content = messages[0].get("content", "")
+                semantic_match = re.search(r'\[SEMANTIC_RESULT\](.*?)\[/SEMANTIC_RESULT\]', semantic_content, re.DOTALL)
+                
+                if semantic_match:
+                    html_output = semantic_match.group(1).strip()
+                    logger.info(
+                        "[SEMANTIC TARGETING] Used pre-generated result",
+                        result_length=len(html_output)
+                    )
+                    # Create dummy response data for consistency
+                    response_data = type('obj', (object,), {
+                        'usage': type('obj', (object,), {
+                            'input_tokens': 0,
+                            'output_tokens': 0
+                        })()
+                    })()
+                else:
+                    # Normal Claude API call
+                    response = self._call_claude_with_retry(system_prompt, messages, max_tokens, temperature)
+                    response_data = response
+                    
+                    logger.info(
+                        "[CLAUDE API RESPONSE] Received response from Claude",
+                        response_length=len(response.content[0].text),
+                        usage_tokens=response.usage.input_tokens + response.usage.output_tokens if response.usage else 0
+                    )
+                    
+                    # Simple response parsing - expect pure HTML
+                    html_output = self._parse_simple_response(response.content[0].text)
+            else:
+                # Normal Claude API call
+                response = self._call_claude_with_retry(system_prompt, messages, max_tokens, temperature)
+                response_data = response
+                
+                logger.info(
+                    "[CLAUDE API RESPONSE] Received response from Claude",
+                    response_length=len(response.content[0].text),
+                    usage_tokens=response.usage.input_tokens + response.usage.output_tokens if response.usage else 0
+                )
+                
+                # Simple response parsing - expect pure HTML
+                html_output = self._parse_simple_response(response.content[0].text)
             conversation = self._generate_simple_conversation(html_output, user_input)
             
             # Generate metadata
-            input_tokens = response.usage.input_tokens if response.usage else 0
-            output_tokens = response.usage.output_tokens if response.usage else 0
+            input_tokens = response_data.usage.input_tokens if response_data.usage else 0
+            output_tokens = response_data.usage.output_tokens if response_data.usage else 0
             total_tokens = input_tokens + output_tokens
             
             metadata = {
@@ -157,34 +190,46 @@ class ClaudeService:
 - If adding new elements, include basic dark mode support for consistency
 - Maintain existing light mode appearance while ensuring dark mode compatibility"""
 
-        return f"""You are an expert HTML/CSS designer specializing in precise, targeted modifications to existing HTML documents.
+        return f"""You are an expert HTML/CSS designer specializing in PRECISE, TARGETED modifications to existing HTML documents.
+
+CRITICAL PRESERVATION RULE:
+🚨 PRESERVE EVERYTHING EXCEPT WHAT IS EXPLICITLY REQUESTED TO CHANGE 🚨
 
 SURGICAL EDITING APPROACH:
-- When modifying existing HTML, make ONLY the specific changes requested
-- Preserve all existing styling, structure, and functionality not explicitly mentioned
-- Keep the same CSS classes, IDs, and JavaScript interactions intact
-- Maintain responsive design and brand consistency
+- Make ONLY the specific, targeted changes requested - nothing more, nothing less
+- Treat the existing document as sacred - preserve all content, structure, styling, and functionality
+- If user says "keep everything the same but change X" - keep EVERYTHING except X
+- If user says "preserve the formatting" - maintain ALL existing styling
+- Never recreate or restructure existing content unless explicitly asked
 {color_preservation}
 
 MODIFICATION GUIDELINES:
-1. Identify the exact section/element to modify (e.g., header title, specific div, particular section)
-2. Change only that targeted element while preserving everything else
-3. Keep all existing CSS styling unless specifically asked to change styling
-4. Maintain the same HTML structure and class names
-5. Preserve all interactive elements (tabs, buttons, JavaScript)
-6. Keep existing color scheme support intact
+1. IDENTIFY PRECISELY what needs to change (e.g., "just the header title", "only the pricing section")
+2. LOCATE the exact HTML element(s) that contain what needs to change
+3. MODIFY only those specific elements while keeping everything else identical
+4. PRESERVE all existing CSS classes, IDs, structure, and JavaScript
+5. MAINTAIN all interactive elements (tabs, buttons, navigation) exactly as they were
+6. KEEP all existing content, text, images, and layout intact
+
+ABSOLUTE PRESERVATION REQUIREMENTS:
+- All existing text content (unless specifically changing that text)
+- All existing HTML structure and element hierarchy  
+- All existing CSS styling and classes
+- All existing JavaScript functionality
+- All existing responsive behavior
+- All existing color schemes and themes
+- All existing animations and transitions
 
 BRAND CONSISTENCY:
-- Use existing blue colors (#003366, #0066CF) already in the document
-- Match existing typography and spacing
-- Keep the same design patterns and layout structure
+- Use existing colors, typography, and design patterns already in the document
+- Match existing spacing, layout, and visual hierarchy exactly
+- Maintain the same professional appearance and quality level
 
 OUTPUT REQUIREMENTS:
 - Return ONLY the complete modified HTML document
 - No explanations or additional text
-- Ensure seamless integration with existing design
-- Maintain professional quality and accessibility
-- Preserve existing color scheme functionality"""
+- Changes should be seamlessly integrated and undetectable except for the requested modification
+- Document should look and behave exactly the same except for the specific change requested"""
 
     def _get_simple_system_prompt(self, color_scheme: str = "light") -> str:
         """
@@ -262,31 +307,57 @@ IMPORTANT:
             self._should_attempt_surgical_editing(context, user_input)
         )
         
+        # Enhanced logging for decision tracking
+        logger.info("[DECISION TRACKING] Message approach analysis",
+                   user_input_preview=user_input[:100],
+                   is_modification=is_modification,
+                   has_context=len(context) > 0 if context else False,
+                   context_messages=len(context) if context else 0,
+                   should_use_surgical=should_use_surgical_editing,
+                   color_scheme=color_scheme)
+        
         if should_use_surgical_editing:
             try:
-                system_prompt = self._get_surgical_system_prompt(color_scheme)
-                messages = self._build_surgical_edit_messages(user_input, context)
-                logger.info("[CLAUDE MESSAGES] Using surgical editing approach", 
-                           message_count=len(messages), 
-                           modification_detected=True)
-                return system_prompt, messages
+                # Find the current HTML document for semantic targeting
+                last_html = None
+                for msg in reversed(context):
+                    if msg.get("sender") == "assistant" and msg.get("html_output"):
+                        last_html = msg["html_output"]
+                        break
+                
+                if last_html:
+                    logger.info("[CLAUDE MESSAGES] ✅ SURGICAL EDITING SELECTED - Using semantic targeting", 
+                               html_size=len(last_html),
+                               modification_detected=True,
+                               approach="semantic_targeting")
+                    
+                    # Perform semantic targeting edit directly
+                    system_prompt = self._get_surgical_system_prompt(color_scheme)
+                    modified_html = self._perform_semantic_targeting_edit(user_input, last_html, system_prompt)
+                    
+                    # Return special flag to indicate semantic targeting was used
+                    messages = [{"role": "system", "content": f"[SEMANTIC_RESULT]{modified_html}[/SEMANTIC_RESULT]"}]
+                    return system_prompt, messages
+                else:
+                    logger.warning("No HTML found for surgical editing, falling back to creation")
             except Exception as e:
-                logger.warning("Failed to build surgical editing messages, falling back to creation", error=str(e))
+                logger.warning("[CLAUDE MESSAGES] ⚠️ Surgical editing failed, falling back to creation", error=str(e))
                 # Fall through to creation approach
         
         # Use creation approach (either by choice or fallback)
         system_prompt = self._get_simple_system_prompt(color_scheme)
         messages = self._build_creation_messages(user_input, context)
-        fallback_reason = "surgical editing failed" if should_use_surgical_editing else "not applicable"
-        logger.info("[CLAUDE MESSAGES] Using creation approach", 
+        fallback_reason = "surgical_editing_failed" if should_use_surgical_editing else "new_content_creation"
+        logger.info("[CLAUDE MESSAGES] 🆕 CREATION MODE SELECTED", 
                    message_count=len(messages), 
                    modification_detected=is_modification,
-                   fallback_reason=fallback_reason)
+                   fallback_reason=fallback_reason,
+                   approach="full_generation")
         
         return system_prompt, messages
 
     def _should_attempt_surgical_editing(self, context: List[Dict[str, Any]], user_input: str) -> bool:
-        """Intelligent decision on whether to attempt surgical editing"""
+        """Simplified decision logic: use surgical editing for any modification request with existing HTML"""
         try:
             # Find the most recent HTML content
             last_html = None
@@ -296,45 +367,37 @@ IMPORTANT:
                     break
             
             if not last_html:
+                logger.info("No previous HTML found, using creation mode")
                 return False
             
-            # Don't use surgical editing for very small documents (likely to fit in context anyway)
-            if len(last_html) < 10000:
-                logger.info("Document too small for surgical editing", size=len(last_html))
-                return False
+            # Check for modification keywords (much more comprehensive)
+            modification_words = [
+                "change", "modify", "update", "adjust", "fix", "edit", "improve", "enhance",
+                "make", "add", "remove", "alter", "delete", "replace", "keep", "preserve", 
+                "maintain", "but", "except", "only", "just", "hide", "show", "color", 
+                "text", "title", "content", "section", "tab", "header", "footer"
+            ]
             
-            # Don't use surgical editing for very large documents (context prep likely to fail)
-            if len(last_html) > 100000:
-                logger.info("Document too large for reliable surgical editing", size=len(last_html))
-                return False
+            # Check for preservation keywords (strong indicators)
+            preservation_words = [
+                "keep", "preserve", "maintain", "same", "but", "except", "only", "just"
+            ]
             
-            # Check if the request is for a simple, localized change
-            simple_changes = ["remove", "delete", "hide", "show", "color", "text", "title"]
             request_lower = user_input.lower()
-            is_simple_change = any(word in request_lower for word in simple_changes)
+            has_modification = any(word in request_lower for word in modification_words)
+            has_preservation = any(word in request_lower for word in preservation_words)
             
-            # Check if request mentions specific sections (good for surgical editing)
-            specific_sections = ["tab", "section", "header", "footer", "button", "link", "paragraph"]
-            mentions_specific_section = any(word in request_lower for word in specific_sections)
+            # Use surgical editing if:
+            # 1. Any modification keyword detected, OR
+            # 2. Strong preservation indicators
+            should_use = has_modification or has_preservation
             
-            # Prefer surgical editing for simple, specific changes
-            surgical_score = 0
-            if is_simple_change:
-                surgical_score += 2
-            if mentions_specific_section:
-                surgical_score += 2
-            if len(user_input.split()) <= 15:  # Short, specific requests
-                surgical_score += 1
-                
-            should_use = surgical_score >= 3
-            
-            logger.info("Surgical editing decision", 
+            logger.info("Surgical editing decision (simplified)", 
                        should_use=should_use,
-                       score=surgical_score,
-                       is_simple=is_simple_change,
-                       mentions_section=mentions_specific_section,
+                       has_modification=has_modification,
+                       has_preservation=has_preservation,
                        html_size=len(last_html),
-                       request_length=len(user_input))
+                       request_preview=user_input[:100])
             
             return should_use
             
@@ -342,44 +405,134 @@ IMPORTANT:
             logger.warning("Error in surgical editing decision logic", error=str(e))
             return False
 
-    def _build_surgical_edit_messages(self, user_input: str, context: List[Dict[str, Any]]) -> List[Dict[str, str]]:
-        """Build messages specifically for surgical editing with prompt caching"""
-        messages = []
+    # Note: _build_surgical_edit_messages method removed - semantic targeting now handled in main flow
+
+    def _perform_semantic_targeting_edit(self, user_input: str, last_html: str, system_prompt: str) -> str:
+        """
+        Semantic targeting approach inspired by Claude Artifacts.
+        Identifies what needs to change, extracts relevant sections, modifies them, and merges back.
+        """
+        logger.info("Starting semantic targeting edit")
         
-        # Find the current HTML document
-        last_html = None
-        for msg in reversed(context):
-            if msg.get("sender") == "assistant" and msg.get("html_output"):
-                last_html = msg["html_output"]
-                break
-        
-        if last_html:
-            # Add HTML context with caching for efficiency
-            html_content = self._prepare_html_for_context(last_html)
+        try:
+            # Phase 1: Identify what needs to change
+            analysis_prompt = f"""Analyze this HTML document and user request to identify exactly what sections need modification.
+
+HTML Document Length: {len(last_html)} characters
+
+User Request: "{user_input}"
+
+Please identify:
+1. Which specific HTML elements/sections need to be modified
+2. What type of change is needed (content, styling, structure)
+3. Can this be done with targeted edits or does it require full recreation?
+
+Respond with:
+- TARGET_SECTIONS: List the specific elements (by class/id/tag) that need changes
+- CHANGE_TYPE: content|styling|structure|addition|removal
+- APPROACH: targeted|full_recreation
+- REASONING: Brief explanation
+
+Be precise - we want to preserve as much of the existing document as possible."""
+
+            # Get analysis from Claude
+            analysis_response = self.client.messages.create(
+                model=self.model,
+                max_tokens=1000,
+                temperature=0.3,
+                system="You are an expert HTML analyst. Be precise and concise.",
+                messages=[{"role": "user", "content": analysis_prompt}]
+            )
             
-            # Use prompt caching for the HTML document (it's likely to be reused)
-            cache_control_message = {
-                "role": "user", 
-                "content": [
-                    {
-                        "type": "text",
-                        "text": f"Current HTML document to modify:\n\n```html\n{html_content}\n```",
-                        "cache_control": {"type": "ephemeral"}  # Cache this HTML content
-                    }
-                ]
-            }
-            messages.append(cache_control_message)
+            analysis = analysis_response.content[0].text
+            logger.info("Semantic analysis completed", analysis_length=len(analysis))
             
-            # Add instruction for surgical editing
-            messages.append({
-                "role": "assistant", 
-                "content": "I can see the current HTML document. I'll make precise modifications while preserving all existing styling and structure."
-            })
-        
-        # Add the specific modification request
-        messages.append({"role": "user", "content": user_input})
-        
-        return messages
+            # Phase 2: Determine approach based on analysis
+            if "APPROACH: full_recreation" in analysis:
+                logger.info("Analysis recommends full recreation, using standard approach")
+                # Fall back to standard surgical editing
+                return self._perform_standard_surgical_edit(user_input, last_html, system_prompt)
+            
+            # Phase 3: Extract target sections for targeted editing
+            if "APPROACH: targeted" in analysis:
+                return self._perform_targeted_section_edit(user_input, last_html, system_prompt, analysis)
+            
+            # Default fallback
+            logger.warning("Semantic analysis unclear, using standard surgical edit")
+            return self._perform_standard_surgical_edit(user_input, last_html, system_prompt)
+            
+        except Exception as e:
+            logger.error("Semantic targeting failed, falling back to standard approach", error=str(e))
+            return self._perform_standard_surgical_edit(user_input, last_html, system_prompt)
+
+    def _perform_targeted_section_edit(self, user_input: str, last_html: str, system_prompt: str, analysis: str) -> str:
+        """Perform targeted edits on specific sections identified by semantic analysis"""
+        try:
+            # Enhanced prompt for targeted editing
+            targeted_prompt = f"""You are performing TARGETED SECTION EDITING based on this analysis:
+
+{analysis}
+
+CRITICAL INSTRUCTIONS:
+1. Make ONLY the changes identified in the analysis
+2. Preserve ALL other content exactly as it exists
+3. Focus on the specific sections mentioned in TARGET_SECTIONS
+4. Do not recreate or restructure anything not mentioned
+
+Current HTML Document:
+{last_html[:120000]}  # Use our increased context limit
+
+User Request: "{user_input}"
+
+Return the COMPLETE modified HTML document with only the targeted changes applied."""
+
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=12000,
+                temperature=0.7,
+                system=system_prompt,
+                messages=[{"role": "user", "content": targeted_prompt}]
+            )
+            
+            result = response.content[0].text.strip()
+            logger.info("Targeted section edit completed", result_length=len(result))
+            return result
+            
+        except Exception as e:
+            logger.error("Targeted section edit failed", error=str(e))
+            return self._perform_standard_surgical_edit(user_input, last_html, system_prompt)
+
+    def _perform_standard_surgical_edit(self, user_input: str, last_html: str, system_prompt: str) -> str:
+        """Standard surgical edit approach with full context"""
+        try:
+            # Prepare HTML context using our enhanced limits
+            html_context = self._prepare_html_for_context(last_html)
+            
+            surgical_prompt = f"""Current HTML document to modify:
+
+```html
+{html_context}
+```
+
+User Request: "{user_input}"
+
+Make the requested changes while preserving everything else exactly as it exists."""
+
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=12000,
+                temperature=0.7,
+                system=system_prompt,
+                messages=[{"role": "user", "content": surgical_prompt}]
+            )
+            
+            result = response.content[0].text.strip()
+            logger.info("Standard surgical edit completed", result_length=len(result))
+            return result
+            
+        except Exception as e:
+            logger.error("Standard surgical edit failed", error=str(e))
+            raise
 
     def _build_creation_messages(self, user_input: str, context: List[Dict[str, Any]]) -> List[Dict[str, str]]:
         """Build messages for new HTML creation"""
@@ -412,11 +565,26 @@ IMPORTANT:
         return messages
 
     def _parse_simple_response(self, response_text: str) -> str:
-        """Simple parsing - expect pure HTML response"""
+        """Enhanced parsing - handles both standard Claude responses and semantic targeting results"""
         try:
             response_text = response_text.strip()
             
-            # If it starts with DOCTYPE, use it directly
+            # Check for semantic targeting result first
+            semantic_match = re.search(r'\[SEMANTIC_EDIT_RESULT\](.*?)\[/SEMANTIC_EDIT_RESULT\]', response_text, re.DOTALL)
+            if semantic_match:
+                semantic_html = semantic_match.group(1).strip()
+                logger.info("[CLAUDE PARSE] Found semantic targeting result", length=len(semantic_html))
+                
+                # Validate it's proper HTML
+                if semantic_html.startswith('<!DOCTYPE html>') or semantic_html.lower().startswith('<html'):
+                    return semantic_html
+                else:
+                    # Try to extract HTML from within the semantic result
+                    doctype_match = re.search(r'<!DOCTYPE html>.*?</html>', semantic_html, re.DOTALL | re.IGNORECASE)
+                    if doctype_match:
+                        return doctype_match.group(0)
+            
+            # Standard HTML parsing for direct Claude responses
             if response_text.startswith('<!DOCTYPE html>'):
                 logger.info("[CLAUDE PARSE] Found clean HTML response")
                 return response_text
@@ -445,9 +613,9 @@ IMPORTANT:
             return "No HTML content available."
         
         try:
-            # Modern token limits - Claude Sonnet 4 can handle more context
-            MAX_HTML_CONTEXT_LENGTH = 25000  # Increased from 15000
-            OPTIMAL_CONTEXT_LENGTH = 20000    # Target for performance
+            # Modern token limits - Claude Sonnet 4 can handle much more context
+            MAX_HTML_CONTEXT_LENGTH = 150000  # Utilize 75% of Claude Sonnet 4's context window
+            OPTIMAL_CONTEXT_LENGTH = 120000   # Target for performance with 15-iteration sessions
             
             # If content fits comfortably, return as-is
             if len(html_content) <= OPTIMAL_CONTEXT_LENGTH:
@@ -480,7 +648,7 @@ IMPORTANT:
         
         except Exception as e:
             logger.warning("Advanced HTML context preparation failed", error=str(e))
-            return self._fallback_html_preparation(html_content, 25000)
+            return self._fallback_html_preparation(html_content, 150000)
 
     def _create_structure_preserving_context(self, soup: BeautifulSoup, max_length: int) -> BeautifulSoup:
         """
