@@ -25,6 +25,17 @@
   background: white;
 }
 
+@media (prefers-color-scheme: dark) {
+  .html-renderer {
+    background: #2d2d2d;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+  
+  .html-iframe {
+    background: #2d2d2d;
+  }
+}
+
 .html-renderer::before {
   content: '';
   position: absolute;

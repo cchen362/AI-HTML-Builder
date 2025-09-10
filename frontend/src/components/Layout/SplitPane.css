@@ -66,6 +66,21 @@
   z-index: 10000;
 }
 
+@media (prefers-color-scheme: dark) {
+  .split-pane-divider {
+    background: #404040;
+  }
+  
+  .split-pane-divider:hover {
+    background: #66a9e2;
+  }
+  
+  .split-pane-divider.dragging {
+    background: #004488;
+    box-shadow: 0 0 10px rgba(0, 68, 136, 0.3);
+  }
+}
+
 /* Ensure no interference from content during drag */
 .split-pane.dragging {
   cursor: ew-resize !important;

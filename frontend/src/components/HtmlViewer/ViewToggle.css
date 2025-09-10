@@ -16,6 +16,17 @@
   border-radius: 8px;
 }
 
+@media (prefers-color-scheme: dark) {
+  .view-toggle {
+    background: #2a2a2a;
+    border-bottom: 1px solid #404040;
+  }
+  
+  .toggle-buttons {
+    background: #3a3a3a;
+  }
+}
+
 .toggle-btn {
   padding: 0.5rem 1rem;
   border: none;
@@ -39,6 +50,23 @@
   box-shadow: 0 1px 2px rgba(0, 51, 102, 0.2);
 }
 
+@media (prefers-color-scheme: dark) {
+  .toggle-btn {
+    color: #b0b0b0;
+  }
+  
+  .toggle-btn:hover {
+    background: rgba(102, 169, 226, 0.1);
+    color: #66a9e2;
+  }
+  
+  .toggle-btn.active {
+    background: #004488;
+    color: white;
+    box-shadow: 0 1px 2px rgba(0, 68, 136, 0.2);
+  }
+}
+
 .action-buttons {
   display: flex;
   gap: 0.5rem;
@@ -59,6 +87,19 @@
   border-color: #4A90E2;
   color: #4A90E2;
   transform: translateY(-1px);
+}
+
+@media (prefers-color-scheme: dark) {
+  .action-btn {
+    border: 1px solid #555;
+    background: #3a3a3a;
+    color: #b0b0b0;
+  }
+  
+  .action-btn:hover {
+    border-color: #66a9e2;
+    color: #66a9e2;
+  }
 }
 
 .action-btn.export {

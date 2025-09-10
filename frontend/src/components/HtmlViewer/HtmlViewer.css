@@ -16,6 +16,16 @@
   background: white;
 }
 
+@media (prefers-color-scheme: dark) {
+  .html-viewer {
+    background: #2d2d2d;
+  }
+  
+  .html-viewer.fullscreen {
+    background: #2d2d2d;
+  }
+}
+
 .viewer-content {
   flex: 1;
   min-height: 0;
