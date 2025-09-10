@@ -21,6 +21,7 @@ interface WebSocketMessage {
     messages?: Message[];
     current_html?: string;
     iteration_count?: number;
+    colorScheme?: 'light' | 'dark';
     artifact?: {
       id: string;
       version: number;
@@ -257,10 +258,14 @@ export const useWebSocket = (sessionId: string): UseWebSocketReturn => {
       setIsProcessing(true);
       setError(null);
       
+      // Detect user's color scheme preference
+      const colorScheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      
       // Send message to server
       const message = {
         type: 'chat',
         content,
+        colorScheme,
         attachments: []
       };
       

@@ -61,15 +61,16 @@ class ClaudeService:
         self, 
         user_input: str, 
         context: List[Dict[str, Any]], 
-        session_id: str
+        session_id: str,
+        color_scheme: str = "light"
     ) -> DualResponse:
         """
         Generate high-quality HTML and conversation using Claude Sonnet 4
         """
         logger.info("[DEBUG] Claude generate_dual_response method called!", session_id=session_id, user_input_length=len(user_input))
         try:
-            # Build simple message structure
-            system_prompt, messages = self._build_simple_messages(user_input, context)
+            # Build simple message structure with color scheme support
+            system_prompt, messages = self._build_simple_messages(user_input, context, color_scheme)
             
             # Enhanced parameters for iterative editing and larger outputs
             max_tokens = 12000  # Increased for safety buffer with complex templates
@@ -138,17 +139,30 @@ class ClaudeService:
             logger.error("Claude generation failed", error=str(e), user_input_length=len(user_input))
             return self._get_fallback_response(user_input, "I encountered an issue generating your content. Please try again!")
 
-    def _get_surgical_system_prompt(self) -> str:
+    def _get_surgical_system_prompt(self, color_scheme: str = "light") -> str:
         """
-        System prompt optimized for surgical HTML editing
+        System prompt optimized for surgical HTML editing with color scheme awareness
         """
-        return """You are an expert HTML/CSS designer specializing in precise, targeted modifications to existing HTML documents.
+        color_preservation = ""
+        if color_scheme == "dark":
+            color_preservation = """
+- Preserve existing dark mode @media queries and ensure any new elements include dark mode styling
+- If adding new elements, include both light and dark mode CSS using @media (prefers-color-scheme: dark)
+- Maintain existing color scheme support (user prefers dark mode)"""
+        else:
+            color_preservation = """
+- Preserve any existing @media (prefers-color-scheme: dark) rules
+- If adding new elements, include basic dark mode support for consistency
+- Maintain existing light mode appearance while ensuring dark mode compatibility"""
+
+        return f"""You are an expert HTML/CSS designer specializing in precise, targeted modifications to existing HTML documents.
 
 SURGICAL EDITING APPROACH:
 - When modifying existing HTML, make ONLY the specific changes requested
 - Preserve all existing styling, structure, and functionality not explicitly mentioned
 - Keep the same CSS classes, IDs, and JavaScript interactions intact
 - Maintain responsive design and brand consistency
+{color_preservation}
 
 MODIFICATION GUIDELINES:
 1. Identify the exact section/element to modify (e.g., header title, specific div, particular section)
@@ -156,6 +170,7 @@ MODIFICATION GUIDELINES:
 3. Keep all existing CSS styling unless specifically asked to change styling
 4. Maintain the same HTML structure and class names
 5. Preserve all interactive elements (tabs, buttons, JavaScript)
+6. Keep existing color scheme support intact
 
 BRAND CONSISTENCY:
 - Use existing blue colors (#003366, #0066CF) already in the document
@@ -166,36 +181,71 @@ OUTPUT REQUIREMENTS:
 - Return ONLY the complete modified HTML document
 - No explanations or additional text
 - Ensure seamless integration with existing design
-- Maintain professional quality and accessibility"""
+- Maintain professional quality and accessibility
+- Preserve existing color scheme functionality"""
 
-    def _get_simple_system_prompt(self) -> str:
+    def _get_simple_system_prompt(self, color_scheme: str = "light") -> str:
         """
-        Enhanced system prompt that supports both new creation and iterative editing
+        Enhanced system prompt that supports both new creation and iterative editing with color scheme awareness
         """
-        return """You are an expert HTML/CSS designer who creates and modifies professional single-file HTML documents.
+        # Define color scheme specific instructions
+        color_instructions = ""
+        if color_scheme == "dark":
+            color_instructions = """
+DARK MODE OPTIMIZED: The user prefers dark mode. Generate HTML that automatically adapts to both light and dark color schemes using CSS media queries:
+
+CSS REQUIREMENTS:
+- Include @media (prefers-color-scheme: dark) rules for all styling
+- Dark mode backgrounds: #1a1a1a, #2d2d2d, #3a3a3a (instead of white/light gray)
+- Dark mode text: #e0e0e0, #ffffff (instead of dark colors)
+- Dark mode borders: #404040, #555 (instead of light gray)
+- Keep brand blues (#003366, #0066CF) with proper contrast adjustments for dark mode
+- Ensure all elements have both light and dark mode styling
+
+EXAMPLE PATTERN:
+```css
+.container {
+  background: white;
+  color: #333;
+}
+@media (prefers-color-scheme: dark) {
+  .container {
+    background: #2d2d2d;
+    color: #e0e0e0;
+  }
+}
+```"""
+        else:
+            color_instructions = """
+LIGHT MODE OPTIMIZED: Generate HTML with professional light mode styling, but include basic dark mode support using @media (prefers-color-scheme: dark) queries for future compatibility."""
+
+        return f"""You are an expert HTML/CSS designer who creates and modifies professional single-file HTML documents.
 
 For NEW requests: Create a complete, production-ready HTML file with:
-- All CSS inline in <style> tags
+- All CSS inline in <style> tags with dual light/dark mode support
 - All JavaScript inline in <script> tags (if needed)  
 - Mobile-responsive design
 - Professional appearance using blue (#003366, #0066CF), white, and grey brand colors
 - Clean, minimal UI elements
 - Modern design principles
+{color_instructions}
 
 For MODIFICATION requests: Update the existing HTML while preserving:
 - Overall structure and design consistency
-- Brand colors and styling approach
+- Brand colors and styling approach  
 - Responsive behavior
 - All inline CSS/JS approach
 - Any interactive elements (tabs, buttons, etc.)
+- Existing color scheme support (light/dark mode)
 
 IMPORTANT: 
 - Always return ONLY the complete HTML document starting with <!DOCTYPE html>
 - No explanations, markdown formatting, or additional text
 - Ensure all modifications integrate seamlessly with existing design
-- Maintain professional quality throughout"""
+- Maintain professional quality throughout
+- Always include @media (prefers-color-scheme: dark) rules for comprehensive color scheme support"""
 
-    def _build_simple_messages(self, user_input: str, context: List[Dict[str, Any]]) -> tuple[str, List[Dict[str, str]]]:
+    def _build_simple_messages(self, user_input: str, context: List[Dict[str, Any]], color_scheme: str = "light") -> tuple[str, List[Dict[str, str]]]:
         """Build message structure optimized for surgical editing and prompt caching"""
         
         # Detect if this is a modification request
@@ -204,13 +254,13 @@ IMPORTANT:
         
         # Use surgical editing prompt for modifications
         if is_modification and context and len(context) > 0:
-            system_prompt = self._get_surgical_system_prompt()
+            system_prompt = self._get_surgical_system_prompt(color_scheme)
             messages = self._build_surgical_edit_messages(user_input, context)
             logger.info("[CLAUDE MESSAGES] Using surgical editing approach", 
                        message_count=len(messages), 
                        modification_detected=True)
         else:
-            system_prompt = self._get_simple_system_prompt()
+            system_prompt = self._get_simple_system_prompt(color_scheme)
             messages = self._build_creation_messages(user_input, context)
             logger.info("[CLAUDE MESSAGES] Using creation approach", 
                        message_count=len(messages), 

@@ -170,6 +170,7 @@ class WebSocketHandler:
         try:
             content = message_data.get("content", "")
             attachments = message_data.get("attachments", [])
+            color_scheme = message_data.get("colorScheme", "light")  # Default to light mode
             
             if not content.strip():
                 await self._send_error("Empty message")
@@ -219,7 +220,8 @@ class WebSocketHandler:
                 dual_response = claude_service.generate_dual_response(
                     content,
                     self.session.messages,  # Pass messages directly
-                    self.session_id
+                    self.session_id,
+                    color_scheme
                 )
                 logger.info("Successfully received dual_response from claude_service", session_id=self.session_id)
                 
