@@ -57,7 +57,6 @@ AI HTML Builder is a cutting-edge web application that enables users to generate
 
 ### AI Integration
 - **Anthropic Claude Sonnet 4**: Primary AI model for HTML generation
-- **OpenAI GPT-4**: Optional fallback model
 - **Advanced Context Management**: 150K character optimization
 - **Semantic Analysis**: Multi-phase request understanding
 
