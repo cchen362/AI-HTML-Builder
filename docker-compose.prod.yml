@@ -1,3 +1,5 @@
+# AI HTML Builder - Production Deployment Configuration
+# Optimized for Podman deployment with security best practices
 version: '3.8'
 
 services:
@@ -5,18 +7,35 @@ services:
     image: redis:7.4-alpine
     container_name: ai-html-builder-redis
     restart: unless-stopped
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis-secure-password}
     volumes:
       - redis_data:/data
-    ports:
-      - "6379:6379"
+    # Remove external port exposure for security (only internal network access)
+    expose:
+      - "6379"
     networks:
       - app-network
+    environment:
+      - REDIS_SAVE=900 1 300 10 60 10000
+      - REDIS_MAXMEMORY=512mb
+      - REDIS_MAXMEMORY_POLICY=allkeys-lru
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis-secure-password}", "ping"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 5s
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    user: "999:999"
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETUID
+      - SETGID
 
   app:
     build:
@@ -26,37 +45,61 @@ services:
     restart: unless-stopped
     ports:
       - "8080:8000"
+    # Use env_file instead of inline environment variables for security
+    env_file:
+      - .env.prod
     environment:
-      # Copy from your .env file or set via environment
-      - REDIS_URL=redis://redis:6379
+      # Override specific values for container environment
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis-secure-password}@redis:6379
       - ENVIRONMENT=production
-      - LOG_LEVEL=info
-      - MAX_UPLOAD_SIZE=52428800
-      - SESSION_TIMEOUT=3600
-      - RATE_LIMIT_REQUESTS=30
-      - RATE_LIMIT_WINDOW=60
-      - FRONTEND_URL=http://localhost:8080
-      - BACKEND_URL=http://localhost:8080
-      - JWT_SECRET=${JWT_SECRET:-ai-html-builder-jwt-secret-key-2025-secure}
-      # Set your API keys via environment variables or .env
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
     depends_on:
       redis:
         condition: service_healthy
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/api/health')"]
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/api/health', timeout=5)"]
       interval: 30s
-      timeout: 10s
+      timeout: 15s
       retries: 3
-      start_period: 40s
+      start_period: 60s
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    # Volume mounts for logs and temporary files
+    volumes:
+      - app_logs:/app/logs
+      - app_tmp:/tmp
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
   app-network:
     driver: bridge
+    # Isolate containers from external networks
+    internal: false
 
 volumes:
   redis_data:
+    driver: local
+  app_logs:
+    driver: local  
+  app_tmp:
     driver: local
