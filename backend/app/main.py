@@ -1,84 +1,61 @@
-from fastapi import FastAPI, WebSocket
-from fastapi.middleware.cors import CORSMiddleware
+import logging
 from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from pathlib import Path
 import structlog
-from dotenv import load_dotenv
 
-# Import services and utilities
-from .services.redis_service import redis_service
-from .utils.logger import configure_logging
-from .core.config import settings
+from app.config import settings
+from app.database import init_db, close_db
 
-# Import API endpoints
-from .api.endpoints.health import router as health_router
-from .api.endpoints.upload import router as upload_router
-from .api.endpoints.export import router as export_router
-from .api.websocket import websocket_endpoint
+# Configure structlog with proper log level mapping
+LOG_LEVELS = {
+    "debug": logging.DEBUG,
+    "info": logging.INFO,
+    "warning": logging.WARNING,
+    "error": logging.ERROR,
+    "critical": logging.CRITICAL,
+}
 
-# Import admin endpoints
-from .api.admin.auth import router as admin_auth_router
-from .api.admin.dashboard import router as admin_dashboard_router
-from .api.admin.export import router as admin_export_router
-
-# Load environment variables
-load_dotenv()
-
-# Configure logging
-configure_logging()
+structlog.configure(
+    wrapper_class=structlog.make_filtering_bound_logger(
+        LOG_LEVELS.get(settings.log_level.lower(), logging.INFO)
+    ),
+)
 logger = structlog.get_logger()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    logger.info("Starting AI HTML Builder API")
-    
-    # Initialize Redis connection
-    await redis_service.connect()
-    logger.info("Redis connected")
-    
+    await init_db()
+    logger.info("Application started")
     yield
-    
     # Shutdown
-    logger.info("Shutting down AI HTML Builder API")
-    await redis_service.disconnect()
+    await close_db()
+    logger.info("Application stopped")
 
-app = FastAPI(
-    title="AI HTML Builder",
-    description="Generate styled HTML documents through AI chat interactions",
-    version="1.0.0",
-    lifespan=lifespan
-)
 
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app = FastAPI(title="AI HTML Builder", lifespan=lifespan)
 
-# Include API routers
-app.include_router(health_router, prefix="/api", tags=["health"])
-app.include_router(upload_router, prefix="/api", tags=["upload"])
-app.include_router(export_router, prefix="/api", tags=["export"])
+# Import and register API routers
+from app.api import chat, sessions, health, costs  # noqa: E402
 
-# Include admin routers
-app.include_router(admin_auth_router, prefix="/api/admin", tags=["admin-auth"])
-app.include_router(admin_dashboard_router, prefix="/api/admin", tags=["admin-dashboard"])
-app.include_router(admin_export_router, prefix="/api/admin", tags=["admin-export"])
+app.include_router(chat.router)
+app.include_router(sessions.router)
+app.include_router(health.router)
+app.include_router(costs.router)
 
-# WebSocket endpoint
-@app.websocket("/ws/{session_id}")
-async def websocket_handler(websocket: WebSocket, session_id: str):
-    await websocket_endpoint(websocket, session_id)
+# Serve static frontend files (built React app)
+static_dir = Path(__file__).parent.parent / "static"
+if static_dir.exists():
+    app.mount("/assets", StaticFiles(directory=str(static_dir / "assets")), name="assets")
 
-# Root endpoint
-@app.get("/")
-async def root():
-    return {
-        "message": "AI HTML Builder API",
-        "status": "ready",
-        "version": "1.0.0",
-        "docs": "/docs"
-    }
+    @app.get("/{path:path}")
+    async def serve_spa(path: str):
+        """Serve the React SPA for all non-API routes."""
+        file_path = static_dir / path
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(str(file_path))
+        return FileResponse(str(static_dir / "index.html"))
