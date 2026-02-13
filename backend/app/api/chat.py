@@ -34,6 +34,21 @@ def _extract_title(message: str) -> str:
     return first_line[:50]
 
 
+_BASE64_RE = re.compile(
+    r'(data:image/[^;]+;base64,)[A-Za-z0-9+/=]{100,}',
+)
+
+
+def _strip_base64_for_context(html: str) -> str:
+    """Strip base64 image payloads from HTML for use as LLM context.
+
+    Preserves <img> tags and alt text but replaces the base64 payload
+    with a placeholder. Gemini can't interpret base64 in text form —
+    it's pure noise that wastes tokens and cost.
+    """
+    return _BASE64_RE.sub(r'\1[image-removed]', html)
+
+
 def _sse(data: dict) -> str:
     """Format a dict as an SSE data line."""
     return f"data: {json.dumps(data)}\n\n"
@@ -106,6 +121,7 @@ async def _handle_create(
     session_service: Any,
     request: ChatRequest,
     session_id: str,
+    current_html: str | None = None,
 ) -> AsyncIterator[dict]:
     """New document via Gemini (Claude fallback)."""
     from app.services.creator import DocumentCreator, extract_html
@@ -125,9 +141,16 @@ async def _handle_create(
 
     creator = DocumentCreator(primary, fallback)
 
+    # Strip base64 from context (noise for Gemini, wastes tokens)
+    context_html = None
+    if current_html:
+        context_html = _strip_base64_for_context(current_html)
+
     # Stream creation
     chunks: list[str] = []
-    async for chunk in creator.stream_create(request.message):
+    async for chunk in creator.stream_create(
+        request.message, template_content=context_html
+    ):
         chunks.append(chunk)
         yield {"type": "chunk", "content": chunk}
 
@@ -139,7 +162,8 @@ async def _handle_create(
     )
 
     # Estimate tokens (streaming doesn't return usage metadata)
-    est_input = len(request.message) // 4
+    context_len = len(context_html) if context_html else 0
+    est_input = (len(request.message) + context_len) // 4
     est_output = len(full_html) // 4
     model_used = getattr(primary, "model", "unknown")
 
@@ -322,6 +346,7 @@ async def chat(session_id: str, request: ChatRequest):
             elif route == "create":
                 handler = _handle_create(
                     session_service, request, session_id,
+                    current_html=current_html,
                 )
             elif route == "image":
                 handler = _handle_image(

@@ -74,6 +74,18 @@ class SessionService:
         rows = await cursor.fetchall()
         return [dict(r) for r in rows]
 
+    async def verify_document_ownership(
+        self, document_id: str, session_id: str
+    ) -> bool:
+        """Check if a document belongs to a session."""
+        db = await get_db()
+        cursor = await db.execute(
+            "SELECT 1 FROM documents WHERE id = ? AND session_id = ?",
+            (document_id, session_id),
+        )
+        row = await cursor.fetchone()
+        return row is not None
+
     async def switch_document(
         self, session_id: str, document_id: str
     ) -> bool:

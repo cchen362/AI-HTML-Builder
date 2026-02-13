@@ -141,7 +141,8 @@ class DocumentCreator:
                 {
                     "role": "user",
                     "content": (
-                        "Use this template as a starting point:\n\n"
+                        "Here is the existing document to use as context "
+                        "and source material:\n\n"
                         + template
                     ),
                 }
@@ -150,7 +151,8 @@ class DocumentCreator:
                 {
                     "role": "assistant",
                     "content": (
-                        "I'll use this template as inspiration for the design."
+                        "I have the existing document. I'll use its content "
+                        "as source material for the new document."
                     ),
                 }
             )

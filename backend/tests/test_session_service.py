@@ -206,3 +206,25 @@ async def test_chat_messages_with_document(db_and_service):
     assert messages[0]["document_id"] == doc_id
 
 
+@pytest.mark.asyncio
+async def test_verify_ownership_correct_session(db_and_service):
+    service = db_and_service
+    sid = await service.create_session()
+    doc_id = await service.create_document(sid, "Test")
+    assert await service.verify_document_ownership(doc_id, sid) is True
+
+
+@pytest.mark.asyncio
+async def test_verify_ownership_wrong_session(db_and_service):
+    service = db_and_service
+    sid1 = await service.create_session()
+    sid2 = await service.create_session()
+    doc_id = await service.create_document(sid1, "Test")
+    assert await service.verify_document_ownership(doc_id, sid2) is False
+
+
+@pytest.mark.asyncio
+async def test_verify_ownership_nonexistent_doc(db_and_service):
+    service = db_and_service
+    sid = await service.create_session()
+    assert await service.verify_document_ownership("nonexistent", sid) is False

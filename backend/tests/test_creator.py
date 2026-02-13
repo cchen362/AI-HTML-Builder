@@ -77,7 +77,7 @@ async def test_create_with_template_context(mock_provider, creator):
 
     # Template should add 2 extra messages (template + ack) before user message
     assert len(messages) == 3
-    assert "template" in messages[0]["content"].lower()
+    assert "existing document" in messages[0]["content"].lower()
     assert messages[0]["role"] == "user"
     assert messages[1]["role"] == "assistant"
     assert messages[2]["content"] == "Create a page"

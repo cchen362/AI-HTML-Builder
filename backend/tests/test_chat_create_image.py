@@ -140,6 +140,174 @@ async def test_create_route_fallback_to_claude(tmp_path):
             await close_db()
 
 
+# --- Transformation context tests (Plan 016) ---
+
+
+@pytest.mark.asyncio
+async def test_create_route_with_existing_html_passes_context(tmp_path):
+    """When route=create and HTML exists (transformation), current_html is passed to creator."""
+    from app.database import init_db, close_db
+    from app.config import settings
+    from app.services.session_service import session_service
+
+    db_path = tmp_path / "test.db"
+    with patch.object(settings, "database_path", str(db_path)):
+        await init_db()
+
+        try:
+            # Create session with existing document
+            sid = await session_service.create_session()
+            doc_id = await session_service.create_document(sid, "Slides")
+            await session_service.save_version(doc_id, SAMPLE_HTML)
+
+            from app.api.chat import chat, ChatRequest
+
+            mock_gemini = MagicMock()
+            mock_gemini.model = "gemini-2.5-pro"
+
+            captured_calls: list = []
+
+            async def fake_stream(msg, template_content=None):
+                captured_calls.append({"msg": msg, "template_content": template_content})
+                yield SAMPLE_HTML
+
+            mock_creator = MagicMock()
+            mock_creator.stream_create = fake_stream
+
+            with patch("app.providers.gemini_provider.GeminiProvider", return_value=mock_gemini), \
+                 patch("app.providers.anthropic_provider.AnthropicProvider", return_value=MagicMock()), \
+                 patch("app.services.creator.DocumentCreator", return_value=mock_creator), \
+                 patch("app.services.creator.extract_html", return_value=SAMPLE_HTML), \
+                 patch("app.services.router.classify_request", new_callable=AsyncMock, return_value="create"):
+
+                request = ChatRequest(message="Turn this into a stakeholder brief")
+                response = await chat(sid, request)
+
+                body = ""
+                async for chunk in response.body_iterator:
+                    body += chunk
+
+            # Verify template_content was passed (existing HTML as context)
+            assert len(captured_calls) == 1
+            assert captured_calls[0]["template_content"] is not None
+            assert "<!DOCTYPE html>" in captured_calls[0]["template_content"]
+
+        finally:
+            await close_db()
+
+
+@pytest.mark.asyncio
+async def test_create_route_without_html_no_context(tmp_path):
+    """When route=create and no HTML exists (fresh creation), template_content is None."""
+    from app.database import init_db, close_db
+    from app.config import settings
+
+    db_path = tmp_path / "test.db"
+    with patch.object(settings, "database_path", str(db_path)):
+        await init_db()
+
+        try:
+            from app.api.chat import chat, ChatRequest
+
+            mock_gemini = MagicMock()
+            mock_gemini.model = "gemini-2.5-pro"
+
+            captured_calls: list = []
+
+            async def fake_stream(msg, template_content=None):
+                captured_calls.append({"msg": msg, "template_content": template_content})
+                yield SAMPLE_HTML
+
+            mock_creator = MagicMock()
+            mock_creator.stream_create = fake_stream
+
+            with patch("app.providers.gemini_provider.GeminiProvider", return_value=mock_gemini), \
+                 patch("app.providers.anthropic_provider.AnthropicProvider", return_value=MagicMock()), \
+                 patch("app.services.creator.DocumentCreator", return_value=mock_creator), \
+                 patch("app.services.creator.extract_html", return_value=SAMPLE_HTML):
+
+                request = ChatRequest(message="Create a landing page")
+                response = await chat("test-session-no-context", request)
+
+                body = ""
+                async for chunk in response.body_iterator:
+                    body += chunk
+
+            # Verify template_content is None (no existing doc)
+            assert len(captured_calls) == 1
+            assert captured_calls[0]["template_content"] is None
+
+        finally:
+            await close_db()
+
+
+@pytest.mark.asyncio
+async def test_create_route_strips_base64_from_context(tmp_path):
+    """When existing HTML contains base64 images, base64 payload is stripped but
+    <img> tag and alt text are preserved in context passed to creator."""
+    from app.database import init_db, close_db
+    from app.config import settings
+    from app.services.session_service import session_service
+
+    html_with_image = (
+        '<!DOCTYPE html><html lang="en"><head><title>Test</title></head>'
+        '<body><main><p>Content</p>'
+        '<img src="data:image/png;base64,' + "A" * 200 + '" '
+        'alt="Revenue chart" style="max-width:100%"/>'
+        '</main></body></html>'
+    )
+
+    db_path = tmp_path / "test.db"
+    with patch.object(settings, "database_path", str(db_path)):
+        await init_db()
+
+        try:
+            sid = await session_service.create_session()
+            doc_id = await session_service.create_document(sid, "Slides")
+            await session_service.save_version(doc_id, html_with_image)
+
+            from app.api.chat import chat, ChatRequest
+
+            mock_gemini = MagicMock()
+            mock_gemini.model = "gemini-2.5-pro"
+
+            captured_calls: list = []
+
+            async def fake_stream(msg, template_content=None):
+                captured_calls.append({"msg": msg, "template_content": template_content})
+                yield SAMPLE_HTML
+
+            mock_creator = MagicMock()
+            mock_creator.stream_create = fake_stream
+
+            with patch("app.providers.gemini_provider.GeminiProvider", return_value=mock_gemini), \
+                 patch("app.providers.anthropic_provider.AnthropicProvider", return_value=MagicMock()), \
+                 patch("app.services.creator.DocumentCreator", return_value=mock_creator), \
+                 patch("app.services.creator.extract_html", return_value=SAMPLE_HTML), \
+                 patch("app.services.router.classify_request", new_callable=AsyncMock, return_value="create"):
+
+                request = ChatRequest(message="Turn this into a stakeholder brief")
+                response = await chat(sid, request)
+
+                body = ""
+                async for chunk in response.body_iterator:
+                    body += chunk
+
+            assert len(captured_calls) == 1
+            ctx = captured_calls[0]["template_content"]
+
+            # Base64 payload should be stripped
+            assert "AAAA" not in ctx
+            # But the <img> tag and alt text should be preserved
+            assert 'alt="Revenue chart"' in ctx
+            assert "[image-removed]" in ctx
+            # The data URI prefix should still be there
+            assert "data:image/png;base64," in ctx
+
+        finally:
+            await close_db()
+
+
 # --- Image route tests ---
 
 

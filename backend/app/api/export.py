@@ -16,8 +16,9 @@ logger = structlog.get_logger()
 router = APIRouter()
 
 
-@router.post("/api/export/{document_id}/{format_key}")
+@router.post("/api/sessions/{session_id}/documents/{document_id}/export/{format_key}")
 async def export(
+    session_id: str,
     document_id: str,
     format_key: str,
     version: int | None = Query(None, description="Document version (None = latest)"),
@@ -36,6 +37,14 @@ async def export(
     height: int | None = Query(None, description="Screenshot height in pixels"),
 ) -> StreamingResponse:
     """Export a document in the requested format."""
+    from app.services.session_service import session_service
+
+    owns = await session_service.verify_document_ownership(document_id, session_id)
+    if not owns:
+        raise HTTPException(
+            status_code=403, detail="Document does not belong to this session"
+        )
+
     try:
         options = ExportOptions(
             document_title=title,

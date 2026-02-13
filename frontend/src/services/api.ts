@@ -10,6 +10,14 @@ async function json<T>(url: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+const SESSION_KEY = 'ai-html-builder-session-id';
+
+function getSessionId(): string {
+  const sid = sessionStorage.getItem(SESSION_KEY);
+  if (!sid) throw new Error('No active session');
+  return sid;
+}
+
 export const api = {
   /** Create a new session. Returns {session_id}. */
   createSession(): Promise<{ session_id: string }> {
@@ -35,17 +43,17 @@ export const api = {
 
   /** Get the latest HTML content for a document. */
   getDocumentHtml(docId: string): Promise<{ html: string }> {
-    return json(`/api/documents/${docId}/html`);
+    return json(`/api/sessions/${getSessionId()}/documents/${docId}/html`);
   },
 
   /** Get version history for a document. */
   getVersions(docId: string): Promise<{ versions: Version[] }> {
-    return json(`/api/documents/${docId}/versions`);
+    return json(`/api/sessions/${getSessionId()}/documents/${docId}/versions`);
   },
 
   /** Get a specific version with full HTML content. */
   getVersion(docId: string, version: number): Promise<VersionDetail> {
-    return json(`/api/documents/${docId}/versions/${version}`);
+    return json(`/api/sessions/${getSessionId()}/documents/${docId}/versions/${version}`);
   },
 
   /** Get chat history for a session. */
@@ -100,14 +108,14 @@ export const api = {
 
   /** Restore a historical version (creates a new version from old HTML). */
   restoreVersion(docId: string, version: number): Promise<{ version: number }> {
-    return json(`/api/documents/${docId}/versions/${version}/restore`, {
+    return json(`/api/sessions/${getSessionId()}/documents/${docId}/versions/${version}/restore`, {
       method: 'POST',
     });
   },
 
   /** Rename a document. */
   renameDocument(docId: string, title: string): Promise<{ success: boolean }> {
-    return json(`/api/documents/${docId}`, {
+    return json(`/api/sessions/${getSessionId()}/documents/${docId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title }),
@@ -123,7 +131,7 @@ export const api = {
 
   /** Save manual HTML edits as a new version. */
   saveManualEdit(documentId: string, htmlContent: string): Promise<{ version: number; success: boolean }> {
-    return json(`/api/documents/${documentId}/manual-edit`, {
+    return json(`/api/sessions/${getSessionId()}/documents/${documentId}/manual-edit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ html_content: htmlContent }),
@@ -140,7 +148,7 @@ export const api = {
     if (title) params.set('title', title);
 
     const res = await fetch(
-      `${BASE}/api/export/${documentId}/${format}?${params.toString()}`,
+      `${BASE}/api/sessions/${getSessionId()}/documents/${documentId}/export/${format}?${params.toString()}`,
       { method: 'POST' },
     );
 

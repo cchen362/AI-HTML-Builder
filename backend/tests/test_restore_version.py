@@ -18,6 +18,7 @@ from fastapi.testclient import TestClient
 @pytest.fixture()
 def mock_session_service():
     mock_svc = AsyncMock()
+    mock_svc.verify_document_ownership.return_value = True
     with patch("app.api.sessions.session_service", mock_svc):
         yield mock_svc
 
@@ -33,7 +34,7 @@ def test_restore_version_endpoint_success(
     client: TestClient, mock_session_service: AsyncMock
 ) -> None:
     mock_session_service.restore_version.return_value = 3
-    resp = client.post("/api/documents/doc-123/versions/1/restore")
+    resp = client.post("/api/sessions/sess-1/documents/doc-123/versions/1/restore")
     assert resp.status_code == 200
     assert resp.json()["version"] == 3
     mock_session_service.restore_version.assert_awaited_once_with("doc-123", 1)
@@ -45,7 +46,7 @@ def test_restore_version_endpoint_not_found(
     mock_session_service.restore_version.side_effect = ValueError(
         "Version 999 not found"
     )
-    resp = client.post("/api/documents/doc-123/versions/999/restore")
+    resp = client.post("/api/sessions/sess-1/documents/doc-123/versions/999/restore")
     assert resp.status_code == 404
     assert "999" in resp.json()["detail"]
 

@@ -18,6 +18,7 @@ from fastapi.testclient import TestClient
 @pytest.fixture()
 def mock_session_service():
     mock_svc = AsyncMock()
+    mock_svc.verify_document_ownership.return_value = True
     with patch("app.api.sessions.session_service", mock_svc):
         yield mock_svc
 
@@ -37,7 +38,7 @@ def test_rename_document_success(
 ) -> None:
     mock_session_service.rename_document.return_value = True
     resp = client.patch(
-        "/api/documents/doc-123",
+        "/api/sessions/sess-1/documents/doc-123",
         json={"title": "New Title"},
     )
     assert resp.status_code == 200
@@ -52,7 +53,7 @@ def test_rename_document_not_found(
 ) -> None:
     mock_session_service.rename_document.return_value = False
     resp = client.patch(
-        "/api/documents/doc-999",
+        "/api/sessions/sess-1/documents/doc-999",
         json={"title": "New Title"},
     )
     assert resp.status_code == 404
@@ -62,10 +63,42 @@ def test_rename_document_empty_title_rejected(
     client: TestClient, mock_session_service: AsyncMock
 ) -> None:
     resp = client.patch(
-        "/api/documents/doc-123",
+        "/api/sessions/sess-1/documents/doc-123",
         json={"title": ""},
     )
     assert resp.status_code == 422
+
+
+# --- Ownership ---
+
+
+def test_rename_document_wrong_session(
+    client: TestClient, mock_session_service: AsyncMock
+) -> None:
+    mock_session_service.verify_document_ownership.return_value = False
+    resp = client.patch(
+        "/api/sessions/wrong-session/documents/doc-123",
+        json={"title": "New Title"},
+    )
+    assert resp.status_code == 403
+
+
+def test_get_html_wrong_session(
+    client: TestClient, mock_session_service: AsyncMock
+) -> None:
+    mock_session_service.verify_document_ownership.return_value = False
+    resp = client.get(
+        "/api/sessions/wrong-session/documents/doc-123/html",
+    )
+    assert resp.status_code == 403
+
+
+def test_get_html_old_url_returns_404(
+    client: TestClient, mock_session_service: AsyncMock
+) -> None:
+    """Old /api/documents/{docId}/html URL no longer exists."""
+    resp = client.get("/api/documents/doc-123/html")
+    assert resp.status_code in (404, 405)
 
 
 # --- Delete ---
@@ -150,7 +183,7 @@ async def test_delete_document_activates_another(db_and_service) -> None:
     assert active["id"] == doc1
 
 
-async def test_delete_last_document_blocked(db_and_service) -> None:
+async def test_delete_last_document_blocked_service(db_and_service) -> None:
     service = db_and_service
     sid = await service.create_session()
     doc_id = await service.create_document(sid, "Only")
@@ -166,7 +199,7 @@ async def test_delete_nullifies_chat_messages(db_and_service) -> None:
     service = db_and_service
     sid = await service.create_session()
     doc1 = await service.create_document(sid, "First")
-    doc2 = await service.create_document(sid, "Second")
+    _doc2 = await service.create_document(sid, "Second")
 
     # Add chat message linked to doc1
     await service.add_chat_message(sid, "user", "hello", document_id=doc1)

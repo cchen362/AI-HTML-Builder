@@ -6,6 +6,20 @@ from app.services.session_service import session_service
 router = APIRouter()
 
 
+async def _require_document_ownership(
+    document_id: str, session_id: str
+) -> None:
+    """Raise 403 if the document doesn't belong to the session."""
+    owns = await session_service.verify_document_ownership(
+        document_id, session_id
+    )
+    if not owns:
+        raise HTTPException(
+            status_code=403,
+            detail="Document does not belong to this session",
+        )
+
+
 @router.post("/api/sessions")
 async def create_session():
     session_id = await session_service.create_session()
@@ -37,28 +51,32 @@ async def switch_document(session_id: str, document_id: str):
     return {"success": success}
 
 
-@router.get("/api/documents/{document_id}/versions")
-async def get_versions(document_id: str):
+@router.get("/api/sessions/{session_id}/documents/{document_id}/versions")
+async def get_versions(session_id: str, document_id: str):
+    await _require_document_ownership(document_id, session_id)
     versions = await session_service.get_version_history(document_id)
     return {"versions": versions}
 
 
-@router.get("/api/documents/{document_id}/versions/{version}")
-async def get_version(document_id: str, version: int):
+@router.get("/api/sessions/{session_id}/documents/{document_id}/versions/{version}")
+async def get_version(session_id: str, document_id: str, version: int):
+    await _require_document_ownership(document_id, session_id)
     ver = await session_service.get_version(document_id, version)
     if not ver:
         raise HTTPException(status_code=404, detail="Version not found")
     return ver
 
 
-@router.get("/api/documents/{document_id}/html")
-async def get_latest_html(document_id: str):
+@router.get("/api/sessions/{session_id}/documents/{document_id}/html")
+async def get_latest_html(session_id: str, document_id: str):
+    await _require_document_ownership(document_id, session_id)
     html = await session_service.get_latest_html(document_id)
     return {"html": html}
 
 
-@router.post("/api/documents/{document_id}/versions/{version}/restore")
-async def restore_version(document_id: str, version: int):
+@router.post("/api/sessions/{session_id}/documents/{document_id}/versions/{version}/restore")
+async def restore_version(session_id: str, document_id: str, version: int):
+    await _require_document_ownership(document_id, session_id)
     try:
         new_version = await session_service.restore_version(document_id, version)
         return {"version": new_version}
@@ -100,8 +118,9 @@ class RenameRequest(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
 
 
-@router.patch("/api/documents/{document_id}")
-async def rename_document(document_id: str, body: RenameRequest):
+@router.patch("/api/sessions/{session_id}/documents/{document_id}")
+async def rename_document(session_id: str, document_id: str, body: RenameRequest):
+    await _require_document_ownership(document_id, session_id)
     success = await session_service.rename_document(document_id, body.title)
     if not success:
         raise HTTPException(status_code=404, detail="Document not found")
@@ -119,9 +138,10 @@ async def delete_document(session_id: str, document_id: str):
     return {"success": True}
 
 
-@router.post("/api/documents/{document_id}/manual-edit")
-async def save_manual_edit(document_id: str, body: ManualEditRequest):
+@router.post("/api/sessions/{session_id}/documents/{document_id}/manual-edit")
+async def save_manual_edit(session_id: str, document_id: str, body: ManualEditRequest):
     """Save manual HTML edits as a new version."""
+    await _require_document_ownership(document_id, session_id)
     version = await session_service.save_manual_edit(
         document_id, body.html_content
     )

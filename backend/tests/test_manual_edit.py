@@ -18,6 +18,7 @@ from fastapi.testclient import TestClient
 @pytest.fixture()
 def mock_session_service():
     mock_svc = AsyncMock()
+    mock_svc.verify_document_ownership.return_value = True
     with patch("app.api.sessions.session_service", mock_svc):
         yield mock_svc
 
@@ -34,7 +35,7 @@ def test_manual_edit_creates_version(
 ) -> None:
     mock_session_service.save_manual_edit.return_value = 2
     resp = client.post(
-        "/api/documents/doc-123/manual-edit",
+        "/api/sessions/sess-1/documents/doc-123/manual-edit",
         json={"html_content": "<h1>Manually Edited</h1>"},
     )
     assert resp.status_code == 200
@@ -50,7 +51,7 @@ def test_manual_edit_empty_content_rejected(
     client: TestClient, mock_session_service: AsyncMock
 ) -> None:
     resp = client.post(
-        "/api/documents/doc-123/manual-edit",
+        "/api/sessions/sess-1/documents/doc-123/manual-edit",
         json={"html_content": ""},
     )
     assert resp.status_code == 422
@@ -60,7 +61,7 @@ def test_manual_edit_missing_content_rejected(
     client: TestClient, mock_session_service: AsyncMock
 ) -> None:
     resp = client.post(
-        "/api/documents/doc-123/manual-edit",
+        "/api/sessions/sess-1/documents/doc-123/manual-edit",
         json={},
     )
     assert resp.status_code == 422
