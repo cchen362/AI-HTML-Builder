@@ -22,7 +22,7 @@ export interface Document {
   created_at: string;
 }
 
-/** Version from GET /api/documents/{docId}/versions */
+/** Version from GET /api/sessions/{sid}/documents/{docId}/versions */
 export interface Version {
   version: number;
   user_prompt: string;
@@ -32,7 +32,7 @@ export interface Version {
   created_at: string;
 }
 
-/** Full version detail from GET /api/documents/{docId}/versions/{ver} */
+/** Full version detail from GET /api/sessions/{sid}/documents/{docId}/versions/{ver} */
 export interface VersionDetail extends Version {
   id: number;
   document_id: string;

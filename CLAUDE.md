@@ -17,7 +17,7 @@ npm install
 npm run dev                                        # http://localhost:5173
 
 # Quality checks
-cd backend && pytest                               # 244+ tests
+cd backend && pytest                               # 270+ tests
 ruff check backend/ && mypy backend/               # Lint + types
 cd frontend && npm run lint && npm run build        # ESLint + TypeScript + Vite
 
@@ -289,7 +289,7 @@ For generated HTML documents, unless user specifies otherwise:
 - Vite dev proxy: `/api` routes to `http://localhost:8000`
 
 ### Testing
-- 230+ tests across 20+ test files, `asyncio_mode = "auto"` in pyproject.toml
+- 270+ tests across 20+ test files, `asyncio_mode = "auto"` in pyproject.toml
 - 1 known pre-existing failure: `test_init_db_creates_file`
 - Patches must target source module, not consumer (e.g., `app.utils.file_processors.*`, not `app.api.upload.*`)
 - `pytest-asyncio` auto mode: no need for `@pytest.mark.asyncio` decorators
@@ -317,6 +317,11 @@ All plans in `IMPLEMENTATION_PLANS/` directory:
 | 013 | UX Improvements (template badges, confirm dialogs, new session, editable CodeMirror, loading state, send debounce, doc badges) | COMPLETE |
 | 014 | LLM Router + Template Fix (Haiku 4.5 intent classification, template badge fix, SVG word boundaries) | COMPLETE |
 | 015 | Critical Bug Fixes (Router pre-routing, edit error guards, template titles, SVG branch removal) | COMPLETE |
+| 016 | Transformation Context + Document Ownership Validation | COMPLETE |
+
+## Future: Real Infographics (NotebookLM-style)
+
+Aspirational feature — the primary reason Nano Banana Pro (Gemini 3 Pro Image) is in the pipeline. The vision: generate magazine-quality visual infographics from user content, similar to how NotebookLM transforms documents into audio podcasts but as visual output. Pipeline TBD: likely Gemini structures content/layout → Nano Banana Pro renders as visual image. Requires extensive design discussion before planning. Will get its own plan number when ready.
 
 ## Known Issues
 
@@ -333,11 +338,14 @@ All plans in `IMPLEMENTATION_PLANS/` directory:
 - ~~Template `{{PLACEHOLDER}}` visible in titles~~ — **RESOLVED in Plan 015** (server-side title extraction)
 - ~~Raw text in viewer after failed edit~~ — **RESOLVED in Plan 015** (fallback preserves original HTML on failure)
 - ~~Hardcoded SVG templates in image handler~~ — **RESOLVED in Plan 015** (SVG branch removed; diagrams route to editor)
+- ~~"Turn this into X" creates document with hallucinated content~~ — **RESOLVED in Plan 016** (existing HTML passed as context to creator with base64 stripping)
+- ~~Token estimation wrong for transformation requests~~ — **RESOLVED in Plan 016** (input estimate now includes context HTML size)
+- ~~Document endpoints accessible without session validation~~ — **RESOLVED in Plan 016** (all document endpoints moved to `/api/sessions/{sid}/documents/{docId}/*` with ownership validation)
 
 ---
 
 **Last Updated**: February 2026
-**Architecture**: v2 rebuild (Plans 001-015 complete except 008 pending)
+**Architecture**: v2 rebuild (Plans 001-016 complete)
 **AI Models**: Haiku 4.5 (routing) + Claude Sonnet 4.5 (edits) + Gemini 2.5 Pro (creation) + Nano Banana Pro (images)
 **Database**: SQLite WAL (no Redis)
 **Communication**: SSE + HTTP POST (no WebSocket)
