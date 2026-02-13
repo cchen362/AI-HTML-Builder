@@ -592,6 +592,80 @@ async def test_infographic_route_no_google_key_returns_error(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_infographic_iteration_override(tmp_path):
+    """Edit/create on an infographic doc should override route to infographic."""
+    from app.database import init_db, close_db
+    from app.config import settings
+    from app.services.session_service import session_service
+    from app.services.infographic_service import InfographicResult, wrap_infographic_html
+
+    db_path = tmp_path / "test_infographic_iter.db"
+    with patch.object(settings, "database_path", str(db_path)):
+        await init_db()
+
+        try:
+            sid = await session_service.create_session()
+            doc_id = await session_service.create_document(sid, "Infographic")
+
+            # Save an infographic doc (minimal HTML with base64 <img>)
+            infographic_html = wrap_infographic_html(
+                b"\x89PNG" + b"\x00" * 50, "PNG", "Test infographic"
+            )
+            await session_service.save_version(doc_id, infographic_html)
+
+            from app.api.chat import chat, ChatRequest
+
+            mock_result = InfographicResult(
+                image_bytes=b"\x89PNG" + b"\x00" * 60,
+                image_format="PNG",
+                visual_prompt="Updated visual prompt...",
+                model_prompt="gemini-2.5-pro",
+                model_image="gemini-3-pro-image-preview",
+                prompt_input_tokens=500,
+                prompt_output_tokens=200,
+            )
+
+            mock_service_instance = AsyncMock()
+            mock_service_instance.generate.return_value = mock_result
+
+            # Router returns "edit" — but the override should send to infographic
+            mock_classify = AsyncMock(return_value="edit")
+            with patch(
+                "app.services.infographic_service.InfographicService",
+                return_value=mock_service_instance,
+            ), patch(
+                "app.providers.gemini_provider.GeminiProvider",
+            ), patch(
+                "app.providers.gemini_image_provider.GeminiImageProvider",
+            ), patch(
+                "app.services.router.classify_request",
+                mock_classify,
+            ), patch(
+                "app.services.cost_tracker.cost_tracker",
+                AsyncMock(),
+            ):
+                request = ChatRequest(message="make it less prose and bigger text")
+                response = await chat(sid, request)
+
+                body = ""
+                async for chunk in response.body_iterator:
+                    body += chunk
+
+            events = _parse_sse_events(body)
+            html_events = [e for e in events if e["type"] == "html"]
+
+            # Should have generated a new infographic, not tried to edit
+            assert len(html_events) == 1
+            assert "data:image/png;base64," in html_events[0]["content"]
+
+            # InfographicService.generate should have been called
+            mock_service_instance.generate.assert_called_once()
+
+        finally:
+            await close_db()
+
+
+@pytest.mark.asyncio
 async def test_edit_route_unchanged(tmp_path):
     """Verify edit route still functions after create/image additions."""
     from app.database import init_db, close_db

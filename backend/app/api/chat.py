@@ -55,9 +55,20 @@ def _is_infographic_doc(html: str) -> bool:
     Infographic documents have a distinctive structure: <500 chars of HTML
     after removing base64 payloads, with a single <img> tag. This is how
     wrap_infographic_html() creates them — no <main>, <header>, <section>.
+
+    Regular docs with embedded images are excluded by checking for structural
+    HTML tags that infographic wrappers never contain.
     """
     stripped = _BASE64_RE.sub("", html)
-    return len(stripped) < 500 and "<img" in html and "data:image" in html
+    if len(stripped) >= 600:
+        return False
+    if "<img" not in html or "data:image" not in html:
+        return False
+    # Infographic wrappers have no structural content tags
+    lower = html.lower()
+    if "<main" in lower or "<header" in lower or "<section" in lower:
+        return False
+    return True
 
 
 async def _get_latest_version_prompt(
@@ -505,6 +516,16 @@ async def chat(session_id: str, request: ChatRequest):
 
     # Classify request
     route = await classify_request(request.message, current_html is not None)
+
+    # Override: if active doc is an infographic, route edit/create to infographic
+    # so iteration works without requiring the "infographic" keyword every time
+    if route in ("edit", "create") and current_html and _is_infographic_doc(current_html):
+        logger.info(
+            "[ROUTER] Active doc is infographic, overriding to INFOGRAPHIC",
+            original_route=route,
+            request=request.message[:80],
+        )
+        route = "infographic"
 
     async def event_stream():
         try:
