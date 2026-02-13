@@ -12,6 +12,9 @@
 
 /* --- Chat Header --- */
 .chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 1rem 1.5rem;
   border-bottom: 1px solid var(--border-default);
   background: var(--gradient-header);
@@ -47,12 +50,6 @@
 }
 
 /* --- Header Actions & Menu --- */
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
 .header-menu-wrapper {
   position: relative;
 }

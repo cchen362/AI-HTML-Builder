@@ -63,37 +63,33 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   return (
     <div className="chat-window">
       <div className="chat-header">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2>AI HTML Builder</h2>
-          <div className="header-actions">
-            <div className="header-menu-wrapper" ref={menuRef}>
+        <h2>AI HTML Builder</h2>
+        <div className="header-menu-wrapper" ref={menuRef}>
+          <button
+            className={`header-menu-btn${menuOpen ? ' active' : ''}`}
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Session menu"
+            type="button"
+          >
+            ⋮
+          </button>
+          {menuOpen && (
+            <div className="header-menu-dropdown">
               <button
-                className={`header-menu-btn${menuOpen ? ' active' : ''}`}
-                onClick={() => setMenuOpen(!menuOpen)}
-                aria-label="Session menu"
                 type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onStartNewSession?.();
+                }}
+                disabled={isStreaming}
               >
-                ⋮
+                New Session
               </button>
-              {menuOpen && (
-                <div className="header-menu-dropdown">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      onStartNewSession?.();
-                    }}
-                    disabled={isStreaming}
-                  >
-                    New Session
-                  </button>
-                  <div className="session-id-display">
-                    Session: {sessionId?.slice(0, 8) || '—'}
-                  </div>
-                </div>
-              )}
+              <div className="session-id-display">
+                Session: {sessionId?.slice(0, 8) || '—'}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
