@@ -10,6 +10,7 @@ Images are compressed with Pillow if > 5MB before embedding.
 
 import asyncio
 import base64
+import re
 from io import BytesIO
 
 from PIL import Image
@@ -119,12 +120,15 @@ class ImageService:
     def should_use_svg(self, message: str) -> tuple[bool, str]:
         """Check if SVG template is appropriate for this request.
 
+        Uses word-boundary matching to avoid false positives
+        (e.g. "infographic" should NOT match "graph").
+
         Returns:
             (use_svg, svg_type) - e.g. (True, "flowchart")
         """
         msg_lower = message.lower()
         for keyword, svg_type in SVG_KEYWORDS.items():
-            if keyword in msg_lower:
+            if re.search(r'\b' + re.escape(keyword) + r'\b', msg_lower):
                 return True, svg_type
         return False, ""
 

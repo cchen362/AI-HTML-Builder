@@ -10,6 +10,7 @@ MODEL_PRICING: dict[str, dict[str, float]] = {
     "gemini-2.5-pro": {"input": 1.25, "output": 10.0},
     "gemini-3-pro-image-preview": {"input": 0.0, "output": 120.0},
     "gemini-2.5-flash-image": {"input": 0.0, "output": 30.0},
+    "claude-haiku-4-5-20251001": {"input": 0.8, "output": 4.0},
 }
 
 

@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
 import type { ChatMessage, Document } from '../../types';
+import type { PromptTemplate } from '../../data/promptTemplates';
 import ThemeToggle from '../ThemeToggle';
 import './ChatWindow.css';
 
@@ -32,12 +33,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   onStartNewSession,
   documents = [],
 }) => {
-  const [pendingTemplate, setPendingTemplate] = useState<string | null>(null);
+  const [pendingTemplate, setPendingTemplate] = useState<PromptTemplate | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const handleSelectTemplate = useCallback((prompt: string) => {
-    setPendingTemplate(prompt);
+  const handleSelectTemplate = useCallback((template: PromptTemplate) => {
+    setPendingTemplate(template);
   }, []);
 
   const handleTemplateClaimed = useCallback(() => {
@@ -122,8 +123,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         onSendMessage={onSendMessage}
         isProcessing={isStreaming}
         placeholder="Describe the HTML you want to create, or browse templates for inspiration..."
-        externalMessage={pendingTemplate}
-        onExternalMessageClaimed={handleTemplateClaimed}
+        externalTemplate={pendingTemplate}
+        onExternalTemplateClaimed={handleTemplateClaimed}
         onCancelRequest={onCancelRequest}
       />
     </div>

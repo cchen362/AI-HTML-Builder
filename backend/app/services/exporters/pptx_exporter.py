@@ -205,7 +205,11 @@ HTML DOCUMENT:
 ```
 
 REQUIREMENTS:
-1. Use ONLY the python-pptx library (import as 'from pptx import Presentation')
+1. Use ONLY the python-pptx library. Key imports:
+   - from pptx import Presentation
+   - from pptx.util import Inches, Pt, Emu
+   - from pptx.dml.color import RGBColor  (NOT from pptx.util)
+   - from pptx.enum.text import PP_ALIGN
 2. Create a Presentation object and add slides to represent the document
 3. Analyze the HTML structure to determine appropriate slide layouts:
    - Headers (h1, h2) typically become slide titles

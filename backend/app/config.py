@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     image_model: str = "gemini-3-pro-image-preview"
     image_fallback_model: str = "gemini-2.5-flash-image"
     image_timeout_seconds: int = 90
+    router_model: str = "claude-haiku-4-5-20251001"
 
     model_config = {
         "env_file": ".env",

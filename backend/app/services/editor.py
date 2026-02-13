@@ -10,6 +10,7 @@ Approach inspired by: Claude Artifacts, Cursor, Aider (EditBlock format)
 
 import re
 from dataclasses import dataclass
+from typing import Any
 
 import structlog
 
@@ -18,6 +19,47 @@ from app.utils.fuzzy_match import fuzzy_find_and_replace
 from app.utils.html_validator import validate_edit_result
 
 logger = structlog.get_logger()
+
+# Regex to match data URIs with base64 content (images, fonts, etc.)
+# Captures: data:mime/type;base64,<long_base64_string>
+_DATA_URI_RE = re.compile(
+    r'(data:[a-zA-Z0-9+/.-]+;base64,)'  # Group 1: prefix
+    r'([A-Za-z0-9+/=]{100,})'            # Group 2: base64 payload (100+ chars)
+)
+
+
+def _strip_base64(html: str) -> tuple[str, dict[str, str]]:
+    """Replace long base64 data URIs with short placeholders.
+
+    Returns the stripped HTML and a mapping of placeholder → original base64.
+    This prevents sending megabytes of image data to Claude for edits.
+    """
+    store: dict[str, str] = {}
+    counter = 0
+
+    def _replace(m: Any) -> str:
+        nonlocal counter
+        counter += 1
+        placeholder = f"__B64_{counter}__"
+        store[placeholder] = m.group(2)  # the base64 payload
+        return m.group(1) + placeholder   # keep the data:mime;base64, prefix
+
+    stripped = _DATA_URI_RE.sub(_replace, html)
+    if store:
+        logger.info(
+            "Stripped base64 for edit",
+            count=len(store),
+            saved_chars=len(html) - len(stripped),
+        )
+    return stripped, store
+
+
+def _restore_base64(html: str, store: dict[str, str]) -> str:
+    """Restore base64 placeholders back to original data."""
+    for placeholder, b64_data in store.items():
+        html = html.replace(placeholder, b64_data)
+    return html
+
 
 # Tool definitions sent to Claude
 EDIT_TOOLS = [
@@ -183,9 +225,13 @@ class SurgicalEditor:
         Returns:
             EditResult with modified HTML, applied edits, and metadata
         """
+        # Strip base64 data URIs to avoid sending megabytes of image data
+        # to Claude. Edits operate on the stripped HTML; base64 is restored after.
+        stripped_html, b64_store = _strip_base64(current_html)
+
         # Build messages with conversation context
         messages = self._build_messages(
-            current_html, user_request, conversation_context
+            stripped_html, user_request, conversation_context
         )
 
         # Call Claude with tools (temperature=0 for deterministic precision)
@@ -197,23 +243,23 @@ class SurgicalEditor:
             temperature=0.0,
         )
 
-        # Apply tool calls to HTML
+        # Apply tool calls to the stripped HTML
         modified_html, applied, errors = self._apply_tool_calls(
-            current_html, tool_result.tool_calls
+            stripped_html, tool_result.tool_calls
         )
 
-        # Validate result
+        # Validate result (compare stripped versions)
         if applied:
             is_valid, validation_msg = validate_edit_result(
-                current_html, modified_html
+                stripped_html, modified_html
             )
             if not is_valid:
                 logger.warning(
                     "Edit validation failed", reason=validation_msg
                 )
                 errors.append(f"Validation: {validation_msg}")
-                # Revert to original
-                modified_html = current_html
+                # Revert to stripped original
+                modified_html = stripped_html
                 applied = []
 
         # If ALL tool calls failed, fall back to full regeneration
@@ -224,9 +270,12 @@ class SurgicalEditor:
                 errors=errors[:3],
             )
             modified_html = await self._fallback_full_edit(
-                current_html, user_request
+                stripped_html, user_request
             )
             applied = ["full_regeneration_fallback"]
+
+        # Restore base64 data URIs back into the final HTML
+        modified_html = _restore_base64(modified_html, b64_store)
 
         # Generate edit summary from applied changes
         edit_summary = self._summarize_edits(applied, tool_result.text)

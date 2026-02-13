@@ -9,8 +9,8 @@ interface ChatInputProps {
   onSendMessage: (message: string, files?: File[], templateName?: string, userContent?: string) => void;
   isProcessing?: boolean;
   placeholder?: string;
-  externalMessage?: string | null;
-  onExternalMessageClaimed?: () => void;
+  externalTemplate?: PromptTemplate | null;
+  onExternalTemplateClaimed?: () => void;
   onCancelRequest?: () => void;
 }
 
@@ -95,8 +95,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
   onSendMessage,
   isProcessing = false,
   placeholder = "Describe the HTML you want to create, or browse templates for inspiration...",
-  externalMessage = null,
-  onExternalMessageClaimed,
+  externalTemplate = null,
+  onExternalTemplateClaimed,
   onCancelRequest,
 }) => {
   const [message, setMessage] = useState('');
@@ -121,14 +121,17 @@ const ChatInput: React.FC<ChatInputProps> = ({
   // Use the custom hook for auto-resize
   useAutosizeTextArea(textareaRef, message);
 
-  // Receive external message (e.g. from template card click)
+  // Receive external template (e.g. from template card click) — activate badge
   useEffect(() => {
-    if (externalMessage) {
-      setMessage(externalMessage);
-      onExternalMessageClaimed?.();
+    if (externalTemplate) {
+      setActiveTemplate(externalTemplate);
+      setPopoverOpen(false);
+      setMessage('');
+      setAttachedFile(null);
+      onExternalTemplateClaimed?.();
       setTimeout(() => textareaRef.current?.focus(), 50);
     }
-  }, [externalMessage, onExternalMessageClaimed]);
+  }, [externalTemplate, onExternalTemplateClaimed]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

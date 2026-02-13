@@ -1,6 +1,9 @@
 import pytest
 from unittest.mock import AsyncMock
-from app.services.editor import SurgicalEditor, EditResult, EDIT_TOOLS
+from app.services.editor import (
+    SurgicalEditor, EditResult, EDIT_TOOLS,
+    _strip_base64, _restore_base64,
+)
 from app.providers.base import (
     LLMProvider,
     GenerationResult,
@@ -410,3 +413,103 @@ def test_edit_tools_structure():
         assert "description" in tool
         assert "input_schema" in tool
         assert tool["input_schema"]["type"] == "object"
+
+
+# --- Base64 stripping / restoration tests ---
+
+
+def test_strip_base64_removes_long_data_uris():
+    """Long base64 data URIs should be replaced with placeholders."""
+    b64 = "A" * 200  # 200-char base64 payload
+    html = f'<img src="data:image/jpeg;base64,{b64}"/>'
+    stripped, store = _strip_base64(html)
+
+    assert b64 not in stripped
+    assert "__B64_1__" in stripped
+    assert len(store) == 1
+    assert store["__B64_1__"] == b64
+
+
+def test_strip_base64_preserves_short_data_uris():
+    """Short base64 (< 100 chars) should NOT be stripped."""
+    b64 = "A" * 50
+    html = f'<img src="data:image/png;base64,{b64}"/>'
+    stripped, store = _strip_base64(html)
+
+    assert stripped == html
+    assert len(store) == 0
+
+
+def test_strip_base64_multiple_images():
+    """Multiple images should each get unique placeholders."""
+    b64_1 = "A" * 200
+    b64_2 = "B" * 300
+    html = (
+        f'<img src="data:image/jpeg;base64,{b64_1}"/>'
+        f'<img src="data:image/png;base64,{b64_2}"/>'
+    )
+    stripped, store = _strip_base64(html)
+
+    assert b64_1 not in stripped
+    assert b64_2 not in stripped
+    assert len(store) == 2
+
+
+def test_restore_base64_roundtrip():
+    """strip -> restore should return the original HTML."""
+    b64 = "A" * 500
+    original = f'<img src="data:image/jpeg;base64,{b64}"/><p>Hello</p>'
+    stripped, store = _strip_base64(original)
+    restored = _restore_base64(stripped, store)
+
+    assert restored == original
+
+
+def test_strip_base64_no_images():
+    """HTML without base64 should pass through unchanged."""
+    html = "<h1>Hello</h1><p>No images here</p>"
+    stripped, store = _strip_base64(html)
+
+    assert stripped == html
+    assert len(store) == 0
+
+
+@pytest.mark.asyncio
+async def test_edit_with_base64_image(mock_provider, editor):
+    """Edit with embedded base64 image should strip before sending to Claude."""
+    b64 = "A" * 1000
+    html_with_image = (
+        '<!DOCTYPE html><html><body>'
+        '<h1>Hello World</h1>'
+        f'<img src="data:image/jpeg;base64,{b64}"/>'
+        '</body></html>'
+    )
+
+    # Claude returns a tool call to change the title
+    mock_provider.generate_with_tools.return_value = ToolResult(
+        tool_calls=[
+            ToolCall(
+                id="1",
+                name="html_replace",
+                input={"old_text": "<h1>Hello World</h1>", "new_text": "<h1>Updated</h1>"},
+            )
+        ],
+        text="Changed the title",
+        input_tokens=100,
+        output_tokens=50,
+        model="test-model",
+    )
+
+    result = await editor.edit(html_with_image, "Change title to Updated")
+
+    # The result should have the updated title AND the original base64 restored
+    assert "<h1>Updated</h1>" in result.html
+    assert b64 in result.html
+    assert "__B64_" not in result.html
+
+    # Verify Claude received the stripped HTML (no base64 in messages)
+    call_args = mock_provider.generate_with_tools.call_args
+    messages = call_args.kwargs.get("messages") or call_args.args[1]
+    html_message = next(m for m in messages if "HTML document" in m["content"])
+    assert b64 not in html_message["content"]
+    assert "__B64_1__" in html_message["content"]

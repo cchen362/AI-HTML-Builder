@@ -1,8 +1,8 @@
-import { promptTemplates } from '../../data/promptTemplates';
+import { promptTemplates, type PromptTemplate } from '../../data/promptTemplates';
 import './TemplateCards.css';
 
 interface TemplateCardsProps {
-  onSelectTemplate: (prompt: string) => void;
+  onSelectTemplate: (template: PromptTemplate) => void;
 }
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -27,7 +27,7 @@ const TemplateCards: React.FC<TemplateCardsProps> = ({
           <button
             key={t.id}
             className="template-card"
-            onClick={() => onSelectTemplate(t.template)}
+            onClick={() => onSelectTemplate(t)}
             type="button"
           >
             <span className="template-card-icon">

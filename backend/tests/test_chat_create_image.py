@@ -165,6 +165,10 @@ async def test_image_route_svg(tmp_path):
             with patch(
                 "app.providers.gemini_image_provider.GeminiImageProvider",
                 side_effect=ValueError("no key"),
+            ), patch(
+                "app.services.router.classify_request",
+                new_callable=AsyncMock,
+                return_value="image",
             ):
                 request = ChatRequest(message="Add a flowchart showing the process")
                 response = await chat(sid, request)
@@ -201,7 +205,7 @@ async def test_image_route_no_document(tmp_path):
             from app.api.chat import chat, ChatRequest
 
             # Force image route by patching at the source module
-            with patch("app.services.router.classify_request", return_value="image"):
+            with patch("app.services.router.classify_request", new_callable=AsyncMock, return_value="image"):
                 request = ChatRequest(message="Add a photo of mountains")
                 response = await chat("test-session-no-doc", request)
 
@@ -251,6 +255,10 @@ async def test_image_route_api_image(tmp_path):
             with patch(
                 "app.providers.gemini_image_provider.GeminiImageProvider",
                 return_value=mock_img_provider,
+            ), patch(
+                "app.services.router.classify_request",
+                new_callable=AsyncMock,
+                return_value="image",
             ):
                 request = ChatRequest(message="Add a picture of mountains")
                 response = await chat(sid, request)
@@ -306,7 +314,8 @@ async def test_edit_route_unchanged(tmp_path):
             mock_editor.edit.return_value = mock_result
 
             with patch("app.services.editor.SurgicalEditor", return_value=mock_editor), \
-                 patch("app.providers.anthropic_provider.AnthropicProvider"):
+                 patch("app.providers.anthropic_provider.AnthropicProvider"), \
+                 patch("app.services.router.classify_request", new_callable=AsyncMock, return_value="edit"):
                 request = ChatRequest(message="Change the title to Updated")
                 response = await chat(sid, request)
 

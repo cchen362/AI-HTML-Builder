@@ -30,7 +30,8 @@ COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Install Playwright Chromium browser and system dependencies
-# Must happen after pip install (needs playwright package) and before USER change (needs root)
+# PLAYWRIGHT_BROWSERS_PATH makes browsers accessible to appuser (root installs, appuser runs)
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
 RUN playwright install chromium --with-deps
 
 # Copy backend code

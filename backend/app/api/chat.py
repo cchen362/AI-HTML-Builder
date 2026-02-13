@@ -299,7 +299,7 @@ async def chat(session_id: str, request: ChatRequest):
     )
 
     # Classify request
-    route = classify_request(request.message, current_html is not None)
+    route = await classify_request(request.message, current_html is not None)
 
     async def event_stream():
         try:

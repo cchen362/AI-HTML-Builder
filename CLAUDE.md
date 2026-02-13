@@ -1,6 +1,6 @@
 # AI HTML Builder v2
 
-AI-powered HTML/CSS document generator for 2-5 corporate users on a private Debian server. Users chat in natural language; the system creates, edits, and exports single-file HTML documents with all CSS/JS inlined. Three AI models collaborate: **Gemini 2.5 Pro** creates new documents, **Claude Sonnet 4.5** surgically edits them via `tool_use`, and **Nano Banana Pro (Gemini 3 Pro Image)** generates images.
+AI-powered HTML/CSS document generator for 2-5 corporate users on a private Debian server. Users chat in natural language; the system creates, edits, and exports single-file HTML documents with all CSS/JS inlined. Four AI models collaborate: **Haiku 4.5** classifies intent, **Gemini 2.5 Pro** creates new documents, **Claude Sonnet 4.5** surgically edits them via `tool_use`, and **Nano Banana Pro (Gemini 3 Pro Image)** generates images.
 
 ## Quick Start
 
@@ -37,14 +37,17 @@ React 19 (SSE) ──POST──> FastAPI ──> SQLite WAL
           (edit)        (create)        (image)
 ```
 
-### 3-Model Routing (`services/router.py`)
+### LLM Intent Routing (`services/router.py`)
 
 | Rule | Condition | Route | Model |
 |------|-----------|-------|-------|
 | 1 | No existing HTML in session | CREATE | Gemini 2.5 Pro |
-| 2 | "create a new", "start fresh", etc. | CREATE | Gemini 2.5 Pro |
-| 3 | Image/diagram keywords | IMAGE | Nano Banana Pro |
-| 4 | Everything else (default) | EDIT | Claude Sonnet 4.5 |
+| 2 | HTML exists → Haiku 4.5 classifies intent | create / edit / image | Haiku 4.5 decides |
+
+- **No-HTML shortcut**: If no document exists, always routes to CREATE (no LLM call needed)
+- **LLM classification**: Haiku 4.5 (`max_tokens=1, temperature=0`) classifies into create/edit/image
+- **Fallback on ANY error**: Defaults to EDIT (safest — doesn't create docs or call image API)
+- **Cost**: ~$0.0001/call, ~200ms latency, tracked in `cost_tracking` table
 
 ### Surgical Editing Engine (`services/editor.py`)
 
@@ -86,6 +89,7 @@ Server: text/event-stream
 | AI Edit | Claude Sonnet 4.5 | `claude-sonnet-4-5-20250929` |
 | AI Create | Gemini 2.5 Pro | `gemini-2.5-pro` |
 | AI Image | Nano Banana Pro (Gemini 3 Pro Image) | `gemini-3-pro-image-preview` |
+| AI Router | Claude Haiku 4.5 | `claude-haiku-4-5-20251001` |
 | Deploy | Docker multi-stage | Node 22-alpine + Python 3.11-slim |
 | Proxy | Nginx Proxy Manager | External (already on server) |
 
@@ -111,7 +115,7 @@ backend/app/
   services/
     editor.py                # SurgicalEditor - tool_use + fuzzy match (THE core)
     creator.py               # DocumentCreator - streaming creation, Claude fallback
-    router.py                # classify_request() - 4-rule routing
+    router.py                # classify_request() - Haiku 4.5 LLM intent classification
     image_service.py         # Image generation + SVG templates
     session_service.py       # Session/document/version/chat CRUD
     cost_tracker.py          # Per-model token + cost tracking
@@ -204,6 +208,7 @@ CREATION_MODEL=gemini-2.5-pro
 IMAGE_MODEL=gemini-3-pro-image-preview
 IMAGE_FALLBACK_MODEL=gemini-2.5-flash-image
 IMAGE_TIMEOUT_SECONDS=90
+ROUTER_MODEL=claude-haiku-4-5-20251001
 ```
 
 ## Deployment
@@ -213,7 +218,7 @@ IMAGE_TIMEOUT_SECONDS=90
 2. Stage 2: `python:3.11-slim` - installs backend deps, Playwright Chromium, copies static frontend
 3. Non-root user `appuser`, port 8000, healthcheck via `curl`
 
-**Production**: Nginx Proxy Manager (already running on server ports 80/81/443) reverse-proxies to container port 8080 -> internal 8000. Server: Debian at `100.94.82.35`, SSH as `chee@100.94.82.35`.
+**Production**: Docker container on Debian server at `100.94.82.35` (SSH as `chee@100.94.82.35`). Port 6669 external -> 8000 internal. Domain: `clhtml.zyroi.com`. Repo cloned to `~/aihtml`. Deploy workflow: local `git push` -> server `cd ~/aihtml && ./deploy.sh` (pulls, builds, restarts, health-checks). Daily DB backup via cron at 2 AM.
 
 ## Frontend Aesthetics Guidelines
 
@@ -300,13 +305,14 @@ All plans in `IMPLEMENTATION_PLANS/` directory:
 | 005 | Export Pipeline (HTML, PPTX, PDF, PNG) | COMPLETE |
 | 006 | File Upload & Templates | COMPLETE |
 | 007 | Template Optimization (placeholders, max_tokens) | COMPLETE |
-| 008 | Deployment & Security | PENDING |
+| 008 | Deployment & Security | COMPLETE |
 | 009a | Visual Foundation ("Obsidian Terminal" theme) | COMPLETE |
 | 009b | Viewer Pane & UX Polish | COMPLETE |
 | 010 | Nano Banana Pro Image Model Upgrade | COMPLETE |
 | 011 | Remove Custom Templates | COMPLETE |
 | 012 | Architecture Refactoring (dead code, export consolidation, chat.py extraction) | COMPLETE |
 | 013 | UX Improvements (template badges, confirm dialogs, new session, editable CodeMirror, loading state, send debounce, doc badges) | COMPLETE |
+| 014 | LLM Router + Template Fix (Haiku 4.5 intent classification, template badge fix, SVG word boundaries) | COMPLETE |
 
 ## Known Issues
 
@@ -322,7 +328,7 @@ All plans in `IMPLEMENTATION_PLANS/` directory:
 ---
 
 **Last Updated**: February 2026
-**Architecture**: v2 rebuild (Plans 001-007, 009a, 009b, 010, 011, 012 complete; Plan 008 pending)
-**AI Models**: Claude Sonnet 4.5 (edits) + Gemini 2.5 Pro (creation) + Nano Banana Pro (images)
+**Architecture**: v2 rebuild (Plans 001-014 complete except 008 pending)
+**AI Models**: Haiku 4.5 (routing) + Claude Sonnet 4.5 (edits) + Gemini 2.5 Pro (creation) + Nano Banana Pro (images)
 **Database**: SQLite WAL (no Redis)
 **Communication**: SSE + HTTP POST (no WebSocket)

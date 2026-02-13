@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import type { ChatMessage, Document } from '../../types';
+import type { PromptTemplate } from '../../data/promptTemplates';
 import StreamingMarkdown from '../Chat/StreamingMarkdown';
 import TemplateCards from '../EmptyState/TemplateCards';
 import './MessageList.css';
@@ -8,7 +9,7 @@ interface MessageListProps {
   messages: ChatMessage[];
   isStreaming?: boolean;
   streamingContent?: string;
-  onSelectTemplate?: (prompt: string) => void;
+  onSelectTemplate?: (template: PromptTemplate) => void;
   documents?: Document[];
 }
 
