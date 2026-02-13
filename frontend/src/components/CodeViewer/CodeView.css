@@ -49,7 +49,7 @@
   gap: 4px;
   padding: 4px 10px;
   background: var(--accent-primary);
-  color: white;
+  color: var(--text-inverse);
   border: none;
   border-radius: var(--radius-sm);
   font-family: var(--font-mono);
@@ -99,7 +99,7 @@
 }
 
 .edit-toggle-btn:disabled {
-  opacity: 0.4;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 

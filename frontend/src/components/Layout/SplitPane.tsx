@@ -7,7 +7,6 @@ interface SplitPaneProps {
   defaultPosition?: number;
   minSize?: number;
   maxSize?: number;
-  isProcessing?: boolean;
 }
 
 const SplitPane: React.FC<SplitPaneProps> = ({
@@ -16,7 +15,6 @@ const SplitPane: React.FC<SplitPaneProps> = ({
   defaultPosition = 50,
   minSize = 20,
   maxSize = 80,
-  isProcessing = false
 }) => {
   const [splitPosition, setSplitPosition] = useState(defaultPosition);
   const [isDragging, setIsDragging] = useState(false);
@@ -91,7 +89,7 @@ const SplitPane: React.FC<SplitPaneProps> = ({
       </div>
       
       <div
-        className={`split-pane-divider ${isDragging ? 'dragging' : ''}${isProcessing ? ' transmitting' : ''}`}
+        className={`split-pane-divider ${isDragging ? 'dragging' : ''}`}
         onMouseDown={handleMouseDown}
       >
         <div className="divider-line" />

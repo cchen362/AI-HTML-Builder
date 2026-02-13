@@ -318,6 +318,7 @@ All plans in `IMPLEMENTATION_PLANS/` directory:
 | 014 | LLM Router + Template Fix (Haiku 4.5 intent classification, template badge fix, SVG word boundaries) | COMPLETE |
 | 015 | Critical Bug Fixes (Router pre-routing, edit error guards, template titles, SVG branch removal) | COMPLETE |
 | 016 | Transformation Context + Document Ownership Validation | COMPLETE |
+| 017 | UI/UX Makeover (Cyberpunk Amethyst theme) | PENDING |
 
 ## Future: Real Infographics (NotebookLM-style)
 

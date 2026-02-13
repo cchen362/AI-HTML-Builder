@@ -121,7 +121,7 @@
   align-items: center;
   justify-content: center;
   background: var(--gradient-send-btn);
-  color: white;
+  color: var(--text-inverse);
   box-shadow: var(--shadow-glow-accent);
   flex-shrink: 0;
 }
@@ -229,7 +229,7 @@
 .attach-file-btn {
   background: none;
   border: 1px solid var(--border-default);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   padding: 3px 8px;
   border-radius: var(--radius-sm);
   font-family: var(--font-mono);
@@ -249,7 +249,7 @@
 
 .add-visual-btn:disabled,
 .attach-file-btn:disabled {
-  opacity: 0.35;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 

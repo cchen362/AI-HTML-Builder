@@ -5,13 +5,15 @@ interface TemplateCardsProps {
   onSelectTemplate: (template: PromptTemplate) => void;
 }
 
-const CATEGORY_ICONS: Record<string, string> = {
-  'Business Reports': '📊',
-  'Technical': '📖',
-  'Analytics': '📈',
-  'Project Management': '📋',
-  'Operations': '⚙️',
-  'Presentation': '🎯',
+const TEMPLATE_ICONS: Record<string, string> = {
+  'impact-assessment': '📊',
+  'documentation': '📖',
+  'dashboard': '📈',
+  'project-report': '🗓️',
+  'process-documentation': '🔄',
+  'presentation': '🎬',
+  'stakeholder-brief': '📝',
+  'brd': '📐',
 };
 
 const TemplateCards: React.FC<TemplateCardsProps> = ({
@@ -31,7 +33,7 @@ const TemplateCards: React.FC<TemplateCardsProps> = ({
             type="button"
           >
             <span className="template-card-icon">
-              {CATEGORY_ICONS[t.category] || '📄'}
+              {TEMPLATE_ICONS[t.id] || '📄'}
             </span>
             <span className="template-card-title">{t.name}</span>
             <span className="template-card-desc">{t.description}</span>

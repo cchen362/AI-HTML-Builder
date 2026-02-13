@@ -41,7 +41,7 @@
 
 /* --- Inline Code --- */
 .markdown-content code {
-  background: var(--surface-highlight);
+  background: var(--accent-primary-muted);
   padding: 1px 5px;
   border-radius: var(--radius-sm);
   font-family: var(--font-mono);
@@ -150,13 +150,3 @@
 .hljs-attr { color: #9cdcfe; }
 .hljs-number { color: #b5cea8; }
 .hljs-built_in { color: #dcdcaa; }
-
-/* --- highlight.js Light Theme Override --- */
-[data-theme="light"] .hljs { color: #24292e; }
-[data-theme="light"] .hljs-keyword { color: #d73a49; }
-[data-theme="light"] .hljs-string { color: #032f62; }
-[data-theme="light"] .hljs-comment { color: #6a737d; }
-[data-theme="light"] .hljs-tag { color: #22863a; }
-[data-theme="light"] .hljs-attr { color: #6f42c1; }
-[data-theme="light"] .hljs-number { color: #005cc5; }
-[data-theme="light"] .hljs-built_in { color: #e36209; }

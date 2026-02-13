@@ -94,38 +94,6 @@
   height: 80px;
 }
 
-/* --- Transmitting State (active AI processing) --- */
-.split-pane-divider.transmitting {
-  background: var(--signal-active-muted);
-  border-color: rgba(0, 229, 204, 0.1);
-}
-
-.split-pane-divider.transmitting .divider-line {
-  background: var(--signal-active);
-  box-shadow: 0 0 12px var(--signal-active-glow);
-  animation: conduit-pulse 1.5s ease-in-out infinite;
-}
-
-/* Sweep overlay for transmitting */
-.split-pane-divider.transmitting::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    var(--signal-active-glow) 50%,
-    transparent 100%
-  );
-  background-size: 100% 60%;
-  background-repeat: no-repeat;
-  animation: conduit-sweep 2s linear infinite;
-  pointer-events: none;
-}
-
 /* Dragging cursor overrides */
 .split-pane.dragging {
   cursor: ew-resize !important;

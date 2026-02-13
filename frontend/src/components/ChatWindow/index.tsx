@@ -3,7 +3,7 @@ import MessageList from './MessageList';
 import ChatInput from './ChatInput';
 import type { ChatMessage, Document } from '../../types';
 import type { PromptTemplate } from '../../data/promptTemplates';
-import ThemeToggle from '../ThemeToggle';
+
 import './ChatWindow.css';
 
 interface ChatWindowProps {
@@ -24,7 +24,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   messages,
   onSendMessage,
   isStreaming = false,
-  currentStatus = '',
   streamingContent = '',
   error = null,
   onDismissError,
@@ -67,7 +66,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2>AI HTML Builder</h2>
           <div className="header-actions">
-            <ThemeToggle />
             <div className="header-menu-wrapper" ref={menuRef}>
               <button
                 className={`header-menu-btn${menuOpen ? ' active' : ''}`}
@@ -95,11 +93,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                 </div>
               )}
             </div>
-          </div>
-        </div>
-        <div className="session-info">
-          <div className={`status-indicator ${isStreaming ? 'processing' : 'ready'}`}>
-            {isStreaming ? `[>] ${currentStatus || 'PROCESSING...'}` : '[*] SYSTEMS NOMINAL'}
           </div>
         </div>
       </div>

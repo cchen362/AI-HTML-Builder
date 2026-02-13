@@ -307,7 +307,6 @@ const ChatApp = () => {
   return (
     <div className="App">
       <SplitPane
-        isProcessing={isStreaming}
         leftContent={
           <ChatWindow
             messages={messages}

@@ -5,8 +5,8 @@
 .version-timeline {
   display: flex;
   flex-direction: column;
-  width: 260px;
-  min-width: 260px;
+  width: 300px;
+  min-width: 300px;
   border-left: 1px solid var(--border-default);
   background: var(--surface-base);
   height: 100%;
@@ -69,9 +69,9 @@
 /* --- Version Preview Bar --- */
 .version-preview-bar {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 12px;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
   background: var(--signal-warning-muted);
   border-bottom: 1px solid var(--signal-warning);
   font-family: var(--font-mono);
@@ -150,7 +150,7 @@
 }
 
 .version-item--current {
-  border-left: 3px solid var(--signal-success);
+  border-left: 3px solid var(--accent-primary);
 }
 
 .version-item-header {
@@ -176,8 +176,8 @@
 }
 
 .version-badge--current {
-  background: var(--signal-success-muted);
-  color: var(--signal-success);
+  background: var(--accent-primary-muted);
+  color: var(--accent-primary);
 }
 
 .version-model {

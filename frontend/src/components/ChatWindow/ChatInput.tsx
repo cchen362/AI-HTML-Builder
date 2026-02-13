@@ -169,7 +169,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
     }
@@ -371,7 +371,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             type="submit"
             disabled={(!message.trim() && !activeTemplate) || isProcessing}
             className="send-button"
-            title="Send message (Ctrl/Cmd + Enter)"
+            title="Send message (Enter)"
           >
             {isProcessing ? (
               <div className="loading-dots">
@@ -429,7 +429,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         </div>
         <div className="footer-right">
           <span className="char-count">{message.length.toLocaleString()} chars</span>
-          <span className="help-text">Ctrl/Cmd + Enter to send</span>
+          <span className="help-text">Shift + Enter for new line</span>
         </div>
       </div>
 
