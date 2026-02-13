@@ -251,7 +251,7 @@
   background: white;
 }
 
-/* --- Loading Skeleton --- */
+/* --- Viewer Loading State --- */
 .viewer-loading {
   display: flex;
   flex-direction: column;
@@ -259,46 +259,17 @@
   justify-content: center;
   height: 100%;
   padding: 2rem;
-  background:
-    linear-gradient(var(--border-subtle) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px);
-  background-size: 40px 40px;
-  background-position: center center;
+  background: var(--surface-base);
+  background-image: radial-gradient(ellipse at center, var(--surface-raised) 0%, var(--surface-base) 70%);
 }
 
-.loading-skeleton {
-  width: 80%;
-  max-width: 600px;
-}
-
-.skeleton-bar {
-  height: 16px;
-  background: linear-gradient(
-    90deg,
-    var(--surface-highlight) 25%,
-    var(--surface-overlay) 50%,
-    var(--surface-highlight) 75%
-  );
-  background-size: 200% 100%;
-  animation: skeleton-shimmer 1.5s ease-in-out infinite;
-  border-radius: var(--radius-sm);
-  margin-bottom: 12px;
-}
-
-.skeleton-header {
-  height: 28px;
-  width: 60%;
-  margin-bottom: 16px;
-}
-
-.skeleton-subheader {
-  height: 20px;
-  width: 40%;
-  margin-bottom: 24px;
-}
-
-.skeleton-line.short {
-  width: 75%;
+.loading-glyph {
+  font-family: var(--font-mono);
+  font-size: 3rem;
+  font-weight: var(--fw-bold);
+  color: var(--accent-primary);
+  opacity: 0.6;
+  animation: summon-pulse 2s var(--ease-out-expo) infinite;
 }
 
 .loading-status {

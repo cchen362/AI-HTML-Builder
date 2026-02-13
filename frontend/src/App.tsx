@@ -116,16 +116,7 @@ const HtmlViewer = React.memo(({
           {!displayHtml ? (
             isStreaming ? (
               <div className="viewer-loading">
-                <div className="loading-skeleton">
-                  <div className="skeleton-bar skeleton-header" />
-                  <div className="skeleton-bar skeleton-subheader" />
-                  <div className="skeleton-bar skeleton-line" />
-                  <div className="skeleton-bar skeleton-line" />
-                  <div className="skeleton-bar skeleton-line short" />
-                  <div className="skeleton-bar skeleton-line" />
-                  <div className="skeleton-bar skeleton-line" />
-                  <div className="skeleton-bar skeleton-line short" />
-                </div>
+                <div className="loading-glyph">&lt;/&gt;</div>
                 {currentStatus && <p className="loading-status">{currentStatus}</p>}
               </div>
             ) : (
