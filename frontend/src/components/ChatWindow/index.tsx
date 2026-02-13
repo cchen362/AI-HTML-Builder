@@ -1,49 +1,130 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
-import type { Message } from '../../types';
+import type { ChatMessage, Document } from '../../types';
+import ThemeToggle from '../ThemeToggle';
 import './ChatWindow.css';
 
 interface ChatWindowProps {
-  sessionId: string;
-  messages: Message[];
-  onSendMessage: (message: string, files?: File[]) => void;
-  isProcessing?: boolean;
+  messages: ChatMessage[];
+  onSendMessage: (message: string, files?: File[], templateName?: string, userContent?: string) => void;
+  isStreaming?: boolean;
+  currentStatus?: string;
+  streamingContent?: string;
+  error?: string | null;
+  onDismissError?: () => void;
+  onCancelRequest?: () => void;
+  sessionId?: string | null;
+  onStartNewSession?: () => void;
+  documents?: Document[];
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({
-  sessionId,
   messages,
   onSendMessage,
-  isProcessing = false
+  isStreaming = false,
+  currentStatus = '',
+  streamingContent = '',
+  error = null,
+  onDismissError,
+  onCancelRequest,
+  sessionId,
+  onStartNewSession,
+  documents = [],
 }) => {
+  const [pendingTemplate, setPendingTemplate] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const handleSelectTemplate = useCallback((prompt: string) => {
+    setPendingTemplate(prompt);
+  }, []);
+
+  const handleTemplateClaimed = useCallback(() => {
+    setPendingTemplate(null);
+  }, []);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    const timer = setTimeout(() => {
+      document.addEventListener('click', handleClickOutside);
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [menuOpen]);
+
   return (
     <div className="chat-window">
       <div className="chat-header">
-        <h2>AI HTML Builder</h2>
-        <div className="session-info">
-          <div className="session-status-row">
-            <span className="session-id">Session: {sessionId.slice(0, 8)}...</span>
-            <Link to="/admin" className="admin-header-link">
-              🔐 Admin
-            </Link>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h2>AI HTML Builder</h2>
+          <div className="header-actions">
+            <ThemeToggle />
+            <div className="header-menu-wrapper" ref={menuRef}>
+              <button
+                className={`header-menu-btn${menuOpen ? ' active' : ''}`}
+                onClick={() => setMenuOpen(!menuOpen)}
+                aria-label="Session menu"
+                type="button"
+              >
+                ⋮
+              </button>
+              {menuOpen && (
+                <div className="header-menu-dropdown">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onStartNewSession?.();
+                    }}
+                    disabled={isStreaming}
+                  >
+                    New Session
+                  </button>
+                  <div className="session-id-display">
+                    Session: {sessionId?.slice(0, 8) || '—'}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-          <div className={`status-indicator ${isProcessing ? 'processing' : 'ready'}`}>
-            {isProcessing ? 'Generating...' : 'Ready'}
+        </div>
+        <div className="session-info">
+          <div className={`status-indicator ${isStreaming ? 'processing' : 'ready'}`}>
+            {isStreaming ? `[>] ${currentStatus || 'PROCESSING...'}` : '[*] SYSTEMS NOMINAL'}
           </div>
         </div>
       </div>
-      
-      <MessageList 
-        messages={messages} 
-        isProcessing={isProcessing}
+
+      {error && (
+        <div className="error-banner">
+          <span className="error-text">{error}</span>
+          <button onClick={onDismissError} className="error-dismiss">&times;</button>
+        </div>
+      )}
+
+      <MessageList
+        messages={messages}
+        isStreaming={isStreaming}
+        streamingContent={streamingContent}
+        onSelectTemplate={handleSelectTemplate}
+        documents={documents}
       />
-      
-      <ChatInput 
+
+      <ChatInput
         onSendMessage={onSendMessage}
-        isProcessing={isProcessing}
+        isProcessing={isStreaming}
         placeholder="Describe the HTML you want to create, or browse templates for inspiration..."
+        externalMessage={pendingTemplate}
+        onExternalMessageClaimed={handleTemplateClaimed}
+        onCancelRequest={onCancelRequest}
       />
     </div>
   );

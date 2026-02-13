@@ -92,16 +92,6 @@ CREATE TABLE IF NOT EXISTS cost_tracking (
     UNIQUE(date, model)
 );
 
-CREATE TABLE IF NOT EXISTS templates (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    description TEXT,
-    html_content TEXT NOT NULL,
-    thumbnail_base64 TEXT,
-    created_by TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
 CREATE INDEX IF NOT EXISTS idx_documents_session ON documents(session_id);
 CREATE INDEX IF NOT EXISTS idx_versions_document ON document_versions(document_id);
 CREATE INDEX IF NOT EXISTS idx_messages_session ON chat_messages(session_id);

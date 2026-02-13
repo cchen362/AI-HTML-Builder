@@ -1,0 +1,107 @@
+/* ==========================================================================
+   Template Cards (Empty State)
+   ========================================================================== */
+
+.template-cards {
+  padding: 24px 16px 16px;
+}
+
+.template-cards-heading {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-regular);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  color: var(--text-tertiary);
+  text-align: center;
+  margin: 0 0 16px;
+}
+
+.template-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+/* --- Template Card --- */
+.template-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--duration-fast) var(--ease-out-expo);
+  font-family: inherit;
+  position: relative;
+  overflow: hidden;
+  animation: card-enter var(--duration-normal) var(--ease-out-expo) backwards;
+}
+
+/* Staggered entrance */
+.template-card:nth-child(1)  { animation-delay: 0ms; }
+.template-card:nth-child(2)  { animation-delay: 50ms; }
+.template-card:nth-child(3)  { animation-delay: 100ms; }
+.template-card:nth-child(4)  { animation-delay: 150ms; }
+.template-card:nth-child(5)  { animation-delay: 200ms; }
+.template-card:nth-child(6)  { animation-delay: 250ms; }
+.template-card:nth-child(7)  { animation-delay: 300ms; }
+.template-card:nth-child(8)  { animation-delay: 350ms; }
+
+/* Accent border slide-in on hover via ::before */
+.template-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 0;
+  background: var(--accent-primary);
+  transition: height var(--duration-normal) var(--ease-out-expo);
+}
+
+.template-card:hover {
+  border-color: var(--border-accent);
+  box-shadow: var(--shadow-glow-accent);
+  transform: translateY(-2px);
+}
+
+.template-card:hover::before {
+  height: 100%;
+}
+
+.template-card-icon {
+  font-size: 20px;
+  line-height: 1;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-primary-muted);
+  border-radius: var(--radius-md);
+}
+
+.template-card-title {
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-primary);
+}
+
+.template-card-desc {
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+  line-height: var(--leading-normal);
+}
+
+/* --- Responsive --- */
+@media (max-width: 480px) {
+  .template-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,4 +1,6 @@
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
+
 from app.services.session_service import session_service
 
 router = APIRouter()
@@ -55,7 +57,72 @@ async def get_latest_html(document_id: str):
     return {"html": html}
 
 
+@router.post("/api/documents/{document_id}/versions/{version}/restore")
+async def restore_version(document_id: str, version: int):
+    try:
+        new_version = await session_service.restore_version(document_id, version)
+        return {"version": new_version}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
 @router.get("/api/sessions/{session_id}/chat")
 async def get_chat_history(session_id: str):
     messages = await session_service.get_chat_history(session_id)
     return {"messages": messages}
+
+
+class FromTemplateRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    html_content: str = Field(..., min_length=1)
+
+
+@router.post("/api/sessions/{session_id}/documents/from-template")
+async def create_from_template(session_id: str, body: FromTemplateRequest):
+    """Create a new document pre-populated with template HTML."""
+    doc_id = await session_service.create_document(session_id, title=body.title)
+    version = await session_service.save_version(
+        document_id=doc_id,
+        html_content=body.html_content,
+        user_prompt="Created from template",
+        edit_summary=f"Template: {body.title}",
+        model_used="template",
+        tokens_used=0,
+    )
+    return {"document_id": doc_id, "version": version}
+
+
+class ManualEditRequest(BaseModel):
+    html_content: str = Field(..., min_length=1)
+
+
+class RenameRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+
+
+@router.patch("/api/documents/{document_id}")
+async def rename_document(document_id: str, body: RenameRequest):
+    success = await session_service.rename_document(document_id, body.title)
+    if not success:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return {"success": True}
+
+
+@router.delete("/api/sessions/{session_id}/documents/{document_id}")
+async def delete_document(session_id: str, document_id: str):
+    success = await session_service.delete_document(session_id, document_id)
+    if not success:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete document (not found or last remaining document)",
+        )
+    return {"success": True}
+
+
+@router.post("/api/documents/{document_id}/manual-edit")
+async def save_manual_edit(document_id: str, body: ManualEditRequest):
+    """Save manual HTML edits as a new version."""
+    version = await session_service.save_manual_edit(
+        document_id, body.html_content
+    )
+    return {"version": version, "success": True}

@@ -2957,7 +2957,103 @@ curl http://localhost:8000/api/health
 
 ---
 
-**Implementation Plan Status:** READY FOR IMPLEMENTATION
+**Implementation Plan Status:** ✅ COMPLETE (implemented 2026-02-12)
 **Last Updated:** 2026-02-12
 **Author:** AI HTML Builder Team
 **Review Required:** Yes (security review for sandboxed execution)
+
+---
+
+## ⚠️ POST-IMPLEMENTATION DISCREPANCIES
+
+> **This section was added after Plan 005 was implemented.**
+> The plan doc above was written before Plans 001-003 were implemented, so it contains
+> assumptions about classes, methods, and patterns that don't exist in the actual codebase.
+> Below is the authoritative list of what was changed during implementation.
+> **Future agents: use this section as the source of truth, not the code snippets above.**
+
+### Discrepancy Table
+
+| # | Plan Doc Assumes | Actual Codebase | What Was Done |
+|---|---|---|---|
+| 1 | `DocumentStorage` class with `get_version(session_id, document_id, version)` and `get_latest_html(session_id, document_id)` | `SessionService` singleton at `app.services.session_service.session_service` with `get_version(document_id, version)` and `get_latest_html(document_id)` — no `session_id` param needed | `ExportService` imports `session_service` directly; calls `session_service.get_version(document_id, version)` returning `dict \| None`; accesses `result["html_content"]` (not `.content`) |
+| 2 | `ClaudeService` with `generate_code()` method (plan proposes adding it) | `AnthropicProvider` implementing `LLMProvider` ABC with `generate()` → `GenerationResult` | `PPTXExporter.__init__(self, provider: LLMProvider)` calls `self.provider.generate(system=..., messages=[...], temperature=0.0, max_tokens=8000)` |
+| 3 | `backend/app/dependencies.py` for dependency injection (`get_document_storage()`, `get_export_service()`) | No DI module; module-level singletons everywhere (`session_service`, `export_registry`, `export_service`) | No `dependencies.py` created; `export_service = ExportService()` at module level |
+| 4 | `ExportRegistry` uses `__new__` singleton pattern | All singletons in codebase are module-level instances | `export_registry = ExportRegistry()` at module level in `registry.py` |
+| 5 | `PlaywrightManager` uses `__new__` singleton pattern | Same as above | `playwright_manager = PlaywrightManager()` at module level in `playwright_manager.py` |
+| 6 | `ExportService.__init__(self, document_storage: DocumentStorage)` constructor DI | No DI; service imports `session_service` directly at module top | `ExportService` has no constructor params; uses `from app.services.session_service import session_service` |
+| 7 | `logging.getLogger(__name__)` throughout | `structlog.get_logger()` used everywhere in v2 codebase | All new files use `structlog.get_logger()` |
+| 8 | API routes at `api/routes/export.py` with `session_id` + `document_id` in URL path (e.g., `/{session_id}/{document_id}/html`) | Flat router files at `api/*.py`; `document_id` is a UUID PK sufficient for lookup | Created `api/export.py` with routes like `/api/export/{document_id}/html` — no `session_id` |
+| 9 | Tests in subdirectories: `tests/test_exporters/test_base.py`, etc. | All tests are flat: `tests/test_*.py` | Created flat: `test_export_base.py`, `test_export_html.py`, `test_export_pptx.py`, `test_export_pdf.py`, `test_export_api.py`, `test_playwright_manager.py` |
+| 10 | `ExportOptions.custom: Dict[str, Any] = None` with `__post_init__` | Modern Python: use `field(default_factory=dict)` to avoid mutable default + `__post_init__` | Used `custom: dict[str, Any] = field(default_factory=dict)` |
+| 11 | `ExportOptions.slide_height: int = 7.5` (int can't hold 7.5) | Type mismatch: 7.5 is a float | Used `slide_height: float = 7.5` |
+| 12 | `from typing import Dict, Any, Optional` (old-style) | Python 3.10+ syntax used throughout v2 codebase | Used `dict[str, Any]`, `X \| None` instead of `Optional[X]`, `from __future__ import annotations` |
+| 13 | Sandbox `__builtins__` has no `__import__` | `from pptx import Presentation` in generated code needs `__import__` to work | Added whitelisted `_safe_import()` function that delegates to `builtins.__import__` after checking module against `_ALLOWED_BASE_MODULES` frozenset |
+| 14 | `_FORBIDDEN_PATTERNS` includes `__import__` | Can't forbid `__import__` if we provide `_safe_import` as `__import__` | Removed `__import__` from forbidden patterns list |
+| 15 | `PlaywrightManager._restart_lock = asyncio.Lock()` in `__init__` | Module-level singleton is imported before event loop exists; `asyncio.Lock()` requires a running loop | `_restart_lock` created lazily inside `async def initialize()`, not in `__init__` |
+| 16 | `PlaywrightManager._playwright` typed as `object \| None` | mypy errors: `"object" has no attribute "chromium"` / `"stop"` | Typed as `Playwright \| None` (from `playwright.async_api`) |
+| 17 | Plan doc proposes `claude_service` variable for PPTX registration in `main.py` lifespan | No `claude_service` exists; `AnthropicProvider` is the provider | Lifespan creates `AnthropicProvider()` wrapped in try/except, passes to `PPTXExporter(pptx_provider)` |
+| 18 | `ExportService.export_document()` calls `self.document_storage.get_version(session_id, doc_id, version).content` | `session_service.get_version(document_id, version)` returns `dict \| None` | Access via `version_data["html_content"]` after None check |
+
+### Key Architectural Patterns (Actual, Not Plan Doc)
+
+- **Singletons**: Module-level instances, NOT `__new__` or DI containers
+  ```python
+  # In registry.py
+  export_registry = ExportRegistry()
+  # In export_service.py
+  export_service = ExportService()
+  # In playwright_manager.py
+  playwright_manager = PlaywrightManager()
+  ```
+
+- **Provider injection**: Constructor takes `LLMProvider` interface (same pattern as `SurgicalEditor`)
+  ```python
+  class PPTXExporter(BaseExporter):
+      def __init__(self, provider: LLMProvider) -> None:
+          self.provider = provider
+  ```
+
+- **Logging**: `structlog.get_logger()` everywhere (not `logging.getLogger`)
+
+- **API routes**: Flat files at `backend/app/api/*.py`, NOT nested `api/routes/` dirs
+
+- **DB access**: `session_service.get_version(document_id, version)` returns `dict | None` with key `"html_content"`
+
+### Files Actually Created/Modified/Deleted
+
+**Created (16 files):**
+- `backend/app/services/exporters/__init__.py`
+- `backend/app/services/exporters/base.py`
+- `backend/app/services/exporters/registry.py`
+- `backend/app/services/exporters/html_exporter.py`
+- `backend/app/services/exporters/pptx_exporter.py`
+- `backend/app/services/exporters/pdf_exporter.py`
+- `backend/app/services/exporters/png_exporter.py`
+- `backend/app/services/export_service.py`
+- `backend/app/services/playwright_manager.py`
+- `backend/app/api/export.py`
+- `backend/tests/test_export_base.py`
+- `backend/tests/test_export_html.py`
+- `backend/tests/test_export_pptx.py`
+- `backend/tests/test_export_pdf.py`
+- `backend/tests/test_playwright_manager.py`
+- `backend/tests/test_export_api.py`
+
+**Modified (3 files):**
+- `backend/app/main.py` — exporter registration in lifespan, Playwright init/shutdown, export router
+- `backend/app/api/health.py` — Playwright status, structured response with components
+- `Dockerfile` — curl, `playwright install chromium --with-deps`, curl-based HEALTHCHECK
+
+**Deleted (2 files):**
+- `backend/app/api/endpoints/export.py` — dead v1 code (imported nonexistent `redis_service`)
+- `backend/app/api/endpoints/health.py` — dead v1 code (real endpoint at `api/health.py`)
+
+**NOT created (contrary to plan doc):**
+- `backend/app/dependencies.py` — not needed, module-level singletons used instead
+- `backend/app/services/claude_service.py` additions — `AnthropicProvider.generate()` used directly
+
+### Verification Results (2026-02-12)
+- **Tests**: 193/194 passing (76 new + 117 existing), 1 pre-existing failure (`test_init_db_creates_file`)
+- **Ruff**: clean
+- **Mypy**: clean

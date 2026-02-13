@@ -1,3 +1,7 @@
+/* ==========================================================================
+   Split Pane Layout
+   ========================================================================== */
+
 .split-pane {
   display: flex;
   height: 100%;
@@ -21,67 +25,108 @@
 .split-pane-right {
   height: 100%;
   overflow: hidden;
-  transition: none; /* Remove transitions during dragging */
+  transition: none;
 }
 
 .split-pane-left.dragging,
 .split-pane-right.dragging {
-  pointer-events: none; /* Prevent content interference during drag */
+  pointer-events: none;
   user-select: none;
 }
 
 .split-pane-left.dragging *,
 .split-pane-right.dragging * {
-  pointer-events: none !important; /* Disable all child element events during drag */
+  pointer-events: none !important;
   user-select: none !important;
 }
 
 .split-pane-left.dragging iframe,
 .split-pane-right.dragging iframe {
-  pointer-events: none !important; /* Specifically disable iframe events during drag */
+  pointer-events: none !important;
 }
 
+/* --- Divider --- */
 .split-pane-divider {
-  width: 8px;
-  background: #e5e5e5;
+  width: 6px;
+  background: var(--surface-void);
   cursor: ew-resize;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: all var(--duration-fast) var(--ease-out-expo);
   position: relative;
   user-select: none;
   flex-shrink: 0;
+  border-left: 1px solid var(--border-subtle);
+  border-right: 1px solid var(--border-subtle);
+}
+
+/* Resting vertical line */
+.divider-line {
+  width: 1px;
+  height: 40px;
+  background: var(--border-strong);
+  border-radius: 1px;
+  transition: all var(--duration-fast) var(--ease-out-expo);
 }
 
 .split-pane-divider:hover {
-  background: #4A90E2;
-  width: 10px;
+  width: 8px;
+  background: var(--surface-highlight);
+}
+
+.split-pane-divider:hover .divider-line {
+  background: var(--accent-primary);
+  box-shadow: 0 0 8px var(--accent-primary-glow);
+  height: 60px;
 }
 
 .split-pane-divider.dragging {
-  background: #003366;
-  width: 10px;
-  box-shadow: 0 0 10px rgba(0, 51, 102, 0.3);
+  width: 8px;
+  background: var(--accent-primary-muted);
+  border-color: var(--accent-primary);
   z-index: 10000;
 }
 
-@media (prefers-color-scheme: dark) {
-  .split-pane-divider {
-    background: #404040;
-  }
-  
-  .split-pane-divider:hover {
-    background: #66a9e2;
-  }
-  
-  .split-pane-divider.dragging {
-    background: #004488;
-    box-shadow: 0 0 10px rgba(0, 68, 136, 0.3);
-  }
+.split-pane-divider.dragging .divider-line {
+  background: var(--accent-primary);
+  box-shadow: 0 0 16px var(--accent-primary-glow);
+  height: 80px;
 }
 
-/* Ensure no interference from content during drag */
+/* --- Transmitting State (active AI processing) --- */
+.split-pane-divider.transmitting {
+  background: var(--signal-active-muted);
+  border-color: rgba(0, 229, 204, 0.1);
+}
+
+.split-pane-divider.transmitting .divider-line {
+  background: var(--signal-active);
+  box-shadow: 0 0 12px var(--signal-active-glow);
+  animation: conduit-pulse 1.5s ease-in-out infinite;
+}
+
+/* Sweep overlay for transmitting */
+.split-pane-divider.transmitting::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    var(--signal-active-glow) 50%,
+    transparent 100%
+  );
+  background-size: 100% 60%;
+  background-repeat: no-repeat;
+  animation: conduit-sweep 2s linear infinite;
+  pointer-events: none;
+}
+
+/* Dragging cursor overrides */
 .split-pane.dragging {
   cursor: ew-resize !important;
 }
@@ -90,66 +135,43 @@
   cursor: ew-resize !important;
 }
 
-.divider-handle {
-  width: 100%;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 3px;
-}
-
-.divider-dots {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  align-items: center;
-}
-
-.divider-dots span {
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.8);
-  display: block;
-}
-
-.split-pane-divider:hover .divider-dots span {
-  background: white;
-}
-
-/* Mobile responsive */
+/* --- Mobile Responsive --- */
 @media (max-width: 768px) {
   .split-pane {
     flex-direction: column;
   }
-  
+
   .split-pane-left,
   .split-pane-right {
     width: 100% !important;
   }
-  
+
   .split-pane-left {
     height: 50% !important;
   }
-  
+
   .split-pane-right {
     height: 50% !important;
   }
-  
+
   .split-pane-divider {
     width: 100%;
     height: 6px;
     cursor: ns-resize;
     flex-direction: row;
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border-subtle);
   }
-  
-  .divider-handle {
+
+  .divider-line {
     width: 40px;
-    height: 100%;
+    height: 1px;
   }
-  
-  .divider-dots {
-    flex-direction: row;
+
+  .split-pane-divider:hover .divider-line {
+    width: 60px;
+    height: 1px;
   }
 }

@@ -1,0 +1,216 @@
+/* ==========================================================================
+   Version Timeline
+   ========================================================================== */
+
+.version-timeline {
+  display: flex;
+  flex-direction: column;
+  width: 260px;
+  min-width: 260px;
+  border-left: 1px solid var(--border-default);
+  background: var(--surface-base);
+  height: 100%;
+  overflow: hidden;
+}
+
+.version-timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-default);
+  background: var(--surface-raised);
+  flex-shrink: 0;
+}
+
+.version-timeline-title {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+
+.version-timeline-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color var(--duration-fast);
+}
+
+.version-timeline-close:hover {
+  color: var(--text-primary);
+}
+
+.version-timeline-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.version-timeline-empty,
+.version-timeline-error {
+  padding: 24px 12px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+}
+
+.version-timeline-error {
+  color: var(--signal-error);
+}
+
+/* --- Version Preview Bar --- */
+.version-preview-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  background: var(--signal-warning-muted);
+  border-bottom: 1px solid var(--signal-warning);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--signal-warning);
+  flex-shrink: 0;
+}
+
+.back-to-current-btn {
+  background: none;
+  border: 1px solid var(--signal-warning);
+  color: var(--signal-warning);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+
+.back-to-current-btn:hover {
+  background: var(--signal-warning);
+  color: var(--text-inverse);
+}
+
+.version-preview-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.restore-version-btn {
+  background: var(--accent-primary);
+  color: var(--text-inverse);
+  border: none;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  transition: all var(--duration-fast);
+}
+
+.restore-version-btn:hover {
+  background: var(--accent-primary-hover);
+}
+
+/* --- Version Item --- */
+.version-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px;
+  margin-bottom: 6px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  cursor: pointer;
+  transition: border-color var(--duration-fast), background var(--duration-fast);
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.version-item:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-highlight);
+}
+
+.version-item--selected {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary-muted);
+}
+
+.version-item--current {
+  border-left: 3px solid var(--signal-success);
+}
+
+.version-item-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.version-number {
+  font-family: var(--font-mono);
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-xs);
+  color: var(--text-primary);
+}
+
+.version-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  font-weight: var(--fw-medium);
+}
+
+.version-badge--current {
+  background: var(--signal-success-muted);
+  color: var(--signal-success);
+}
+
+.version-model {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  background: var(--accent-primary-muted);
+  color: var(--accent-primary);
+}
+
+.version-summary {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.version-prompt {
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+
+.version-time {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-tertiary);
+}

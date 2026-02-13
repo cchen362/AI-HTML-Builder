@@ -57,7 +57,7 @@ def classify_request(user_input: str, has_existing_html: bool) -> str:
 
     Returns:
         'create' - Route to Gemini 2.5 Pro for new document creation
-        'image' - Route to Nano Banana Pro for image generation
+        'image' - Route to Nano Banana Pro (gemini-3-pro-image-preview) for image generation
         'edit' - Route to Claude Sonnet 4.5 for surgical editing (DEFAULT)
     """
     input_lower = user_input.lower()

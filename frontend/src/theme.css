@@ -1,0 +1,234 @@
+/* ==========================================================================
+   AI HTML Builder - Theme System ("Obsidian Terminal")
+   Dark mode = default (:root). Light mode = [data-theme="light"] overrides.
+   All component CSS references these tokens exclusively.
+   ========================================================================== */
+
+/* --- Typography Tokens --- */
+:root {
+  --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-body: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  --fw-thin: 200;
+  --fw-light: 300;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-bold: 700;
+  --fw-heavy: 800;
+
+  --fs-xs: 0.6875rem;
+  --fs-sm: 0.75rem;
+  --fs-base: 0.875rem;
+  --fs-md: 1rem;
+  --fs-lg: 1.25rem;
+  --fs-xl: 1.75rem;
+  --fs-display: 2.5rem;
+
+  --leading-tight: 1.2;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.7;
+
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.08em;
+  --tracking-widest: 0.15em;
+}
+
+/* --- Dark Mode (Default) --- */
+:root {
+  --surface-void: #08090A;
+  --surface-base: #0D0F12;
+  --surface-raised: #141720;
+  --surface-overlay: #1A1E2A;
+  --surface-highlight: #232838;
+
+  --border-subtle: #1E2234;
+  --border-default: #2A2F42;
+  --border-strong: #3D4460;
+  --border-accent: #4F6AFF;
+
+  --text-primary: #E8ECF4;
+  --text-secondary: #8B93A8;
+  --text-tertiary: #555E75;
+  --text-inverse: #0D0F12;
+
+  --accent-primary: #4F6AFF;
+  --accent-primary-hover: #6B82FF;
+  --accent-primary-muted: rgba(79, 106, 255, 0.12);
+  --accent-primary-glow: rgba(79, 106, 255, 0.35);
+
+  --signal-active: #00E5CC;
+  --signal-active-glow: rgba(0, 229, 204, 0.25);
+  --signal-active-muted: rgba(0, 229, 204, 0.08);
+
+  --signal-warning: #FFB020;
+  --signal-warning-muted: rgba(255, 176, 32, 0.10);
+
+  --signal-error: #FF4D6A;
+  --signal-error-muted: rgba(255, 77, 106, 0.10);
+
+  --signal-success: #34D399;
+  --signal-success-muted: rgba(52, 211, 153, 0.10);
+
+  --gradient-header: linear-gradient(135deg, #0D0F12 0%, #141720 50%, #1A1E2A 100%);
+  --gradient-send-btn: linear-gradient(135deg, #4F6AFF 0%, #7B5AFF 100%);
+  --gradient-send-hover: linear-gradient(135deg, #6B82FF 0%, #9575FF 100%);
+  --gradient-user-msg: linear-gradient(135deg, #1A1E56 0%, #1E1240 100%);
+  --gradient-ai-glow: linear-gradient(135deg, rgba(0, 229, 204, 0.03) 0%, rgba(79, 106, 255, 0.03) 100%);
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.6);
+  --shadow-glow-accent: 0 0 20px rgba(79, 106, 255, 0.15);
+  --shadow-glow-signal: 0 0 20px rgba(0, 229, 204, 0.15);
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 500ms;
+  --duration-dramatic: 800ms;
+}
+
+/* --- Light Mode ("Ink on Parchment") --- */
+[data-theme="light"] {
+  --surface-void: #F0EDE8;
+  --surface-base: #F7F5F2;
+  --surface-raised: #FFFFFF;
+  --surface-overlay: #FFFFFF;
+  --surface-highlight: #EDE9E3;
+
+  --border-subtle: #E5E0D8;
+  --border-default: #D4CFC5;
+  --border-strong: #B8B0A4;
+  --border-accent: #3D50CC;
+
+  --text-primary: #1A1A2E;
+  --text-secondary: #6B6880;
+  --text-tertiary: #A09DB0;
+  --text-inverse: #F7F5F2;
+
+  --accent-primary: #3D50CC;
+  --accent-primary-hover: #2E3EAA;
+  --accent-primary-muted: rgba(61, 80, 204, 0.08);
+  --accent-primary-glow: rgba(61, 80, 204, 0.20);
+
+  --signal-active: #0D9488;
+  --signal-active-glow: rgba(13, 148, 136, 0.15);
+  --signal-active-muted: rgba(13, 148, 136, 0.06);
+
+  --signal-warning: #D97706;
+  --signal-warning-muted: rgba(217, 119, 6, 0.08);
+
+  --signal-error: #DC2626;
+  --signal-error-muted: rgba(220, 38, 38, 0.08);
+
+  --signal-success: #059669;
+  --signal-success-muted: rgba(5, 150, 105, 0.08);
+
+  --gradient-header: linear-gradient(135deg, #F7F5F2 0%, #FFFFFF 100%);
+  --gradient-send-btn: linear-gradient(135deg, #3D50CC 0%, #5B3DBB 100%);
+  --gradient-send-hover: linear-gradient(135deg, #2E3EAA 0%, #4A2FA8 100%);
+  --gradient-user-msg: linear-gradient(135deg, #E8EDFF 0%, #F0EBFF 100%);
+  --gradient-ai-glow: linear-gradient(135deg, rgba(13, 148, 136, 0.03) 0%, rgba(61, 80, 204, 0.03) 100%);
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.12);
+  --shadow-glow-accent: 0 0 20px rgba(61, 80, 204, 0.10);
+  --shadow-glow-signal: 0 0 20px rgba(13, 148, 136, 0.10);
+}
+
+/* ==========================================================================
+   Keyframe Animations
+   ========================================================================== */
+
+@keyframes summon-pulse {
+  0%   { box-shadow: 0 0 0 0 var(--accent-primary-glow); transform: scale(1); }
+  15%  { transform: scale(0.88); }
+  40%  { box-shadow: 0 0 0 12px var(--accent-primary-glow); transform: scale(1.12); }
+  100% { box-shadow: 0 0 0 40px transparent; transform: scale(1); }
+}
+
+@keyframes conduit-sweep {
+  0%   { background-position: 50% -100%; }
+  100% { background-position: 50% 200%; }
+}
+
+@keyframes conduit-pulse {
+  0%, 100% { opacity: 0.4; height: 40%; }
+  50%      { opacity: 1; height: 70%; }
+}
+
+@keyframes status-beacon {
+  0%, 100% { box-shadow: 0 0 4px var(--signal-active); opacity: 1; }
+  50%      { box-shadow: 0 0 16px var(--signal-active-glow); opacity: 0.6; }
+}
+
+@keyframes progress-sweep {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes materialize {
+  0%   { opacity: 0; clip-path: inset(0 0 100% 0); }
+  60%  { opacity: 1; clip-path: inset(0 0 20% 0); }
+  100% { opacity: 1; clip-path: inset(0 0 0% 0); }
+}
+
+@keyframes completion-glow {
+  0%   { box-shadow: inset 0 0 0 1px var(--signal-active), 0 0 30px var(--signal-active-glow); }
+  100% { box-shadow: inset 0 0 0 1px transparent, 0 0 0 transparent; }
+}
+
+@keyframes cursor-blink {
+  0%, 50%  { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-left {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes modal-enter {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dropdown-enter {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-pulse {
+  0%, 100% { opacity: 0.6; }
+  50%      { opacity: 1; }
+}
+
+@keyframes border-stream {
+  0%, 100% { border-left-color: var(--accent-primary); }
+  50%      { border-left-color: var(--signal-active); }
+}

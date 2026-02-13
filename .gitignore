@@ -56,5 +56,12 @@ tmp/
 temp/
 uploads/
 
-# Redis dumps
-dump.rdb
+# Production data (mounted as Docker volumes)
+data/
+backups/
+exports/
+
+# SQLite
+*.db
+*.db-shm
+*.db-wal

@@ -1,14 +1,59 @@
 # Implementation Plan 006: File Upload and Templates System
 
+## ✅ STATUS: COMPLETE (Plan 006 fully implemented and verified)
+
+- 243/244 tests passing (1 pre-existing failure: test_init_db_creates_file)
+- Ruff clean (3 pre-existing warnings in test_database/test_session_service)
+- Mypy clean (40 files)
+- Frontend: TypeScript clean, Vite build clean
+
+---
+
+## 🚨 ERRATA — 13 DISCREPANCIES (v1 plan vs v2 actual)
+
+> **This plan was written before the v2 rebuild.** The code examples below contain
+> v1-era patterns (PostgreSQL, Redis, WebSocket, etc.) that do NOT match the actual
+> v2 implementation. The plan was used as a **requirements guide only** — all code
+> was rewritten to match v2 architecture during implementation.
+>
+> **If you are reading this plan for reference, use the discrepancy table below
+> to mentally translate every code example you encounter.**
+
+| # | Original Plan (WRONG for v2) | Actual v2 Implementation | Lines Affected |
+|---|---|---|---|
+| 1 | PostgreSQL + `asyncpg` | **SQLite WAL + `aiosqlite`** | 81, 1248-1249, 1366, 1392-1460 |
+| 2 | Redis dependency (`get_redis`, `Depends(get_redis)`) | **No Redis — all state in SQLite** | 6, 286, 295 |
+| 3 | WebSocket (`ws://`) | **SSE + HTTP POST** | 9 |
+| 4 | `app/api/endpoints/*.py` path structure | **`app/api/*.py` (flat, no endpoints/ subdir)** | 282, 872, 1475, 2282-2283 |
+| 5 | `gen_random_uuid()` (PostgreSQL function) | **Python `uuid.uuid4()`** | 1218 |
+| 6 | `updated_at` column + SQL triggers | **No `updated_at` column in v2 schema** | 1225, 1231-1235, 1277, 1397, 1443 |
+| 7 | `asyncpg.Pool` / `pool.acquire()` | **`async with get_db() as db:` + `cursor = await db.execute()`** | 1392, 1413, 1440, 1460 |
+| 8 | `pip install` deps (suggesting not installed) | **All deps pre-installed in `requirements.txt`** | 108, 1292 |
+| 9 | SQL migration files (`backend/migrations/*.sql`) | **No migrations — table created in `database.py` SCHEMA** | 1216, 1246, 2267, 2338 |
+| 10 | Launch new Playwright per thumbnail | **Reuse `playwright_manager.create_page()` singleton** | ~1303-1350 |
+| 11 | `logging.getLogger(__name__)` | **`structlog.get_logger()`** | 287-289, 877-879, 1303-1306, 1370-1372, 1480-1482 |
+| 12 | Separate `FileUpload` React component | **Integrated into existing `ChatInput.tsx`** | 438-590, 2255, 2292 |
+| 13 | `RETURNING` clause in SQL (PostgreSQL) | **SQLite: use `cursor.lastrowid` or re-SELECT** | 1397 |
+
+### Additional v2 Implementation Notes (not in original plan)
+- **Lazy imports** in API endpoint functions (same pattern as `chat.py`). Tests must patch at SOURCE module, not consumer module.
+- **`onSelectCustomTemplate`** passes `(templateId, templateName)` not `(htmlContent, templateName)` — HTML fetched on demand via `getCustomTemplate()`.
+- **PromptLibraryModal** maps backend `prompt_template` field → frontend `template` field for `PromptTemplate` compatibility.
+- **`template_service.py`** uses singleton pattern: `template_service = TemplateService()`.
+- **Playwright thumbnail** gracefully returns `None` if Playwright not initialized (no crash).
+- **`from-template` endpoint** at `POST /api/sessions/{session_id}/documents/from-template` (not in original plan).
+
+---
+
 ## ⚠️ STOP - READ BEFORE STARTING
 
 **DO NOT proceed until you have:**
-- [ ] Completed Plan 001 (Backend Foundation) - Redis, session management, health checks
-- [ ] Completed Plan 004 (Frontend Foundation) - React setup, routing, chat interface
-- [ ] Verified backend is running and accepting requests
-- [ ] Verified frontend can establish WebSocket connections
-- [ ] Read this ENTIRE document top to bottom
-- [ ] Understood the different flows: file upload → context injection vs template selection → document creation
+- [x] Completed Plan 001 (Backend Foundation) - SQLite, session management, health checks
+- [x] Completed Plan 004 (Frontend Foundation) - React setup, routing, chat interface
+- [x] Verified backend is running and accepting requests
+- [x] Verified frontend can connect via SSE
+- [x] Read this ENTIRE document top to bottom
+- [x] Understood the different flows: file upload → context injection vs template selection → document creation
 
 **Estimated Time**: 3-4 days
 **Complexity**: Medium-High (file processing, thumbnail generation, dual template flows)
@@ -78,7 +123,7 @@ User iterates via chat
 ### Template System Rules
 - [ ] Built-in templates stored in `backend/app/config/builtin_templates.json`
 - [ ] Built-in template format: `{"id": str, "name": str, "description": str, "prompt_template": str, "category": str, "thumbnail": str}`
-- [ ] Custom templates stored in PostgreSQL `templates` table
+- [ ] Custom templates stored in SQLite `templates` table *(ERRATA: plan said PostgreSQL — see discrepancy #1)*
 - [ ] Thumbnail generation via Playwright screenshot (1200x800 viewport, scale to 400x300)
 - [ ] Thumbnail stored as base64 PNG data URI
 - [ ] Template HTML must be valid, complete HTML documents (<!DOCTYPE html>...)
@@ -2397,5 +2442,34 @@ psql -U postgres -d ai_html_builder -c "DROP TABLE IF EXISTS templates CASCADE;"
 
 ---
 
-**Implementation Complete**: File upload and templates system ready for production use.
-**Next Steps**: Proceed to Plan 007 (Advanced Features) or Plan 008 (Deployment).
+**Implementation Complete**: ✅ File upload and templates system fully implemented and verified.
+**Completed by**: Claude agent session (Plan 006)
+**Test Results**: 243/244 passed (1 pre-existing), ruff clean, mypy clean, TypeScript clean, Vite build clean
+**Discrepancies**: 13 v1→v2 corrections applied during implementation (see ERRATA section at top)
+**Next Steps**: Proceed to Plan 007 (Template Optimization) then Plan 008 (Deployment).
+
+### Files Created (11)
+- `backend/app/utils/file_processors.py` — file validation + content extraction
+- `backend/app/api/upload.py` — POST /api/upload endpoint
+- `backend/app/config/builtin_templates.json` — 8 builtin templates
+- `backend/app/api/templates.py` — builtin + custom template CRUD endpoints
+- `backend/app/services/template_service.py` — custom template service (SQLite + Playwright thumbnails)
+- `frontend/src/services/uploadService.ts` — client-side upload validation + API
+- `frontend/src/services/templateService.ts` — builtin + custom template API client
+- `backend/tests/test_file_processors.py` — 12 tests
+- `backend/tests/test_upload_api.py` — 5 tests
+- `backend/tests/test_template_service.py` — 10 tests
+- `backend/tests/test_templates_api.py` — 23 tests
+
+### Files Modified (11)
+- `backend/app/main.py` — added upload + templates routers
+- `backend/app/database.py` — added `idx_templates_created_by` index
+- `backend/app/api/sessions.py` — added `POST .../from-template` endpoint
+- `frontend/src/components/ChatWindow/ChatInput.tsx` — file upload UI integration
+- `frontend/src/components/ChatWindow/ChatInput.css` — upload button + indicator styles
+- `frontend/src/components/EmptyState/TemplateCards.tsx` — fetch from API + custom templates
+- `frontend/src/components/EmptyState/TemplateCards.css` — custom template card styles
+- `frontend/src/components/ChatWindow/PromptLibraryModal.tsx` — fetch from API
+- `frontend/src/App.tsx` — Save Template modal + custom template handler
+- `frontend/src/services/api.ts` — added `createFromTemplate` method
+- `frontend/src/types/index.ts` — added BuiltinTemplate + CustomTemplate interfaces

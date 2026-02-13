@@ -82,7 +82,13 @@
       "Read(/C:\\Users\\cchen362\\OneDrive\\Desktop/**)",
       "Bash(find:*)",
       "Read(//c/Users/cchen362/OneDrive/Desktop/**)",
-      "Bash(npm run lint)"
+      "Bash(npm run lint)",
+      "Bash(del \"c:\\\\Users\\\\cchen362\\\\OneDrive\\\\Desktop\\\\AI-HTML-Builder\\\\backend\\\\app\\\\utils\\\\rate_limiter.py\")",
+      "Bash(npm install:*)",
+      "Bash(ssh:*)",
+      "Bash(ls -la \"c:\\\\Users\\\\cchen362\\\\OneDrive\\\\Desktop\\\\AI-HTML-Builder\"\" | grep -E \".env)",
+      "Bash(docker \")",
+      "Bash(ANTHROPIC_API_KEY=sk-ant-test GOOGLE_API_KEY=test python:*)"
     ],
     "deny": [],
     "ask": []

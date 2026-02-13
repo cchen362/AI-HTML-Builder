@@ -1,0 +1,86 @@
+/* ==========================================================================
+   Export Dropdown
+   ========================================================================== */
+
+.export-dropdown {
+  position: relative;
+}
+
+.export-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  min-width: 180px;
+  background: var(--surface-overlay);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 50;
+  overflow: hidden;
+  animation: dropdown-enter var(--duration-fast) var(--ease-out-expo);
+}
+
+.export-dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 8px 14px;
+  background: none;
+  border: none;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background var(--duration-fast);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+
+.export-dropdown-item:hover:not(:disabled) {
+  background: var(--surface-highlight);
+  color: var(--accent-primary);
+}
+
+.export-dropdown-item:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.export-dropdown-item--disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.coming-soon {
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+  font-style: italic;
+  text-transform: none;
+  letter-spacing: var(--tracking-normal);
+}
+
+.export-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: var(--signal-error-muted);
+  border-bottom: 1px solid var(--signal-error);
+  color: var(--signal-error);
+  font-size: var(--fs-sm);
+}
+
+.export-error button {
+  background: none;
+  border: none;
+  color: var(--signal-error);
+  cursor: pointer;
+  font-size: var(--fs-md);
+  padding: 0 4px;
+}
+
+.export-loading {
+  color: var(--text-tertiary);
+  font-style: italic;
+}

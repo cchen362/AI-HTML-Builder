@@ -11,15 +11,14 @@ class Settings(BaseSettings):
 
     # Server
     log_level: str = "info"
-    rate_limit_requests: int = 30
-    rate_limit_window: int = 60  # seconds
-    session_timeout_hours: int = 24
     max_upload_size_mb: int = 50
 
     # Models (configurable without code change)
     edit_model: str = "claude-sonnet-4-5-20250929"
     creation_model: str = "gemini-2.5-pro"
-    image_model: str = "gemini-2.0-flash-preview-image-generation"
+    image_model: str = "gemini-3-pro-image-preview"
+    image_fallback_model: str = "gemini-2.5-flash-image"
+    image_timeout_seconds: int = 90
 
     model_config = {
         "env_file": ".env",

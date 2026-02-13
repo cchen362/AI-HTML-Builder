@@ -15,7 +15,7 @@ const PromptLibraryModal: React.FC<PromptLibraryModalProps> = ({
   onSelectTemplate
 }) => {
   const [selectedTemplate, setSelectedTemplate] = useState<PromptTemplate | null>(null);
-  const [categories] = useState(() => getTemplatesByCategory());
+  const categories = getTemplatesByCategory();
 
   // Close modal on Escape key
   useEffect(() => {
@@ -56,8 +56,8 @@ const PromptLibraryModal: React.FC<PromptLibraryModalProps> = ({
       <div className="prompt-library-modal">
         <div className="modal-header">
           <h2>Prompt Template Library</h2>
-          <button 
-            className="close-button" 
+          <button
+            className="close-button"
             onClick={onClose}
             aria-label="Close modal"
           >
@@ -72,7 +72,7 @@ const PromptLibraryModal: React.FC<PromptLibraryModalProps> = ({
             <p className="sidebar-description">
               Choose a template that fits your content style:
             </p>
-            
+
             {Array.from(categories.entries()).map(([category, templates]) => (
               <div key={category} className="category-group">
                 <h3 className="category-title">{category}</h3>
@@ -97,26 +97,20 @@ const PromptLibraryModal: React.FC<PromptLibraryModalProps> = ({
                   <h3>{selectedTemplate.name}</h3>
                   <span className="template-category">{selectedTemplate.category}</span>
                 </div>
-                
+
                 <p className="template-full-description">
                   {selectedTemplate.description}
                 </p>
-                
+
                 <div className="template-preview-text">
                   <h4>Template Preview:</h4>
                   <div className="template-text">
                     {selectedTemplate.template
-                      .replace('{USER_CONTENT}', '[Your content will be inserted here]')
+                      .replace(/\{\{[A-Z_]+\}\}/g, '[Your content here]')
                       .split('\n')
                       .map((line, index) => (
                         <div key={index} className={
-                          line.startsWith('DESIGN REQUIREMENTS:') || 
-                          line.startsWith('CONTENT TO INCLUDE:') || 
-                          line.startsWith('STRUCTURE REQUIREMENTS:') ||
-                          line.startsWith('FEATURES REQUIRED:') ||
-                          line.startsWith('INTERACTIVE FEATURES:') ||
-                          line.startsWith('REPORT SECTIONS:') ||
-                          line.startsWith('WORKFLOW FEATURES:') 
+                          /^[A-Z][A-Z _/&()-]+:/.test(line)
                             ? 'section-header' : 'template-line'
                         }>
                           {line}
@@ -125,9 +119,9 @@ const PromptLibraryModal: React.FC<PromptLibraryModalProps> = ({
                     }
                   </div>
                 </div>
-                
+
                 <div className="preview-actions">
-                  <button 
+                  <button
                     className="use-template-button"
                     onClick={handleUseTemplate}
                   >

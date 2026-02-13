@@ -405,43 +405,69 @@ backend/
 **Outcome**: Backend skeleton that compiles, serves static files, handles SSE
 **Completed**: February 12, 2026 - 14 new files, 29/29 tests passing. See "Implementation Notes" section at the end of Plan 001 for deviations from the original code listings (aiosqlite cursor pattern, Pydantic v2 config, etc.)
 
-### Phase 2: Surgical Editing Engine (Plan 002)
+### Phase 2: Surgical Editing Engine (Plan 002) - COMPLETE
 **Goal**: Tool-based editing with Claude Sonnet 4.5
 **Effort**: ~3-4 days
 **Outcome**: Users can edit HTML without content drift
 **Dependencies**: Plan 001
+**Completed**: February 2026 - 46/46 tests passing. SurgicalEditor with tool_use, fuzzy matching fallback chain, router with classify_request(). See "Implementation Notes" at end of Plan 002 for deviations.
 
-### Phase 3: Multi-Model Routing (Plan 003)
-**Goal**: Gemini 2.5 Pro for creation, Nano Banana Pro for images, model router
+### Phase 3: Multi-Model Routing (Plan 003) - COMPLETE
+**Goal**: Gemini 2.5 Pro for creation, Gemini image model for images, SVG templates for diagrams
 **Effort**: ~3-4 days
 **Outcome**: Best model used for each task automatically
-**Dependencies**: Plan 001
+**Dependencies**: Plans 001, 002
+**Completed**: February 2026 - 117/118 tests passing (1 pre-existing). 11 discrepancies corrected from original plan doc (written before Plans 001-002). See "Implementation Notes" at top of Plan 003 for full details.
 
-### Phase 4: Frontend Enhancements (Plan 004)
+### Phase 4: Frontend Enhancements (Plan 004) - COMPLETE
 **Goal**: CodeMirror 6, Streamdown, version history, multi-doc UI
 **Effort**: ~5-7 days
 **Outcome**: Modern, polished frontend with all UX gaps filled
 **Dependencies**: Plan 001
+**Completed**: February 2026 - CodeMirror 6 editor, streaming markdown, version timeline, multi-document tabs, split pane layout.
 
-### Phase 5: Export Pipeline (Plan 005)
+### Phase 5: Export Pipeline (Plan 005) - COMPLETE
 **Goal**: PPTX export (Claude-generated), PDF export (Playwright)
 **Effort**: ~3-4 days
 **Outcome**: Users can export to PowerPoint and PDF
 **Dependencies**: Plans 002, 003
+**Completed**: February 2026 - 193/194 tests passing (76 new + 117 existing, 1 pre-existing). 18 discrepancies corrected from original plan doc (DocumentStorage→SessionService, generate_code→generate, DI→singletons, etc.). See "Post-Implementation Discrepancies" at end of Plan 005 for full details.
 
-### Phase 6: File Upload & Templates (Plan 006)
+### Phase 6: File Upload & Templates (Plan 006) - COMPLETE
 **Goal**: Document/data file upload, smart starter prompts, custom templates
 **Effort**: ~3-4 days
 **Outcome**: Users can upload files and use/save templates
 **Dependencies**: Plans 001, 004
+**Completed**: February 2026 - 243/244 tests passing (50 new + 193 existing, 1 pre-existing). 13 discrepancies corrected from original plan doc (PostgreSQL→SQLite, Redis→none, WebSocket→SSE, etc.). See ERRATA section at top of Plan 006 for full details.
 
-### Phase 7: Deployment & Security (Plan 007)
+### Phase 7: Template Optimization (Plan 007) - COMPLETE
+**Goal**: Rewrite builtin templates with HTML structural guidance, fix placeholder bug, bump token limit, add Stakeholder Brief & BRD
+**Effort**: ~1-2 days
+**Outcome**: Templates produce consistent, well-structured output for users with weak prompting skills
+**Dependencies**: Plan 006
+**Completed**: February 2026 - 244/245 tests passing. 8 builtin templates rewritten with `{{PLACEHOLDER}}` format. Stakeholder Brief and BRD added. `max_tokens` bumped in creator.
+
+### Phase 8: Deployment & Security (Plan 008)
 **Goal**: Docker single-container build, Nginx Proxy Manager integration, cost tracker
 **Effort**: ~2-3 days
 **Outcome**: Production-ready deployment on Debian server
 **Dependencies**: All above
 
-### Total Estimated Effort: ~22-31 days
+### Phase 9a: Visual Foundation (Plan 009a) - COMPLETE
+**Goal**: "Obsidian Terminal" dark-first theme with CSS custom properties, typography system, animations
+**Effort**: ~2-3 days
+**Outcome**: Cohesive visual identity replacing system fonts and scattered hardcoded colors
+**Dependencies**: Plans 001-007
+**Completed**: February 2026 - 14 CSS files rewritten, `theme.css` + `ThemeToggle.tsx` created, Bricolage Grotesque + IBM Plex Sans + JetBrains Mono font system.
+
+### Phase 9b: Viewer Pane & UX Polish (Plan 009b) - COMPLETE
+**Goal**: Export wiring, loading skeleton, version restore, document management, cancel button, drag-drop
+**Effort**: ~2-3 days
+**Outcome**: All frontend UX gaps filled, backend document management endpoints added
+**Dependencies**: Plan 009a, 005, 006, 007
+**Completed**: February 2026 - 14 new backend tests, export dropdown wired to backend API, viewer skeleton, version restore, document rename/delete, cancel streaming, drag-and-drop upload, action button groups.
+
+### Total Estimated Effort: ~26-37 days
 
 ---
 
@@ -483,7 +509,7 @@ backend/
 | `api/endpoints/health.py` | Plan 003 | `api/health.py` (new) |
 | `api/endpoints/export.py` | Plan 003 | `api/export.py` (new, Plan 005) |
 
-**Final verification in Plan 007**: Confirm zero old v1 files remain in `backend/app/`.
+**Final verification in Plan 008**: Confirm zero old v1 files remain in `backend/app/`.
 
 ---
 

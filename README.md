@@ -1,394 +1,246 @@
-# AI HTML Builder 🤖✨
+# AI HTML Builder v2
 
-> Transform ideas into professional HTML documents through intelligent conversation
+> Three AI models, one chat interface. Create, edit, and export professional HTML documents through conversation.
 
-[![AI Powered](https://img.shields.io/badge/AI-Claude%20Sonnet%204-blue)](https://www.anthropic.com/)
-[![Tech Stack](https://img.shields.io/badge/Stack-React%2019%20%2B%20FastAPI%20%2B%20Redis-green)](https://github.com/)
-[![Deploy](https://img.shields.io/badge/Deploy-Podman%20Ready-orange)](https://podman.io/)
+**Claude Sonnet 4.5** surgically edits your documents without content drift. **Gemini 2.5 Pro** generates new documents with top-tier aesthetics. **Nano Banana Pro** creates images on demand. All outputs are single-file HTML with CSS/JS inlined — no external dependencies, ready to share.
 
-AI HTML Builder is a cutting-edge web application that enables users to generate beautiful, responsive HTML documents through natural language conversations. Powered by Anthropic's Claude Sonnet 4, it transforms user ideas into professionally crafted single-file HTML outputs with live preview and real-time editing capabilities.
+## How It Works
 
-## 🚀 Features
+```
+React 19 (SSE) ──POST──> FastAPI ──> SQLite WAL
+                              |
+                 ┌────────────┼────────────┐
+                 v            v            v
+          Claude 4.5    Gemini 2.5 Pro  Nano Banana Pro
+          (edit)        (create)        (image)
+```
 
-### 🎯 Core Functionality
-- **AI-Powered Generation**: Leverages Claude Sonnet 4 for superior HTML/CSS creation
-- **Natural Language Interface**: Chat-based interaction for intuitive document creation
-- **Live Preview**: Real-time rendering with toggle between preview and code view
-- **Single-File Output**: Complete HTML documents with inlined CSS/JS (no external dependencies)
-- **File Upload Support**: Process .txt, .docx, .md files up to 50MB
-- **Smart Editing**: Semantic targeting system for precise modifications without content recreation
+The system automatically routes your request to the right model:
 
-### 📊 Admin Dashboard & Analytics
-- **Secure Admin Access**: JWT-based authentication with session management
-- **Real-Time Analytics**: Response times, token usage, session tracking
-- **Usage Metrics**: Output type classification, success rates, user engagement
-- **Data Export**: CSV exports with date filtering for business intelligence
-- **Session Management**: Monitor active sessions and system performance
+| You say... | What happens | Model |
+|------------|-------------|-------|
+| First message (no document yet) | Creates a new HTML document | Gemini 2.5 Pro |
+| "Create a new...", "Start fresh..." | Creates a new document | Gemini 2.5 Pro |
+| "Generate an image of...", "Add a diagram..." | Generates and embeds an image | Nano Banana Pro |
+| Everything else | Surgically edits your current document | Claude Sonnet 4.5 |
 
-### 🎨 Professional Design Templates
-- **Impact Assessment Reports**: Tabbed navigation with analysis sections
-- **Technical Documentation**: Clean docs with sidebar navigation
-- **Business Dashboards**: Interactive charts and data visualization
-- **Project Reports**: Structured reports with status tracking
-- **Process Documentation**: Step-by-step guides with workflows
-- **Presentation Slides**: Professional slide presentations
+### The Surgical Editing Engine
 
-### 🔧 Advanced Technical Features
-- **Semantic Targeting**: Claude Artifacts-inspired precise editing
-- **150K Context Window**: Handle large documents and complex iterations
-- **WebSocket Communication**: Real-time bidirectional communication
-- **Redis Integration**: Session persistence with graceful memory fallback
-- **Mobile-Responsive**: Optimized for all device sizes
-- **Accessibility Compliant**: WCAG guidelines and ARIA attributes
+This is the core innovation. Most AI HTML tools regenerate the entire document on every edit, causing **content drift** — your carefully refined sections get rewritten, formatting changes, content disappears. We solved this:
 
-## 🛠 Technology Stack
+1. Claude receives your full HTML + your edit request
+2. Claude responds with **tool calls** (`html_replace`, `html_insert_after`) — not regenerated HTML
+3. The server applies replacements via **deterministic string matching**
+4. A fuzzy matching fallback chain (exact -> whitespace-stripped -> normalized -> 85% sequence match) handles minor discrepancies
+5. Temperature = 0 for edits (deterministic), 0.7 for creation (creative)
 
-### Frontend (React 19)
-- **React**: 19.1.1 with enhanced concurrent rendering
-- **TypeScript**: 5.8.3 for type safety
-- **Vite**: 7.1.2 for fast development and builds
-- **React Router**: 7.8.2 for client-side routing
+Result: edit #50 is just as precise as edit #1.
 
-### Backend (FastAPI)
-- **FastAPI**: 0.111.0+ with async support
-- **Python**: 3.11+ (3.13 compatible)
-- **WebSockets**: 12.0+ for real-time communication
-- **Redis**: 5.0.0+ for session management and caching
+## Features
 
-### AI Integration
-- **Anthropic Claude Sonnet 4**: Primary AI model for HTML generation
-- **Advanced Context Management**: 150K character optimization
-- **Semantic Analysis**: Multi-phase request understanding
+- **Chat-driven creation** — describe what you want in plain language
+- **Surgical editing** — change a heading color without touching anything else
+- **Multi-document sessions** — work on multiple documents in tabs, unlimited edits
+- **Version history** — browse and restore any previous version
+- **4-format export** — HTML, PowerPoint (PPTX), PDF, and PNG screenshot
+- **File upload** — drag & drop .txt, .md, .docx, .pdf, .csv, .xlsx (up to 50MB) as context
+- **8 builtin templates** — stakeholder briefs, BRDs, proposals, dashboards, and more
+- **Live code editor** — CodeMirror 6 with syntax highlighting and preview toggle
+- **Image generation** — AI-generated raster images embedded directly in your document
+- **Cost tracking** — per-model token usage and estimated costs
+- **Dark/light theme** — "Obsidian Terminal" dark theme with light mode toggle
 
-## ⚡ Quick Start
+## Quick Start
 
 ### Prerequisites
-- **Node.js** 18+ (for frontend development)
-- **Python** 3.11+ (for backend development)
-- **Podman** or Docker (for deployment)
-- **Anthropic API Key** (required)
-- **Redis** (optional, falls back to memory)
 
-### 🏃‍♂️ Development Setup
+- **Node.js** 22+ (frontend)
+- **Python** 3.11+ (backend)
+- **Anthropic API key** (for Claude Sonnet 4.5 — edits)
+- **Google API key** (one key covers Gemini 2.5 Pro, Nano Banana Pro, and Flash fallback)
+
+### Development
 
 ```bash
-# Clone the repository
-git clone <your-repository-url>
-cd AI-HTML-Builder
+# Backend
+cd backend
+python -m venv venv && source venv/bin/activate   # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env                               # Add your API keys
+uvicorn app.main:app --reload                      # http://localhost:8000
 
-# Frontend setup
+# Frontend (separate terminal)
 cd frontend
 npm install
-npm run dev    # Starts on http://localhost:5173
-
-# Backend setup (new terminal)
-cd backend
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your Anthropic API key
-
-# Start backend
-uvicorn app.main:app --reload  # Starts on http://localhost:8000
+npm run dev                                        # http://localhost:5173
 ```
 
-### 🐳 Production Deployment with Podman
+The Vite dev server proxies `/api` requests to `localhost:8000` automatically.
+
+### Docker (Production)
 
 ```bash
-# Quick deployment
-podman-compose -f docker-compose.prod.yml up -d
-
-# Or manual setup
-podman build -t ai-html-builder .
-podman run -d -p 8080:8000 --env-file .env.prod ai-html-builder
+docker build -t ai-html-builder .
+docker run -d -p 8080:8000 --env-file .env ai-html-builder
 ```
 
-**Access Your Application:**
-- **Main App**: http://localhost:8080
-- **Admin Dashboard**: http://localhost:8080/admin
-- **API Documentation**: http://localhost:8080/docs
+The multi-stage Dockerfile builds the React frontend with Node 22-alpine, then packages everything into a Python 3.11-slim image with Playwright Chromium for PDF/PNG export.
 
-## 🎮 Usage Guide
+## Environment Variables
 
-### Creating Your First HTML Document
+Create a `.env` file in the project root (or use `--env-file` with Docker):
 
-1. **Start a Chat**: Open the application and begin typing your request
-2. **Describe Your Vision**: Use natural language to describe what you want to create
-   - "Create a professional landing page for a tech startup"
-   - "Build a documentation site with navigation and code examples" 
-   - "Design a dashboard with charts and metrics"
-
-3. **Iterate and Refine**: Make changes through conversation
-   - "Change the header color to navy blue"
-   - "Add a contact form in the footer"
-   - "Make the layout more mobile-friendly"
-
-4. **Export and Use**: Download as a complete HTML file or open in fullscreen
-
-### Example Prompts
-
-```
-🏢 Business Use Cases:
-"Create an impact assessment report with tabs for problem analysis, technical solutions, and recommendations"
-
-📚 Documentation:
-"Build a technical documentation site with a sidebar menu, search, and code syntax highlighting"
-
-📊 Analytics:
-"Design a business dashboard with KPI cards, charts, and a data table"
-
-📄 Reports:
-"Generate a project status report with timeline, milestones, and team updates"
-```
-
-## 🔐 Admin Dashboard
-
-Access advanced analytics and management features:
-
-### Authentication
-- Navigate to `/admin`
-- Use admin credentials (see `.env.prod` configuration)
-- JWT-based session with 8-hour timeout
-
-### Analytics Features
-- **Performance Metrics**: Response times, token usage, processing efficiency
-- **Usage Analytics**: Session counts, iteration patterns, success rates
-- **Content Classification**: Automatic categorization of generated outputs
-- **Export Capabilities**: CSV downloads with custom date ranges
-
-## 🏗 Architecture Overview
-
-```
-┌─────────────────┐    WebSocket/HTTP    ┌─────────────────┐
-│   React 19      │ ←──────────────────→ │   FastAPI       │
-│   Frontend      │                      │   Backend       │
-└─────────────────┘                      └─────────────────┘
-                                                   ↓
-                                         ┌─────────────────┐
-                                         │ Claude Sonnet 4 │
-                                         │ + Redis Cache   │
-                                         └─────────────────┘
-```
-
-### Key Components
-- **Chat Interface**: Natural language processing with Claude integration
-- **HTML Viewer**: Live preview with code/preview toggle
-- **Session Management**: Redis-based with memory fallback
-- **Semantic Targeting**: Precise editing without content recreation
-- **Admin Dashboard**: Analytics, monitoring, and user management
-
-## 📝 Environment Configuration
-
-### Development (.env)
 ```bash
-ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
-REDIS_URL=redis://localhost:6379
-ENVIRONMENT=development
-LOG_LEVEL=debug
-MAX_UPLOAD_SIZE=52428800
-SESSION_TIMEOUT=3600
-```
+# Required
+ANTHROPIC_API_KEY=sk-ant-...          # Claude Sonnet 4.5 for surgical edits
+GOOGLE_API_KEY=AIza...                # One key covers Gemini 2.5 Pro + Nano Banana Pro + Flash
 
-### Production (.env.prod)
-```bash
-ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
-ENVIRONMENT=production
+# Optional (defaults shown)
+DATABASE_PATH=./data/app.db
 LOG_LEVEL=info
-REDIS_URL=redis://redis:6379
-JWT_SECRET=your-secure-jwt-secret
-ADMIN_PASSWORD=your-secure-admin-password
+RATE_LIMIT_REQUESTS=30
+RATE_LIMIT_WINDOW=60
+SESSION_TIMEOUT_HOURS=24
+MAX_UPLOAD_SIZE_MB=50
+EDIT_MODEL=claude-sonnet-4-5-20250929
+CREATION_MODEL=gemini-2.5-pro
+IMAGE_MODEL=gemini-3-pro-image-preview
+IMAGE_FALLBACK_MODEL=gemini-2.5-flash-image
+IMAGE_TIMEOUT_SECONDS=90
 ```
 
-## 🚀 Deployment Guide
+## Tech Stack
 
-### System Requirements
-- **Memory**: 2GB RAM minimum, 4GB recommended
-- **CPU**: 2 cores minimum
-- **Storage**: 10GB available space
-- **Network**: Internet access for AI API calls
+| Layer | Technology | Notes |
+|-------|-----------|-------|
+| Frontend | React 19, TypeScript 5.8, Vite 7.1 | CodeMirror 6 editor, SSE streaming |
+| Backend | FastAPI, Python 3.11+, aiosqlite | SQLite WAL mode, sse-starlette |
+| AI (Edit) | Claude Sonnet 4.5 | Tool-use with `html_replace` / `html_insert_after` |
+| AI (Create) | Gemini 2.5 Pro | Streaming creation, top aesthetics |
+| AI (Image) | Nano Banana Pro | Raster image generation, Flash fallback |
+| Export | Playwright Chromium | PDF and PNG rendering |
+| Export | python-pptx | PowerPoint generation via sandboxed code execution |
+| Deploy | Docker multi-stage | Node 22-alpine + Python 3.11-slim |
+| Proxy | Nginx Proxy Manager | External reverse proxy (not bundled) |
 
-### Performance Specifications
-- **Concurrent Users**: Up to 8 simultaneous sessions
-- **Response Time**: < 10 seconds for HTML generation
-- **File Upload Limit**: 50MB per file
-- **Session Duration**: 1 hour timeout
-- **Context Window**: 150K characters (optimized for Claude Sonnet 4)
+## Project Structure
 
-### Production Deployment
+```
+backend/app/
+  config.py                  # Pydantic settings (all env vars)
+  database.py                # SQLite schema (5 tables), WAL mode
+  main.py                    # FastAPI app, lifespan, routers
+  api/
+    chat.py                  # POST /api/chat/{sid} - SSE streaming
+    sessions.py              # Session + document + version CRUD
+    export.py                # Export to HTML/PPTX/PDF/PNG
+    upload.py                # File upload processing
+    templates.py             # Builtin template API
+    health.py                # Health check (DB + Playwright)
+    costs.py                 # Token usage + cost tracking
+  providers/
+    base.py                  # LLMProvider / ImageProvider ABCs
+    anthropic_provider.py    # Claude Sonnet 4.5 with tool_use
+    gemini_provider.py       # Gemini 2.5 Pro streaming
+    gemini_image_provider.py # Nano Banana Pro image generation
+  services/
+    editor.py                # Surgical editing engine (the core)
+    creator.py               # Document creation + streaming
+    router.py                # 4-rule request classifier
+    image_service.py         # Image generation + fallback
+    session_service.py       # Session/document/version CRUD
+    cost_tracker.py          # Per-model cost tracking
+    export_service.py        # Export orchestration
+    playwright_manager.py    # Browser lifecycle for PDF/PNG
+    exporters/               # HTML, PPTX, PDF, PNG exporters
+  utils/
+    fuzzy_match.py           # Aider-inspired fuzzy string matching
+    html_validator.py        # Post-edit HTML validation
+    file_processors.py       # .docx/.pdf/.xlsx/.txt/.md parsing
+    rate_limiter.py          # Per-session rate limiting
+  config/
+    builtin_templates.json   # 8 builtin document templates
 
-1. **Configure Environment**
-   ```bash
-   # Copy and configure production environment
-   cp .env.example .env.prod
-   # Edit with your production settings
-   ```
+frontend/src/
+  App.tsx                    # Root layout, split-pane, routing
+  hooks/useSSEChat.ts        # Core SSE hook (single source of truth)
+  services/                  # API, template, upload service wrappers
+  components/
+    ChatWindow/              # Chat input, message list, prompt library
+    CodeViewer/              # CodeMirror 6 + preview toggle
+    DocumentTabs/            # Multi-document tab bar
+    VersionHistory/          # Version timeline with restore
+    Export/                  # Format dropdown
+    EmptyState/              # Template cards for new sessions
+    Chat/                    # Streaming markdown renderer
+    Layout/                  # Resizable split pane
+  theme.css                  # CSS custom properties (dark/light)
+  types/index.ts             # TypeScript interfaces
+```
 
-2. **Deploy with Podman**
-   ```bash
-   # Build and deploy
-   podman-compose -f docker-compose.prod.yml up -d
-   
-   # Monitor deployment
-   podman logs -f ai-html-builder-app
-   ```
+## API Reference
 
-3. **Health Checks**
-   ```bash
-   # Verify application health
-   curl http://localhost:8080/api/health
-   
-   # Check Redis connectivity
-   podman exec ai-html-builder-redis redis-cli ping
-   ```
+### Chat (SSE Streaming)
+- `POST /api/chat/{session_id}` — Send message, receive SSE stream of events (`status`, `chunk`, `html`, `summary`, `done`)
 
-### Scaling and Monitoring
+### Sessions & Documents
+- `POST /api/sessions` — Create session
+- `GET /api/sessions/{sid}` — Session info + documents
+- `GET /api/sessions/{sid}/documents` — List documents
+- `POST /api/sessions/{sid}/documents/{docId}/switch` — Switch active document
+- `POST /api/sessions/{sid}/documents/from-template` — Create from template
+- `PUT /api/sessions/{sid}/documents/{docId}/rename` — Rename document
+- `DELETE /api/sessions/{sid}/documents/{docId}` — Delete document
+- `GET /api/sessions/{sid}/chat` — Chat history
+- `GET /api/documents/{docId}/html` — Latest HTML
+- `GET /api/documents/{docId}/versions` — Version history
+- `GET /api/documents/{docId}/versions/{ver}` — Specific version
+- `POST /api/documents/{docId}/versions/{ver}/restore` — Restore version
+
+### Export
+- `POST /api/export/{docId}/html` — Download as HTML
+- `POST /api/export/{docId}/pptx` — Export as PowerPoint
+- `POST /api/export/{docId}/pdf` — Export as PDF (Playwright)
+- `POST /api/export/{docId}/png` — Export as PNG screenshot (Playwright)
+- `GET /api/export/formats` — List available formats
+
+### Upload, Templates, Costs & Health
+- `POST /api/upload` — Upload file (.txt/.md/.docx/.pdf/.csv/.xlsx, max 50MB)
+- `GET /api/templates/builtin` — List builtin templates
+- `GET /api/templates/builtin/{id}` — Get specific template
+- `GET /api/costs` — Cost summary (default 30 days)
+- `GET /api/costs/today` — Today's costs
+- `GET /api/health` — DB + Playwright status
+
+## Database
+
+SQLite in WAL mode with 5 tables: `sessions`, `documents`, `document_versions`, `chat_messages`, `cost_tracking`. Foreign keys enabled. No Redis, no external database dependencies.
+
+## Quality Checks
 
 ```bash
-# Monitor resource usage
-podman stats
+# Backend
+cd backend
+pytest                                 # 244+ tests
+ruff check .                           # Linting
+mypy .                                 # Type checking
 
-# View application logs
-podman logs -f ai-html-builder-app
-
-# Access admin analytics
-curl -H "Authorization: Bearer TOKEN" http://localhost:8080/api/admin/stats
+# Frontend
+cd frontend
+npm run lint                           # ESLint
+npm run build                          # TypeScript + Vite build
 ```
 
-## 🔧 Development
+## Deployment Notes
 
-### Project Structure
-```
-AI-HTML-Builder/
-├── frontend/          # React 19 application
-│   ├── src/
-│   │   ├── components/   # UI components
-│   │   ├── hooks/        # Custom React hooks
-│   │   ├── pages/        # Route components
-│   │   └── types/        # TypeScript definitions
-│   └── dist/            # Built frontend assets
-├── backend/           # FastAPI application
-│   ├── app/
-│   │   ├── api/          # REST endpoints
-│   │   ├── services/     # Business logic
-│   │   ├── models/       # Data models
-│   │   └── core/         # Configuration
-│   └── requirements.txt
-├── Dockerfile         # Multi-stage container build
-├── docker-compose.prod.yml  # Production deployment
-└── DEPLOYMENT.md      # Detailed deployment guide
-```
+The app is designed to run behind **Nginx Proxy Manager** (or any reverse proxy) on a private server. The Dockerfile produces a single container that serves both the API and the built frontend static files. Playwright Chromium is included in the image for PDF/PNG export.
 
-### Adding New Features
+Typical setup:
+- Container exposes port 8000 internally
+- Map to any external port (e.g., 8080)
+- Reverse proxy handles HTTPS termination
+- `.env` file or `--env-file` for API keys
 
-1. **Frontend Components**: Add to `frontend/src/components/`
-2. **API Endpoints**: Create in `backend/app/api/endpoints/`
-3. **Services**: Implement in `backend/app/services/`
-4. **Types**: Define in `frontend/src/types/`
+## License
 
-### Code Quality
-```bash
-# Frontend linting
-cd frontend && npm run lint
-
-# Backend linting  
-ruff check backend/
-
-# Type checking
-mypy backend/
-```
-
-## 🔒 Security Features
-
-### Data Protection
-- **No External Dependencies**: All CSS/JS inlined for security
-- **Input Validation**: File type/size validation and XSS prevention
-- **API Key Protection**: Environment variables only, never exposed to client
-- **Session Security**: UUID v4 generation with automatic cleanup
-
-### Admin Security
-- **JWT Authentication**: Secure token-based authentication
-- **Password Protection**: Configurable admin credentials
-- **Rate Limiting**: 30 requests/minute per session
-- **CORS Configuration**: Restricted origins for production
-
-## 📊 Analytics & Monitoring
-
-### Tracked Metrics
-- ⏱️ **Performance**: Response times, processing duration
-- 🎯 **Usage**: Token consumption, iteration counts
-- 📊 **Content**: Output type classification, success rates
-- 👥 **Users**: Session analytics, engagement patterns
-
-### Export Capabilities
-- **CSV Exports**: Detailed analytics with date filtering
-- **Session Summaries**: High-level performance metrics
-- **Custom Reports**: Flexible data analysis options
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**Redis Connection Warning** ✅
-- This is expected behavior - the app gracefully falls back to memory storage
-- In production, Redis will be available via docker-compose
-- No action needed for development
-
-**WebSocket Connection Failed**
-```bash
-# Check backend is running
-curl http://localhost:8000/api/health
-
-# Verify WebSocket endpoint
-wscat -c ws://localhost:8000/ws/test-session-id
-```
-
-**Admin Dashboard Access Issues**
-- Verify JWT_SECRET is configured
-- Check admin password in .env.prod
-- Clear browser cookies and try again
-
-### Performance Optimization
-- **Context Management**: App uses 150K character optimization for large documents
-- **Semantic Caching**: Analysis results cached for similar requests
-- **Connection Pooling**: Redis connections managed efficiently
-
-## 🤝 Contributing
-
-We welcome contributions! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes with tests
-4. Submit a pull request
-
-### Development Guidelines
-- Follow existing code style
-- Add TypeScript types for new features
-- Include tests for new functionality
-- Update documentation as needed
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🆘 Support
-
-### Getting Help
-- **Documentation**: Check `/docs` endpoint for API documentation
-- **Health Check**: Monitor `/api/health` for system status
-- **Admin Dashboard**: Use `/admin` for detailed analytics
-- **Logs**: Check container logs for debugging
-
-### System Requirements
-- **Browser**: Modern browsers with WebSocket support
-- **Network**: Stable internet for AI API calls
-- **Resources**: Minimum 2GB RAM, 2 CPU cores
-
----
-
-**🚀 Ready to Launch?** Follow the deployment guide in `DEPLOYMENT.md` for detailed production setup instructions.
-
-**Built with ❤️ using Claude Sonnet 4, React 19, FastAPI, and modern web technologies.**
+MIT

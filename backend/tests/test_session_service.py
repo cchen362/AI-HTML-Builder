@@ -206,19 +206,3 @@ async def test_chat_messages_with_document(db_and_service):
     assert messages[0]["document_id"] == doc_id
 
 
-@pytest.mark.asyncio
-async def test_cleanup_expired_sessions(db_and_service):
-    service = db_and_service
-    from app.database import get_db
-
-    # Create a session and manually backdate it
-    sid = await service.create_session()
-    db = await get_db()
-    await db.execute(
-        "UPDATE sessions SET last_active = datetime('now', '-48 hours') WHERE id = ?",
-        (sid,),
-    )
-    await db.commit()
-
-    deleted = await service.cleanup_expired_sessions(timeout_hours=24)
-    assert deleted == 1

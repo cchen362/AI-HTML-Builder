@@ -8,7 +8,8 @@ logger = structlog.get_logger()
 MODEL_PRICING: dict[str, dict[str, float]] = {
     "claude-sonnet-4-5-20250929": {"input": 3.0, "output": 15.0},
     "gemini-2.5-pro": {"input": 1.25, "output": 10.0},
-    "gemini-2.0-flash-preview-image-generation": {"input": 0.1, "output": 0.4},
+    "gemini-3-pro-image-preview": {"input": 0.0, "output": 120.0},
+    "gemini-2.5-flash-image": {"input": 0.0, "output": 30.0},
 }
 
 

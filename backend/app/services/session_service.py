@@ -128,6 +128,19 @@ class SessionService:
         )
         return version
 
+    async def save_manual_edit(
+        self, document_id: str, html_content: str
+    ) -> int:
+        """Save a manual HTML edit as a new version."""
+        return await self.save_version(
+            document_id=document_id,
+            html_content=html_content,
+            user_prompt="",
+            edit_summary="Manual edit",
+            model_used="manual",
+            tokens_used=0,
+        )
+
     async def get_latest_html(self, document_id: str) -> str | None:
         db = await get_db()
         cursor = await db.execute(
@@ -159,6 +172,89 @@ class SessionService:
         rows = await cursor.fetchall()
         return [dict(r) for r in rows]
 
+    async def restore_version(
+        self, document_id: str, version: int
+    ) -> int:
+        """Restore an old version by saving its HTML as a new version."""
+        old = await self.get_version(document_id, version)
+        if not old:
+            raise ValueError(f"Version {version} not found")
+        return await self.save_version(
+            document_id=document_id,
+            html_content=old["html_content"],
+            user_prompt="",
+            edit_summary=f"Restored from version {version}",
+            model_used="restore",
+            tokens_used=0,
+        )
+
+    async def rename_document(
+        self, document_id: str, new_title: str
+    ) -> bool:
+        """Rename a document. Returns True if found and renamed."""
+        db = await get_db()
+        cursor = await db.execute(
+            "UPDATE documents SET title = ? WHERE id = ?",
+            (new_title, document_id),
+        )
+        await db.commit()
+        return cursor.rowcount > 0
+
+    async def delete_document(
+        self, session_id: str, document_id: str
+    ) -> bool:
+        """Delete a document. Activates another if this was active.
+        Returns False if this is the last document (cannot delete)."""
+        db = await get_db()
+
+        # Count documents in session
+        cursor = await db.execute(
+            "SELECT COUNT(*) as cnt FROM documents WHERE session_id = ?",
+            (session_id,),
+        )
+        row = await cursor.fetchone()
+        assert row is not None
+        if row["cnt"] <= 1:
+            return False
+
+        # Check if document exists and is active
+        cursor = await db.execute(
+            "SELECT is_active FROM documents WHERE id = ? AND session_id = ?",
+            (document_id, session_id),
+        )
+        doc_row = await cursor.fetchone()
+        if not doc_row:
+            return False
+
+        was_active = bool(doc_row["is_active"])
+
+        # Nullify document_id in chat_messages (no ON DELETE for this FK)
+        await db.execute(
+            "UPDATE chat_messages SET document_id = NULL WHERE document_id = ?",
+            (document_id,),
+        )
+
+        # Delete document (CASCADE deletes versions)
+        await db.execute(
+            "DELETE FROM documents WHERE id = ? AND session_id = ?",
+            (document_id, session_id),
+        )
+
+        # If deleted document was active, activate the most recent remaining
+        if was_active:
+            await db.execute(
+                """UPDATE documents SET is_active = 1
+                   WHERE id = (
+                     SELECT id FROM documents
+                     WHERE session_id = ? ORDER BY created_at DESC LIMIT 1
+                   )""",
+                (session_id,),
+            )
+
+        await db.commit()
+        logger.info("Document deleted", doc_id=document_id[:8])
+        return True
+
     async def add_chat_message(
         self,
         session_id: str,
@@ -187,17 +283,6 @@ class SessionService:
         rows = await cursor.fetchall()
         return [dict(r) for r in reversed(list(rows))]
 
-    async def cleanup_expired_sessions(self, timeout_hours: int = 24) -> int:
-        db = await get_db()
-        cursor = await db.execute(
-            "DELETE FROM sessions WHERE last_active < datetime('now', ? || ' hours')",
-            (f"-{timeout_hours}",),
-        )
-        await db.commit()
-        deleted = cursor.rowcount
-        if deleted > 0:
-            logger.info("Cleaned up expired sessions", count=deleted)
-        return deleted
 
 
 session_service = SessionService()

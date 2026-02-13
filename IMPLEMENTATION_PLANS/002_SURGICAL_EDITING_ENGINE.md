@@ -818,6 +818,48 @@ After this plan is complete, delete the following old v1 files that were kept as
 
 ---
 
+## ⚠️ POST-IMPLEMENTATION DISCREPANCIES (Plan 002 Complete - February 2026)
+
+> **STATUS: ✅ COMPLETE** — 46/46 tests passing (40 new + 6 existing), ruff clean, mypy clean.
+>
+> This plan was written before Plan 001 was fully implemented. The code listings above contain
+> several discrepancies from the actual implementation. Future agents should use the **actual
+> source files** as the source of truth, NOT the code in this document.
+
+### Discrepancies Corrected During Implementation
+
+| # | Plan Doc Says | Actual Implementation | Why |
+|---|---|---|---|
+| 1 | `cost_tracker.record(model, input_tokens, output_tokens)` | `cost_tracker.record_usage(model, input_tokens, output_tokens)` | Plan 001 named the method `record_usage`, not `record` |
+| 2 | `EditResult` shown as standalone dataclass in a separate code block | `EditResult` placed inside `services/editor.py` directly above `SurgicalEditor` class | Keeps the result type co-located with the class that produces it |
+| 3 | `chat.py` imports at module top level | Lazy imports inside `event_stream()` generator function body | Avoids circular imports and allows patching at source module in tests |
+| 4 | `difflib.SequenceMatcher` implied to compare characters | `SequenceMatcher` compares **lines** as units (splitlines); `.strip()` on `old_text` removes first line's leading whitespace | Important for understanding fuzzy match behavior |
+| 5 | `EDIT_SYSTEM_PROMPT` as plain string | `EDIT_SYSTEM_PROMPT` as `list[dict]` format with `cache_control` for Anthropic prompt caching | Enables prompt caching to reduce costs on repeated edits |
+
+### Files Created/Modified/Deleted (Actual)
+
+**Created:**
+- `backend/app/services/editor.py` — `SurgicalEditor` class + `EditResult` dataclass
+- `backend/app/services/router.py` — `classify_request()` function for routing
+- `backend/tests/test_editor.py` — 20 tests
+- `backend/tests/test_router.py` — 10 tests
+- `backend/tests/test_fuzzy_match.py` — 10 tests
+
+**Modified:**
+- `backend/app/utils/fuzzy_match.py` — stub → full implementation (exact → stripped → normalized → sequence match)
+- `backend/app/api/chat.py` — placeholder → full integration with editor, router, lazy imports
+
+**Deleted (6 old v1 files, ~1,700 lines):**
+- `backend/app/services/claude_service.py`
+- `backend/app/services/artifact_manager.py`
+- `backend/app/models/session.py` (old)
+- `backend/app/models/schemas.py` (old)
+- `backend/app/utils/logger.py`
+- `backend/app/utils/sanitizer.py`
+
+---
+
 *Created: February 12, 2026*
+*Completed: February 12, 2026*
 *Plan: 002 - Surgical Editing Engine*
 *Next: Plan 003 - Multi-Model Routing*
