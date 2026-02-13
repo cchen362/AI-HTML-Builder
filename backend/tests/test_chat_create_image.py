@@ -487,6 +487,110 @@ def test_multiline_message_uses_first_line():
 # --- Edit route still works ---
 
 
+# --- Infographic route tests (Plan 018) ---
+
+
+@pytest.mark.asyncio
+async def test_infographic_route_creates_document(tmp_path):
+    """Infographic route should generate image, wrap in HTML, create doc tab."""
+    from app.database import init_db, close_db
+    from app.config import settings
+    from app.services.infographic_service import InfographicResult
+
+    db_path = tmp_path / "test_infographic.db"
+    with patch.object(settings, "database_path", str(db_path)):
+        await init_db()
+
+        try:
+            from app.api.chat import chat, ChatRequest
+
+            mock_result = InfographicResult(
+                image_bytes=b"\x89PNG" + b"\x00" * 50,
+                image_format="PNG",
+                visual_prompt="A detailed infographic about revenue...",
+                model_prompt="gemini-2.5-pro",
+                model_image="gemini-3-pro-image-preview",
+                prompt_input_tokens=500,
+                prompt_output_tokens=200,
+            )
+
+            mock_service_instance = AsyncMock()
+            mock_service_instance.generate.return_value = mock_result
+
+            with patch(
+                "app.services.infographic_service.InfographicService",
+                return_value=mock_service_instance,
+            ), patch(
+                "app.providers.gemini_provider.GeminiProvider",
+            ), patch(
+                "app.providers.gemini_image_provider.GeminiImageProvider",
+            ), patch(
+                "app.services.router.classify_request",
+                new_callable=AsyncMock,
+                return_value="infographic",
+            ):
+                request = ChatRequest(message="Create an infographic about revenue")
+                response = await chat("test-session-infographic", request)
+
+                body = ""
+                async for chunk in response.body_iterator:
+                    body += chunk
+
+            events = _parse_sse_events(body)
+            event_types = [e["type"] for e in events]
+
+            assert "status" in event_types
+            assert "html" in event_types
+            assert "summary" in event_types
+            assert "done" in event_types
+
+            # HTML event should contain base64 image
+            html_events = [e for e in events if e["type"] == "html"]
+            assert len(html_events) == 1
+            assert "data:image/png;base64," in html_events[0]["content"]
+
+        finally:
+            await close_db()
+
+
+@pytest.mark.asyncio
+async def test_infographic_route_no_google_key_returns_error(tmp_path):
+    """Infographic route without GOOGLE_API_KEY should return error."""
+    from app.database import init_db, close_db
+    from app.config import settings
+
+    db_path = tmp_path / "test_infographic_nokey.db"
+    with patch.object(settings, "database_path", str(db_path)):
+        await init_db()
+
+        try:
+            from app.api.chat import chat, ChatRequest
+
+            with patch(
+                "app.providers.gemini_provider.GeminiProvider",
+                side_effect=ValueError("No key"),
+            ), patch(
+                "app.services.router.classify_request",
+                new_callable=AsyncMock,
+                return_value="infographic",
+            ):
+                request = ChatRequest(message="Create an infographic about revenue")
+                response = await chat("test-session-infographic-nokey", request)
+
+                body = ""
+                async for chunk in response.body_iterator:
+                    body += chunk
+
+            events = _parse_sse_events(body)
+            error_events = [e for e in events if e["type"] == "error"]
+
+            assert len(error_events) >= 1
+            assert "unavailable" in error_events[0]["content"]
+
+        finally:
+            await close_db()
+
+
 @pytest.mark.asyncio
 async def test_edit_route_unchanged(tmp_path):
     """Verify edit route still functions after create/image additions."""

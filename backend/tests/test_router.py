@@ -110,9 +110,10 @@ async def test_flowchart_is_edit():
 # ---------------------------------------------------------------------------
 
 
-async def test_infographic_is_create():
-    with _mock_haiku("create"):
-        assert await classify_request("Add an infographic about costs", has_existing_html=True) == "create"
+async def test_infographic_routes_to_infographic():
+    """Infographic keyword should route to infographic (pre-routing, no LLM call)."""
+    result = await classify_request("Add an infographic about costs", has_existing_html=True)
+    assert result == "infographic"
 
 
 async def test_mindmap_is_create():
@@ -297,3 +298,35 @@ async def test_change_title_still_uses_llm():
             "Change the title to something better", has_existing_html=True
         )
         assert result == "edit"
+
+
+# ---------------------------------------------------------------------------
+# Pre-routing: Infographic keyword → INFOGRAPHIC (no LLM call, Plan 018)
+# ---------------------------------------------------------------------------
+
+
+async def test_infographic_no_html_routes_to_infographic():
+    """Infographic keyword should work even without existing HTML."""
+    result = await classify_request("Make an infographic about revenue", has_existing_html=False)
+    assert result == "infographic"
+
+
+async def test_turn_into_infographic_routes_to_infographic():
+    result = await classify_request("Turn this into an infographic", has_existing_html=True)
+    assert result == "infographic"
+
+
+async def test_remove_infographic_routes_to_edit():
+    """Removal intent should override infographic keyword."""
+    result = await classify_request("Remove the infographic", has_existing_html=True)
+    assert result == "edit"
+
+
+async def test_create_infographic_about():
+    result = await classify_request("Create an infographic about Q4 growth", has_existing_html=True)
+    assert result == "infographic"
+
+
+async def test_infographic_case_insensitive():
+    result = await classify_request("Make an INFOGRAPHIC", has_existing_html=False)
+    assert result == "infographic"

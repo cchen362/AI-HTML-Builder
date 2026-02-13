@@ -88,7 +88,12 @@
       "Bash(ssh:*)",
       "Bash(ls -la \"c:\\\\Users\\\\cchen362\\\\OneDrive\\\\Desktop\\\\AI-HTML-Builder\"\" | grep -E \".env)",
       "Bash(docker \")",
-      "Bash(ANTHROPIC_API_KEY=sk-ant-test GOOGLE_API_KEY=test python:*)"
+      "Bash(ANTHROPIC_API_KEY=sk-ant-test GOOGLE_API_KEY=test python:*)",
+      "Bash(git push:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix header menu spacing and replace Vite favicon with custom icon\n\nMove 3-dot menu away from title by removing leftover h2 bottom margin\n\\(status indicator is gone\\). Replace default Vite logo with a gold </> on\npurple rounded-rect favicon matching the Cyberpunk Amethyst theme.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nMove 3-dot menu to right edge of header, away from title\n\nFlatten header structure: remove nested flex div and header-actions wrapper.\nChat-header itself is now the flex container with space-between, so the\nmenu button pins to the far right instead of cramping against the title.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

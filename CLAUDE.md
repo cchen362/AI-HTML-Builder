@@ -17,7 +17,7 @@ npm install
 npm run dev                                        # http://localhost:5173
 
 # Quality checks
-cd backend && pytest                               # 270+ tests
+cd backend && pytest                               # 290+ tests
 ruff check backend/ && mypy backend/               # Lint + types
 cd frontend && npm run lint && npm run build        # ESLint + TypeScript + Vite
 
@@ -35,19 +35,25 @@ React 19 (SSE) ──POST──> FastAPI ──> SQLite WAL
                  v            v            v
           Claude 4.5    Gemini 2.5 Pro  Nano Banana Pro
           (edit)        (create)        (image)
+                              |            |
+                              └──────┬─────┘
+                                     v
+                              InfographicService
+                         (art director + renderer)
 ```
 
 ### LLM Intent Routing (`services/router.py`)
 
 | Rule | Condition | Route | Cost |
 |------|-----------|-------|------|
-| 1 | No existing HTML in session | CREATE | $0 |
-| 2 | Removal/deletion keywords detected | EDIT | $0 |
-| 3 | Transformation intent ("turn into", "convert to", "instead") | CREATE | $0 |
-| 4 | HTML exists → Haiku 4.5 classifies intent | create / edit / image | ~$0.0001 |
+| 1 | Removal/deletion keywords AND has HTML | EDIT | $0 |
+| 2 | "infographic" keyword detected | INFOGRAPHIC | $0 |
+| 3 | No existing HTML in session | CREATE | $0 |
+| 4 | Transformation intent ("turn into", "convert to", "instead") | CREATE | $0 |
+| 5 | HTML exists → Haiku 4.5 classifies intent | create / edit / image | ~$0.0001 |
 
-- **No-HTML shortcut**: If no document exists, always routes to CREATE (no LLM call needed)
-- **Pre-routing regex**: Removal keywords → EDIT, transformation intent → CREATE (zero cost, zero latency)
+- **Pre-routing regex**: Removal → EDIT, infographic → INFOGRAPHIC, transformation → CREATE (zero cost, zero latency)
+- **No-HTML shortcut**: If no document exists (and not infographic), always routes to CREATE (no LLM call needed)
 - **LLM classification**: Haiku 4.5 (`max_tokens=1, temperature=0`) classifies remaining requests
 - **Fallback on ANY error**: Defaults to EDIT (safest — doesn't create docs or call image API)
 - **Cost**: ~$0.0001/call for LLM classification, tracked in `cost_tracking` table
@@ -104,7 +110,7 @@ backend/app/
   database.py                # SQLite init, schema (5 tables), WAL mode
   main.py                    # FastAPI app, lifespan, router registration
   api/
-    chat.py                  # POST /api/chat/{sid} - SSE streaming (3 extracted handlers)
+    chat.py                  # POST /api/chat/{sid} - SSE streaming (4 handlers: edit, create, image, infographic)
     sessions.py              # Session + document + version CRUD
     export.py                # Export to HTML/PPTX/PDF/PNG (single parameterized endpoint)
     upload.py                # File upload (.txt/.md/.docx/.pdf/.csv/.xlsx)
@@ -120,6 +126,7 @@ backend/app/
     creator.py               # DocumentCreator - streaming creation, Claude fallback
     router.py                # classify_request() - Haiku 4.5 LLM intent classification
     image_service.py         # Image generation + SVG templates
+    infographic_service.py   # Two-LLM infographic pipeline (Gemini art director + Nano Banana Pro renderer)
     session_service.py       # Session/document/version/chat CRUD
     cost_tracker.py          # Per-model token + cost tracking
     export_service.py        # Export orchestration via dict-based dispatch
@@ -289,7 +296,7 @@ For generated HTML documents, unless user specifies otherwise:
 - Vite dev proxy: `/api` routes to `http://localhost:8000`
 
 ### Testing
-- 270+ tests across 20+ test files, `asyncio_mode = "auto"` in pyproject.toml
+- 290+ tests across 20+ test files, `asyncio_mode = "auto"` in pyproject.toml
 - 1 known pre-existing failure: `test_init_db_creates_file`
 - Patches must target source module, not consumer (e.g., `app.utils.file_processors.*`, not `app.api.upload.*`)
 - `pytest-asyncio` auto mode: no need for `@pytest.mark.asyncio` decorators
@@ -319,10 +326,7 @@ All plans in `IMPLEMENTATION_PLANS/` directory:
 | 015 | Critical Bug Fixes (Router pre-routing, edit error guards, template titles, SVG branch removal) | COMPLETE |
 | 016 | Transformation Context + Document Ownership Validation | COMPLETE |
 | 017 | UI/UX Makeover (Cyberpunk Amethyst theme) | COMPLETE |
-
-## Future: Real Infographics (NotebookLM-style)
-
-Aspirational feature — the primary reason Nano Banana Pro (Gemini 3 Pro Image) is in the pipeline. The vision: generate magazine-quality visual infographics from user content, similar to how NotebookLM transforms documents into audio podcasts but as visual output. Pipeline TBD: likely Gemini structures content/layout → Nano Banana Pro renders as visual image. Requires extensive design discussion before planning. Will get its own plan number when ready.
+| 018 | NotebookLM-Style Infographic Generation | COMPLETE |
 
 ## Known Issues
 
@@ -346,7 +350,7 @@ Aspirational feature — the primary reason Nano Banana Pro (Gemini 3 Pro Image)
 ---
 
 **Last Updated**: February 2026
-**Architecture**: v2 rebuild (Plans 001-016 complete)
-**AI Models**: Haiku 4.5 (routing) + Claude Sonnet 4.5 (edits) + Gemini 2.5 Pro (creation) + Nano Banana Pro (images)
+**Architecture**: v2 rebuild (Plans 001-018 complete)
+**AI Models**: Haiku 4.5 (routing) + Claude Sonnet 4.5 (edits) + Gemini 2.5 Pro (creation + infographic art direction) + Nano Banana Pro (images + infographic rendering)
 **Database**: SQLite WAL (no Redis)
 **Communication**: SSE + HTTP POST (no WebSocket)

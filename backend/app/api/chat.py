@@ -49,6 +49,30 @@ def _strip_base64_for_context(html: str) -> str:
     return _BASE64_RE.sub(r'\1[image-removed]', html)
 
 
+def _is_infographic_doc(html: str) -> bool:
+    """Detect infographic wrapper docs (minimal HTML with single base64 <img>).
+
+    Infographic documents have a distinctive structure: <500 chars of HTML
+    after removing base64 payloads, with a single <img> tag. This is how
+    wrap_infographic_html() creates them — no <main>, <header>, <section>.
+    """
+    stripped = _BASE64_RE.sub("", html)
+    return len(stripped) < 500 and "<img" in html and "data:image" in html
+
+
+async def _get_latest_version_prompt(
+    session_service: Any, document_id: str
+) -> str | None:
+    """Get the user_prompt from the latest version of a document.
+
+    For infographic docs, this stores the art director's visual prompt.
+    """
+    history = await session_service.get_version_history(document_id)
+    if history:
+        return history[0].get("user_prompt")  # history is DESC ordered
+    return None
+
+
 def _sse(data: dict) -> str:
     """Format a dict as an SSE data line."""
     return f"data: {json.dumps(data)}\n\n"
@@ -298,6 +322,152 @@ async def _handle_image(
     }
 
 
+async def _handle_infographic(
+    session_service: Any,
+    request: ChatRequest,
+    session_id: str,
+    active_doc: dict | None,
+    current_html: str | None,
+) -> AsyncIterator[dict]:
+    """Infographic generation via Gemini 2.5 Pro (art director) + Nano Banana Pro (renderer)."""
+    from app.services.infographic_service import (
+        InfographicService,
+        wrap_infographic_html,
+    )
+    from app.providers.gemini_provider import GeminiProvider
+    from app.providers.gemini_image_provider import GeminiImageProvider
+    from app.services.cost_tracker import cost_tracker
+
+    yield {"type": "status", "content": "Designing infographic..."}
+
+    # Initialize prompt provider (Gemini 2.5 Pro)
+    try:
+        prompt_provider = GeminiProvider()
+    except ValueError:
+        yield {
+            "type": "error",
+            "content": "Infographic generation unavailable (no GOOGLE_API_KEY).",
+        }
+        return
+
+    # Initialize image provider (Nano Banana Pro)
+    try:
+        img_provider = GeminiImageProvider()
+    except (ValueError, Exception):
+        yield {
+            "type": "error",
+            "content": "Image generation unavailable (no GOOGLE_API_KEY).",
+        }
+        return
+
+    # Initialize fallback image provider
+    img_fallback = None
+    try:
+        from app.config import settings as _settings
+
+        img_fallback = GeminiImageProvider(model=_settings.image_fallback_model)
+    except (ValueError, Exception):
+        pass  # No fallback available
+
+    service = InfographicService(prompt_provider, img_provider, img_fallback)
+
+    # Determine context mode: first creation vs. iteration
+    content_context = None
+    previous_visual_prompt = None
+    is_iteration = False
+
+    if active_doc and current_html and _is_infographic_doc(current_html):
+        # Active doc IS an infographic → iteration mode
+        is_iteration = True
+        previous_visual_prompt = await _get_latest_version_prompt(
+            session_service, active_doc["id"]
+        )
+    elif current_html:
+        # Active doc is a regular HTML doc → use as source material
+        content_context = _strip_base64_for_context(current_html)
+
+    # Generate infographic with progress updates
+    gen_task = asyncio.create_task(
+        service.generate(
+            request.message,
+            content_context=content_context,
+            previous_visual_prompt=previous_visual_prompt,
+        )
+    )
+    timer_task = asyncio.create_task(asyncio.sleep(8))
+
+    done, _pending = await asyncio.wait(
+        {gen_task, timer_task},
+        return_when=asyncio.FIRST_COMPLETED,
+    )
+
+    if timer_task in done and gen_task not in done:
+        yield {
+            "type": "status",
+            "content": "Rendering infographic... high-quality images can take 15-30 seconds",
+        }
+        result = await gen_task
+    else:
+        timer_task.cancel()
+        result = gen_task.result()
+
+    # Wrap image in HTML
+    infographic_html = wrap_infographic_html(
+        result.image_bytes,
+        result.image_format,
+        alt_text=f"Infographic: {request.message[:100]}",
+    )
+
+    title = f"Infographic: {_extract_title(request.message)}"
+    model_used = f"{result.model_prompt}+{result.model_image}"
+
+    if is_iteration and active_doc:
+        # Iteration: new version of existing infographic document
+        doc_id = active_doc["id"]
+        version = await session_service.save_version(
+            doc_id,
+            infographic_html,
+            user_prompt=result.visual_prompt,
+            edit_summary="Regenerated infographic",
+            model_used=model_used,
+            tokens_used=result.prompt_input_tokens + result.prompt_output_tokens,
+        )
+        summary = "Regenerated infographic"
+    else:
+        # New infographic document
+        doc_id = await session_service.create_document(session_id, title)
+        version = await session_service.save_version(
+            doc_id,
+            infographic_html,
+            user_prompt=result.visual_prompt,
+            edit_summary=f"Created: {title}",
+            model_used=model_used,
+            tokens_used=result.prompt_input_tokens + result.prompt_output_tokens,
+        )
+        summary = f"Created: {title}"
+
+    # Track costs for BOTH models
+    await cost_tracker.record_usage(
+        result.model_prompt,
+        result.prompt_input_tokens,
+        result.prompt_output_tokens,
+    )
+    await cost_tracker.record_usage(
+        result.model_image, 0, 0, 1  # Image models charge per image, not per token
+    )
+
+    await session_service.add_chat_message(
+        session_id,
+        "assistant",
+        summary,
+        doc_id,
+        "infographic_confirmation",
+    )
+
+    yield {"type": "html", "content": infographic_html, "version": version}
+    yield {"type": "summary", "content": summary}
+
+
 # ---------------------------------------------------------------------------
 # Main endpoint
 # ---------------------------------------------------------------------------
@@ -347,6 +517,11 @@ async def chat(session_id: str, request: ChatRequest):
                 handler = _handle_create(
                     session_service, request, session_id,
                     current_html=current_html,
+                )
+            elif route == "infographic":
+                handler = _handle_infographic(
+                    session_service, request, session_id,
+                    active_doc, current_html,
                 )
             elif route == "image":
                 handler = _handle_image(

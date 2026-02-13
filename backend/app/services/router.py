@@ -37,6 +37,11 @@ _TRANSFORM_RE = re.compile(
     re.IGNORECASE,
 )
 
+_INFOGRAPHIC_RE = re.compile(
+    r"\binfographic\b",
+    re.IGNORECASE,
+)
+
 _CLASSIFICATION_PROMPT = """Classify the user's intent into exactly one category.
 
 CATEGORIES:
@@ -52,7 +57,7 @@ RULES:
 
 Respond with ONLY one word: create, edit, or image"""
 
-_VALID_ROUTES = frozenset({"create", "edit", "image"})
+_VALID_ROUTES = frozenset({"create", "edit", "image", "infographic"})
 
 # Lazy singleton — created on first LLM call, reused thereafter.
 _client: anthropic.AsyncAnthropic | None = None
@@ -76,26 +81,32 @@ async def classify_request(user_input: str, has_existing_html: bool) -> str:
     Classify the user's request into a routing category.
 
     Returns:
-        'create' - Route to Gemini 2.5 Pro for new document creation
-        'image'  - Route to Nano Banana Pro for raster image generation
-        'edit'   - Route to Claude Sonnet 4.5 for surgical editing (DEFAULT)
+        'create'      - Route to Gemini 2.5 Pro for new document creation
+        'infographic' - Route to InfographicService (2-LLM pipeline)
+        'image'       - Route to Nano Banana Pro for raster image generation
+        'edit'        - Route to Claude Sonnet 4.5 for surgical editing (DEFAULT)
     """
-    # Rule 1: No existing HTML → always create (no LLM call needed)
+    # Rule 1: Removal/deletion intent → always EDIT (only with existing HTML)
+    if has_existing_html and _REMOVAL_RE.search(user_input):
+        logger.info("[ROUTER] Removal intent -> EDIT", request=user_input[:80])
+        return "edit"
+
+    # Rule 2: Infographic keyword → always INFOGRAPHIC (with or without HTML)
+    if _INFOGRAPHIC_RE.search(user_input):
+        logger.info("[ROUTER] Infographic intent -> INFOGRAPHIC", request=user_input[:80])
+        return "infographic"
+
+    # Rule 3: No existing HTML → always CREATE (no LLM call needed)
     if not has_existing_html:
         logger.info("[ROUTER] No existing HTML -> CREATE", request=user_input[:80])
         return "create"
 
-    # Rule 2: Removal/deletion intent → always edit (override any image match)
-    if _REMOVAL_RE.search(user_input):
-        logger.info("[ROUTER] Removal intent -> EDIT", request=user_input[:80])
-        return "edit"
-
-    # Rule 3: Transformation intent → create (full document reconceptualization)
+    # Rule 4: Transform intent → CREATE (full document reconceptualization)
     if _TRANSFORM_RE.search(user_input):
         logger.info("[ROUTER] Transform intent -> CREATE", request=user_input[:80])
         return "create"
 
-    # Rule 4: LLM classification via Haiku 4.5
+    # Rule 5: LLM classification via Haiku 4.5
     try:
         client = _get_client()
         response = await client.messages.create(

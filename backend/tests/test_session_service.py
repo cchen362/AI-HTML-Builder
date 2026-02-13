@@ -73,7 +73,7 @@ async def test_create_document_deactivates_previous(db_and_service):
     service = db_and_service
     sid = await service.create_session()
 
-    doc1 = await service.create_document(sid, "Doc 1")
+    await service.create_document(sid, "Doc 1")
     doc2 = await service.create_document(sid, "Doc 2")
 
     active = await service.get_active_document(sid)
@@ -89,7 +89,7 @@ async def test_switch_document(db_and_service):
     sid = await service.create_session()
 
     doc1 = await service.create_document(sid, "Doc 1")
-    doc2 = await service.create_document(sid, "Doc 2")
+    await service.create_document(sid, "Doc 2")
 
     success = await service.switch_document(sid, doc1)
     assert success is True
