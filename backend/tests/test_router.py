@@ -330,3 +330,11 @@ async def test_create_infographic_about():
 async def test_infographic_case_insensitive():
     result = await classify_request("Make an INFOGRAPHIC", has_existing_html=False)
     assert result == "infographic"
+
+
+async def test_infographics_plural():
+    """'infographics' (plural) must also route to infographic."""
+    result = await classify_request(
+        "transform the content into an infographics with building and bridge", has_existing_html=True
+    )
+    assert result == "infographic"

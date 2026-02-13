@@ -38,7 +38,7 @@ _TRANSFORM_RE = re.compile(
 )
 
 _INFOGRAPHIC_RE = re.compile(
-    r"\binfographic\b",
+    r"\binfographics?\b",
     re.IGNORECASE,
 )
 
