@@ -34,23 +34,23 @@
   --tracking-widest: 0.15em;
 
   /* --- Surfaces --- */
-  --surface-void: #110B20;
-  --surface-base: #1A0F3C;
-  --surface-raised: #2D1B69;
-  --surface-overlay: #362272;
-  --surface-highlight: #40298A;
+  --surface-void: #0C0A14;
+  --surface-base: #12101E;
+  --surface-raised: #1C1A2E;
+  --surface-overlay: #242238;
+  --surface-highlight: #2E2B45;
 
   /* --- Borders --- */
-  --border-subtle: #3B2578;
-  --border-default: #4A3490;
-  --border-strong: #6B50B5;
+  --border-subtle: #2A2740;
+  --border-default: #383550;
+  --border-strong: #504B70;
   --border-accent: #E5B800;
 
   /* --- Text --- */
   --text-primary: #A8E6A0;
   --text-secondary: #D4A0A0;
   --text-tertiary: #7B6BA0;
-  --text-inverse: #1A0F3C;
+  --text-inverse: #12101E;
 
   /* --- Accent (gold — use with discipline) --- */
   --accent-primary: #E5B800;
@@ -73,10 +73,10 @@
   --signal-success-muted: rgba(168, 230, 160, 0.10);
 
   /* --- Gradients --- */
-  --gradient-header: linear-gradient(135deg, #1A0F3C 0%, #2D1B69 60%, #362272 100%);
+  --gradient-header: linear-gradient(135deg, #12101E 0%, #1C1A2E 60%, #242238 100%);
   --gradient-send-btn: linear-gradient(135deg, #E5B800 0%, #D4A017 100%);
   --gradient-send-hover: linear-gradient(135deg, #FFD700 0%, #E5B800 100%);
-  --gradient-user-msg: linear-gradient(135deg, #2D1B69 0%, #1A0F3C 100%);
+  --gradient-user-msg: linear-gradient(135deg, #1C1A2E 0%, #12101E 100%);
   --gradient-ai-glow: linear-gradient(135deg, rgba(168, 230, 160, 0.04) 0%, rgba(229, 184, 0, 0.04) 100%);
 
   /* --- Shadows --- */
