@@ -335,6 +335,9 @@ All plans in `IMPLEMENTATION_PLANS/` directory:
 - `.env.example` at root may be out of sync with `backend/app/config.py` - always trust `config.py`
 - Custom templates removed (no auth mechanism). Will be re-introduced when Plan 008 adds Nginx Proxy Manager authentication.
 
+### Future Improvements
+- **Infographic text legibility**: Nano Banana Pro renders small text at reduced quality. If needed, tighten the art director prompt to enforce fewer words, larger minimum font sizes, and discourage text below ~24pt. A more advanced option: hybrid overlay (image for visuals, HTML text positioned on top) but this has alignment complexity.
+
 ### Resolved Issues
 - ~~Admin dashboard components~~ — **DELETED** (legacy v1 code removed: `AdminDashboard.tsx`, `AdminLogin.tsx`, `AdminPage.tsx`, `BasicChatWindow.tsx`, `SimpleChatWindow.tsx`)
 - ~~`CodeMirrorViewer.tsx` matchMedia issue~~ — **RESOLVED in Plan 009b** (replaced with `MutationObserver` on `data-theme` attribute)
