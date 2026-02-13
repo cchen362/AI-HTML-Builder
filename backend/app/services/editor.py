@@ -378,8 +378,11 @@ class SurgicalEditor:
         self, html: str, params: dict
     ) -> tuple[str, bool, str]:
         """Apply an html_replace tool call with fuzzy matching fallback."""
-        old_text = params["old_text"]
-        new_text = params["new_text"]
+        try:
+            old_text = params["old_text"]
+            new_text = params["new_text"]
+        except KeyError as e:
+            return html, False, f"Missing parameter: {e}"
 
         # Level 1: Exact match
         count = html.count(old_text)
@@ -407,8 +410,11 @@ class SurgicalEditor:
         self, html: str, params: dict
     ) -> tuple[str, bool, str]:
         """Apply an html_insert_after tool call."""
-        anchor = params["anchor_text"]
-        new_content = params["new_content"]
+        try:
+            anchor = params["anchor_text"]
+            new_content = params["new_content"]
+        except KeyError as e:
+            return html, False, f"Missing parameter: {e}"
 
         count = html.count(anchor)
         if count == 1:
@@ -440,7 +446,10 @@ class SurgicalEditor:
         self, html: str, params: dict
     ) -> tuple[str, bool, str]:
         """Apply an html_delete tool call."""
-        target = params["text_to_delete"]
+        try:
+            target = params["text_to_delete"]
+        except KeyError as e:
+            return html, False, f"Missing parameter: {e}"
 
         count = html.count(target)
         if count == 1:
@@ -485,7 +494,8 @@ class SurgicalEditor:
                 "You are modifying an existing HTML document. Make ONLY the "
                 "change requested. Copy ALL other content exactly as it "
                 "appears. Do not improve, clean up, or restructure anything "
-                "the user did not ask you to change. Return the complete HTML."
+                "the user did not ask you to change. Return the complete HTML "
+                "starting with <!DOCTYPE html>. No markdown fences, no explanation."
             ),
             messages=[
                 {
@@ -496,15 +506,37 @@ class SurgicalEditor:
                     ),
                 }
             ],
-            max_tokens=16000,
+            max_tokens=24000,
             temperature=0.1,
         )
 
-        # Extract HTML from response
         text = result.text
+
+        # Try extracting HTML from markdown fences first
+        if "```html" in text:
+            start = text.index("```html") + len("```html")
+            end = text.rfind("```")
+            if end > start:
+                text = text[start:end].strip()
+
+        # Look for <!DOCTYPE
         if "<!DOCTYPE" in text:
             start = text.index("<!DOCTYPE")
             end = text.rfind("</html>") + len("</html>")
             if end > start:
                 return text[start:end]
-        return text
+
+        # Look for <html tag as fallback
+        if "<html" in text.lower():
+            idx = text.lower().index("<html")
+            end = text.rfind("</html>") + len("</html>")
+            if end > idx:
+                return text[idx:end]
+
+        # Nothing HTML-like found — return ORIGINAL to preserve document
+        logger.error(
+            "Fallback regeneration produced no HTML, preserving original",
+            response_length=len(text),
+            response_preview=text[:200],
+        )
+        return html

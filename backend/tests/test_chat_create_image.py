@@ -144,8 +144,8 @@ async def test_create_route_fallback_to_claude(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_image_route_svg(tmp_path):
-    """Test image route with SVG keyword (flowchart) - zero API cost."""
+async def test_image_route_no_provider_returns_error(tmp_path):
+    """Image route with no provider returns error (SVG branch removed)."""
     from app.database import init_db, close_db
     from app.config import settings
     from app.services.session_service import session_service
@@ -170,7 +170,7 @@ async def test_image_route_svg(tmp_path):
                 new_callable=AsyncMock,
                 return_value="image",
             ):
-                request = ChatRequest(message="Add a flowchart showing the process")
+                request = ChatRequest(message="Add a photo of mountains")
                 response = await chat(sid, request)
 
                 body = ""
@@ -178,14 +178,10 @@ async def test_image_route_svg(tmp_path):
                     body += chunk
 
             events = _parse_sse_events(body)
-            html_events = [e for e in events if e["type"] == "html"]
+            error_events = [e for e in events if e["type"] == "error"]
 
-            assert len(html_events) == 1
-            assert "<svg" in html_events[0]["content"]
-            assert "generated-svg" in html_events[0]["content"]
-
-            summary_events = [e for e in events if e["type"] == "summary"]
-            assert any("SVG diagram" in e["content"] for e in summary_events)
+            assert len(error_events) >= 1
+            assert "unavailable" in error_events[0]["content"]
 
         finally:
             await close_db()
@@ -276,6 +272,48 @@ async def test_image_route_api_image(tmp_path):
 
         finally:
             await close_db()
+
+
+# --- Title extraction tests (Plan 015) ---
+
+
+def test_template_title_strips_placeholder():
+    from app.api.chat import _extract_title
+
+    msg = "Create an engaging slide presentation about: {{TOPIC}}\n\nMy content"
+    title = _extract_title(msg)
+    assert "{{" not in title
+    assert "slide presentation" in title.lower()
+
+
+def test_template_title_strips_brd_placeholder():
+    from app.api.chat import _extract_title
+
+    msg = "Create a Business Requirements Document (BRD) for: {{PROJECT_OR_INITIATIVE}}\n\nDetails"
+    title = _extract_title(msg)
+    assert "{{" not in title
+    assert "BRD" in title or "Business Requirements" in title
+
+
+def test_normal_message_title():
+    from app.api.chat import _extract_title
+
+    msg = "Create a landing page for my startup"
+    assert _extract_title(msg) == "Create a landing page for my startup"
+
+
+def test_long_message_title_truncated():
+    from app.api.chat import _extract_title
+
+    msg = "A" * 200
+    assert len(_extract_title(msg)) <= 50
+
+
+def test_multiline_message_uses_first_line():
+    from app.api.chat import _extract_title
+
+    msg = "Create a dashboard\n\nWith lots of charts and data"
+    assert _extract_title(msg) == "Create a dashboard"
 
 
 # --- Edit route still works ---

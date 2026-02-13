@@ -39,15 +39,18 @@ React 19 (SSE) ──POST──> FastAPI ──> SQLite WAL
 
 ### LLM Intent Routing (`services/router.py`)
 
-| Rule | Condition | Route | Model |
-|------|-----------|-------|-------|
-| 1 | No existing HTML in session | CREATE | Gemini 2.5 Pro |
-| 2 | HTML exists → Haiku 4.5 classifies intent | create / edit / image | Haiku 4.5 decides |
+| Rule | Condition | Route | Cost |
+|------|-----------|-------|------|
+| 1 | No existing HTML in session | CREATE | $0 |
+| 2 | Removal/deletion keywords detected | EDIT | $0 |
+| 3 | Transformation intent ("turn into", "convert to", "instead") | CREATE | $0 |
+| 4 | HTML exists → Haiku 4.5 classifies intent | create / edit / image | ~$0.0001 |
 
 - **No-HTML shortcut**: If no document exists, always routes to CREATE (no LLM call needed)
-- **LLM classification**: Haiku 4.5 (`max_tokens=1, temperature=0`) classifies into create/edit/image
+- **Pre-routing regex**: Removal keywords → EDIT, transformation intent → CREATE (zero cost, zero latency)
+- **LLM classification**: Haiku 4.5 (`max_tokens=1, temperature=0`) classifies remaining requests
 - **Fallback on ANY error**: Defaults to EDIT (safest — doesn't create docs or call image API)
-- **Cost**: ~$0.0001/call, ~200ms latency, tracked in `cost_tracking` table
+- **Cost**: ~$0.0001/call for LLM classification, tracked in `cost_tracking` table
 
 ### Surgical Editing Engine (`services/editor.py`)
 
@@ -313,6 +316,7 @@ All plans in `IMPLEMENTATION_PLANS/` directory:
 | 012 | Architecture Refactoring (dead code, export consolidation, chat.py extraction) | COMPLETE |
 | 013 | UX Improvements (template badges, confirm dialogs, new session, editable CodeMirror, loading state, send debounce, doc badges) | COMPLETE |
 | 014 | LLM Router + Template Fix (Haiku 4.5 intent classification, template badge fix, SVG word boundaries) | COMPLETE |
+| 015 | Critical Bug Fixes (Router pre-routing, edit error guards, template titles, SVG branch removal) | COMPLETE |
 
 ## Known Issues
 
@@ -324,11 +328,16 @@ All plans in `IMPLEMENTATION_PLANS/` directory:
 ### Resolved Issues
 - ~~Admin dashboard components~~ — **DELETED** (legacy v1 code removed: `AdminDashboard.tsx`, `AdminLogin.tsx`, `AdminPage.tsx`, `BasicChatWindow.tsx`, `SimpleChatWindow.tsx`)
 - ~~`CodeMirrorViewer.tsx` matchMedia issue~~ — **RESOLVED in Plan 009b** (replaced with `MutationObserver` on `data-theme` attribute)
+- ~~"REMOVE THE SVG DIAGRAM" adds SVG instead of removing~~ — **RESOLVED in Plan 015** (pre-routing detects removal intent → edit)
+- ~~`'new_text'` error after edit~~ — **RESOLVED in Plan 015** (KeyError guard + user-friendly error messages)
+- ~~Template `{{PLACEHOLDER}}` visible in titles~~ — **RESOLVED in Plan 015** (server-side title extraction)
+- ~~Raw text in viewer after failed edit~~ — **RESOLVED in Plan 015** (fallback preserves original HTML on failure)
+- ~~Hardcoded SVG templates in image handler~~ — **RESOLVED in Plan 015** (SVG branch removed; diagrams route to editor)
 
 ---
 
 **Last Updated**: February 2026
-**Architecture**: v2 rebuild (Plans 001-014 complete except 008 pending)
+**Architecture**: v2 rebuild (Plans 001-015 complete except 008 pending)
 **AI Models**: Haiku 4.5 (routing) + Claude Sonnet 4.5 (edits) + Gemini 2.5 Pro (creation) + Nano Banana Pro (images)
 **Database**: SQLite WAL (no Redis)
 **Communication**: SSE + HTTP POST (no WebSocket)

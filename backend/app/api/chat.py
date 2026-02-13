@@ -8,10 +8,30 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import asyncio
 import json
+import re
 import structlog
 
 logger = structlog.get_logger()
 router = APIRouter()
+
+_PLACEHOLDER_RE = re.compile(r"\{\{[A-Z_]+\}\}")
+
+
+def _extract_title(message: str) -> str:
+    """Extract a clean document title from the user message.
+
+    Handles template messages like:
+        'Create an engaging slide presentation about: {{TOPIC}}\\n\\nContent'
+    by stripping the placeholder and trailing punctuation.
+    """
+    first_line = message.split("\n")[0]
+
+    if _PLACEHOLDER_RE.search(first_line):
+        clean = _PLACEHOLDER_RE.sub("", first_line).strip().rstrip(":").strip()
+        if clean:
+            return clean[:50]
+
+    return first_line[:50]
 
 
 def _sse(data: dict) -> str:
@@ -112,7 +132,7 @@ async def _handle_create(
         yield {"type": "chunk", "content": chunk}
 
     full_html = extract_html("".join(chunks))
-    title = request.message[:50]
+    title = _extract_title(request.message)
 
     new_doc_id = await session_service.create_document(
         session_id, title
@@ -155,7 +175,7 @@ async def _handle_image(
     active_doc: dict | None,
     current_html: str | None,
 ) -> AsyncIterator[dict]:
-    """Image: SVG template or Gemini image generation."""
+    """Raster image generation via Gemini."""
     from app.services.image_service import ImageService
     from app.services.cost_tracker import cost_tracker
 
@@ -175,79 +195,70 @@ async def _handle_image(
     except (ValueError, Exception):
         img_provider = None  # type: ignore[assignment]
 
+    if not img_provider:
+        yield {
+            "type": "error",
+            "content": "Image generation unavailable (no GOOGLE_API_KEY).",
+        }
+        return
+
     img_fallback = None  # type: ignore[assignment]
-    if img_provider:
-        try:
-            from app.config import settings as _settings
-            img_fallback = GeminiImageProvider(
-                model=_settings.image_fallback_model,
-            )
-        except (ValueError, Exception):
-            pass  # No fallback available, primary only
+    try:
+        from app.config import settings as _settings
+        img_fallback = GeminiImageProvider(
+            model=_settings.image_fallback_model,
+        )
+    except (ValueError, Exception):
+        pass  # No fallback available, primary only
 
     img_service = ImageService(
         img_provider,
         fallback_provider=img_fallback,
     )
-    use_svg, svg_type = img_service.should_use_svg(request.message)
 
-    if use_svg:
-        updated_html = img_service.generate_svg_and_embed(
-            current_html, svg_type, request.message
+    gen_task = asyncio.create_task(
+        img_service.generate_and_embed(
+            current_html,
+            request.message,
+            resolution="hd",
         )
-        model_used = "svg-template"
-        images_generated = 0
-    elif img_provider:
-        gen_task = asyncio.create_task(
-            img_service.generate_and_embed(
-                current_html,
-                request.message,
-                resolution="hd",
-            )
-        )
-        timer_task = asyncio.create_task(asyncio.sleep(8))
+    )
+    timer_task = asyncio.create_task(asyncio.sleep(8))
 
-        done, _pending = await asyncio.wait(
-            {gen_task, timer_task},
-            return_when=asyncio.FIRST_COMPLETED,
-        )
+    done, _pending = await asyncio.wait(
+        {gen_task, timer_task},
+        return_when=asyncio.FIRST_COMPLETED,
+    )
 
-        if timer_task in done and gen_task not in done:
-            yield {
-                "type": "status",
-                "content": "Still generating... high-quality images can take 15-30 seconds",
-            }
-            updated_html, img_resp = await gen_task
-        else:
-            timer_task.cancel()
-            updated_html, img_resp = gen_task.result()
-
-        model_used = img_resp.model
-        images_generated = 1
-    else:
+    if timer_task in done and gen_task not in done:
         yield {
-            "type": "error",
-            "content": "Image generation unavailable (no GOOGLE_API_KEY). Only SVG diagrams are supported.",
+            "type": "status",
+            "content": "Still generating... high-quality images can take 15-30 seconds",
         }
-        return
+        updated_html, img_resp = await gen_task
+    else:
+        timer_task.cancel()
+        updated_html, img_resp = gen_task.result()
+
+    model_used = img_resp.model
 
     version = await session_service.save_version(
         active_doc["id"],
         updated_html,
         user_prompt=request.message,
-        edit_summary=f"Added {'SVG diagram' if use_svg else 'image'}",
+        edit_summary="Added image to document",
         model_used=model_used,
         tokens_used=0,
     )
 
     await cost_tracker.record_usage(
-        model_used, 0, 0, images_generated
+        model_used, 0, 0, 1
     )
 
     await session_service.add_chat_message(
         session_id,
         "assistant",
-        f"Added {'SVG diagram' if use_svg else 'image'}",
+        "Added image to document",
         active_doc["id"],
         "image_confirmation",
     )
@@ -259,7 +270,7 @@ async def _handle_image(
     }
     yield {
         "type": "summary",
-        "content": f"Added {'SVG diagram' if use_svg else 'image'} to document",
+        "content": "Added image to document",
     }
 
 
@@ -276,7 +287,7 @@ async def chat(session_id: str, request: ChatRequest):
     Routes requests to the appropriate model:
     - edit: Claude Sonnet 4.5 (surgical editing via tool_use)
     - create: Gemini 2.5 Pro (streaming, with Claude fallback)
-    - image: Gemini image model or SVG templates
+    - image: Gemini image model (raster images)
     """
     from app.services.session_service import session_service
     from app.services.router import classify_request
@@ -330,9 +341,14 @@ async def chat(session_id: str, request: ChatRequest):
             logger.error(
                 "Chat error",
                 error=str(e),
+                error_type=type(e).__name__,
                 session_id=session_id[:8],
             )
-            yield _sse({"type": "error", "content": str(e)})
+            user_msg = (
+                "Something went wrong. Please try again "
+                "or rephrase your request."
+            )
+            yield _sse({"type": "error", "content": user_msg})
 
     return StreamingResponse(
         event_stream(),

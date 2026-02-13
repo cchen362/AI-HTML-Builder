@@ -232,3 +232,68 @@ async def test_cost_tracked_on_success():
     mock_cost_tracker.record_usage.assert_called_once_with(
         "claude-haiku-4-5-20251001", 50, 1
     )
+
+
+# ---------------------------------------------------------------------------
+# Pre-routing: Removal keywords → EDIT (no LLM call, Plan 015)
+# ---------------------------------------------------------------------------
+
+
+async def test_remove_svg_diagram_is_edit():
+    """'REMOVE THE SVG DIAGRAM' must route to edit, not image."""
+    result = await classify_request("REMOVE THE SVG DIAGRAM", has_existing_html=True)
+    assert result == "edit"
+
+
+async def test_get_rid_of_image_is_edit():
+    result = await classify_request("Get rid of the image at the top", has_existing_html=True)
+    assert result == "edit"
+
+
+async def test_eliminate_chart_is_edit():
+    result = await classify_request("Eliminate the chart section", has_existing_html=True)
+    assert result == "edit"
+
+
+# ---------------------------------------------------------------------------
+# Pre-routing: Transform intent → CREATE (no LLM call, Plan 015)
+# ---------------------------------------------------------------------------
+
+
+async def test_turn_into_stakeholder_brief_is_create():
+    result = await classify_request(
+        "Turn the content into stakeholder brief instead", has_existing_html=True
+    )
+    assert result == "create"
+
+
+async def test_convert_to_dashboard_is_create():
+    result = await classify_request("Convert this to a dashboard", has_existing_html=True)
+    assert result == "create"
+
+
+async def test_rewrite_as_brd_is_create():
+    result = await classify_request("Rewrite this as a BRD", has_existing_html=True)
+    assert result == "create"
+
+
+async def test_instead_at_end_is_create():
+    """Message ending with 'instead' should route to create."""
+    result = await classify_request(
+        "Make it a presentation instead", has_existing_html=True
+    )
+    assert result == "create"
+
+
+# ---------------------------------------------------------------------------
+# Pre-routing: Normal requests still fall through to LLM
+# ---------------------------------------------------------------------------
+
+
+async def test_change_title_still_uses_llm():
+    """Non-matching requests should still call Haiku."""
+    with _mock_haiku("edit"):
+        result = await classify_request(
+            "Change the title to something better", has_existing_html=True
+        )
+        assert result == "edit"

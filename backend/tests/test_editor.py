@@ -513,3 +513,90 @@ async def test_edit_with_base64_image(mock_provider, editor):
     html_message = next(m for m in messages if "HTML document" in m["content"])
     assert b64 not in html_message["content"]
     assert "__B64_1__" in html_message["content"]
+
+
+# --- KeyError guard tests (Plan 015) ---
+
+
+@pytest.mark.asyncio
+async def test_missing_new_text_param_handled_gracefully(mock_provider, editor):
+    """KeyError from malformed tool call should not crash."""
+    mock_provider.generate_with_tools.return_value = ToolResult(
+        tool_calls=[
+            ToolCall(
+                name="html_replace",
+                input={"old_text": "<h1>Hello World</h1>"},  # missing new_text
+            )
+        ],
+        text="",
+        input_tokens=100,
+        output_tokens=50,
+        model="test-model",
+    )
+    # Should trigger fallback, not crash
+    mock_provider.generate.return_value = GenerationResult(
+        text=SAMPLE_HTML,
+        input_tokens=200,
+        output_tokens=300,
+        model="test-model",
+    )
+    result = await editor.edit(SAMPLE_HTML, "Change title")
+    assert result.error_count >= 1
+    # Should NOT raise KeyError — document preserved
+    assert "<!DOCTYPE" in result.html
+
+
+@pytest.mark.asyncio
+async def test_missing_anchor_text_param_handled_gracefully(mock_provider, editor):
+    """Missing anchor_text in html_insert_after should not crash."""
+    mock_provider.generate_with_tools.return_value = ToolResult(
+        tool_calls=[
+            ToolCall(
+                name="html_insert_after",
+                input={"new_content": "<p>New</p>"},  # missing anchor_text
+            )
+        ],
+        text="",
+        input_tokens=100,
+        output_tokens=50,
+        model="test-model",
+    )
+    mock_provider.generate.return_value = GenerationResult(
+        text=SAMPLE_HTML,
+        input_tokens=200,
+        output_tokens=300,
+        model="test-model",
+    )
+    result = await editor.edit(SAMPLE_HTML, "Add paragraph")
+    assert result.error_count >= 1
+
+
+@pytest.mark.asyncio
+async def test_fallback_preserves_original_on_bad_response(mock_provider, editor):
+    """If fallback returns non-HTML, preserve original document."""
+    mock_provider.generate_with_tools.return_value = ToolResult(
+        tool_calls=[
+            ToolCall(
+                name="html_replace",
+                input={
+                    "old_text": "<nonexistent/>",
+                    "new_text": "<div>x</div>",
+                },
+            )
+        ],
+        text="",
+        input_tokens=100,
+        output_tokens=50,
+        model="test-model",
+    )
+    # Fallback returns prose, not HTML
+    mock_provider.generate.return_value = GenerationResult(
+        text="I apologize, I cannot make that change.",
+        input_tokens=200,
+        output_tokens=50,
+        model="test-model",
+    )
+    result = await editor.edit(SAMPLE_HTML, "Do something")
+    # Should preserve original HTML, not return prose
+    assert "<!DOCTYPE" in result.html
+    assert "I apologize" not in result.html

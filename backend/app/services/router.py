@@ -10,6 +10,8 @@ Fallback on ANY error → edit (safest default: doesn't create docs or call imag
 
 from __future__ import annotations
 
+import re
+
 import anthropic
 import structlog
 
@@ -17,15 +19,34 @@ from app.config import settings
 
 logger = structlog.get_logger()
 
+# Pre-routing patterns (run BEFORE LLM, zero cost, zero latency)
+_REMOVAL_RE = re.compile(
+    r"\b(remove|delete|get rid of|take out|strip|eliminate)\b",
+    re.IGNORECASE,
+)
+
+_TRANSFORM_RE = re.compile(
+    r"("
+    r"\bturn\s+(?:it\s+|this\s+|the\s+\S+\s+)?(?:into|to)\b"
+    r"|\bconvert\s+(?:it\s+|this\s+|the\s+\S+\s+)?(?:into|to)\b"
+    r"|\brewrite\s+(?:it\s+|this\s+)?(?:as|into)\b"
+    r"|\bredo\s+(?:it\s+|this\s+)?(?:as|into)\b"
+    r"|\bstart\s+(?:over|fresh|from\s+scratch)\b"
+    r"|\binstead\s*$"
+    r")",
+    re.IGNORECASE,
+)
+
 _CLASSIFICATION_PROMPT = """Classify the user's intent into exactly one category.
 
 CATEGORIES:
-- create: User wants a NEW document. Includes: "start fresh", standalone formats (infographic, mindmap, presentation, dashboard), or explicit new document requests.
-- image: User wants to ADD a raster photo/picture/illustration INTO the existing document.
-- edit: User wants to MODIFY the existing document. Includes: text changes, styling, adding/removing sections, adding diagrams/charts/SVGs, or removing images. This is the DEFAULT.
+- create: User wants a NEW document, a completely different type of document, or to start over. Includes: "start fresh", standalone formats (infographic, mindmap, presentation, dashboard), or explicit new document requests.
+- image: User wants to ADD a raster photo/picture/illustration INTO the existing document. The user is asking for a NEW visual to be ADDED.
+- edit: User wants to MODIFY the existing document. Includes: text changes, styling, adding/removing sections, adding diagrams/charts/SVGs, removing images, or any change to the current document. This is the DEFAULT.
 
 RULES:
-- Removing/deleting/fixing an image → edit
+- Removing/deleting/fixing anything → edit (NEVER image)
+- "Turn into X" / "convert to Y" / "make it a Z" → create (complete document type change)
 - Diagrams, charts, flowcharts, SVGs → edit (Claude generates these)
 - If ambiguous → edit
 
@@ -64,7 +85,17 @@ async def classify_request(user_input: str, has_existing_html: bool) -> str:
         logger.info("[ROUTER] No existing HTML -> CREATE", request=user_input[:80])
         return "create"
 
-    # Rule 2: LLM classification via Haiku 4.5
+    # Rule 2: Removal/deletion intent → always edit (override any image match)
+    if _REMOVAL_RE.search(user_input):
+        logger.info("[ROUTER] Removal intent -> EDIT", request=user_input[:80])
+        return "edit"
+
+    # Rule 3: Transformation intent → create (full document reconceptualization)
+    if _TRANSFORM_RE.search(user_input):
+        logger.info("[ROUTER] Transform intent -> CREATE", request=user_input[:80])
+        return "create"
+
+    # Rule 4: LLM classification via Haiku 4.5
     try:
         client = _get_client()
         response = await client.messages.create(
