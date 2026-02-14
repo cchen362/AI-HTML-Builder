@@ -117,6 +117,17 @@ class InfographicService:
             output_tokens=result.output_tokens,
         )
 
+        if not visual_prompt:
+            logger.error(
+                "Art director returned empty visual prompt",
+                input_tokens=result.input_tokens,
+                user_message=user_message[:80],
+            )
+            raise RuntimeError(
+                "The art director couldn't generate a design prompt for this request. "
+                "Try rephrasing or simplifying your instructions."
+            )
+
         # Step 2: Renderer — generate image from visual prompt
         img_response = await self._generate_image_with_retry(visual_prompt, "2k")
 

@@ -58,8 +58,18 @@ class GeminiProvider(LLMProvider):
         usage = response.usage_metadata
         input_toks: int = usage.prompt_token_count if usage else 0  # type: ignore[assignment]
         output_toks: int = usage.candidates_token_count if usage else 0  # type: ignore[assignment]
+        text = response.text or ""
+
+        if not text and response.candidates:
+            candidate = response.candidates[0]
+            logger.warning(
+                "Gemini returned empty text",
+                finish_reason=getattr(candidate, "finish_reason", None),
+                safety_ratings=str(getattr(candidate, "safety_ratings", None)),
+            )
+
         return GenerationResult(
-            text=response.text or "",
+            text=text,
             input_tokens=input_toks or 0,
             output_tokens=output_toks or 0,
             model=self.model,
