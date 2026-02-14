@@ -109,6 +109,7 @@ class SessionService:
         edit_summary: str = "",
         model_used: str = "",
         tokens_used: int = 0,
+        visual_prompt: str = "",
     ) -> int:
         db = await get_db()
         # Get next version number
@@ -122,8 +123,9 @@ class SessionService:
         version = row["next_ver"]
         await db.execute(
             """INSERT INTO document_versions
-               (document_id, version, html_content, user_prompt, edit_summary, model_used, tokens_used)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+               (document_id, version, html_content, user_prompt, edit_summary,
+                model_used, tokens_used, visual_prompt)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 document_id,
                 version,
@@ -132,6 +134,7 @@ class SessionService:
                 edit_summary,
                 model_used,
                 tokens_used,
+                visual_prompt,
             ),
         )
         await db.commit()
@@ -177,7 +180,8 @@ class SessionService:
     async def get_version_history(self, document_id: str) -> list[dict]:
         db = await get_db()
         cursor = await db.execute(
-            """SELECT version, user_prompt, edit_summary, model_used, tokens_used, created_at
+            """SELECT version, user_prompt, edit_summary, model_used,
+                      tokens_used, created_at, visual_prompt
                FROM document_versions WHERE document_id = ? ORDER BY version DESC""",
             (document_id,),
         )

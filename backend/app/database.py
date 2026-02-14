@@ -29,6 +29,14 @@ async def init_db() -> None:
 
     # Create tables
     await _db.executescript(SCHEMA)
+
+    # Migrations (safe to re-run — ADD COLUMN is a no-op if column exists)
+    for migration in _MIGRATIONS:
+        try:
+            await _db.execute(migration)
+        except Exception:
+            pass  # Column already exists
+
     await _db.commit()
     logger.info("Database initialized", path=str(db_path))
 
@@ -97,3 +105,9 @@ CREATE INDEX IF NOT EXISTS idx_versions_document ON document_versions(document_i
 CREATE INDEX IF NOT EXISTS idx_messages_session ON chat_messages(session_id);
 CREATE INDEX IF NOT EXISTS idx_cost_date ON cost_tracking(date);
 """
+
+# Schema migrations — each runs inside a try/except so re-runs are safe.
+# SQLite raises an error if ADD COLUMN targets an existing column.
+_MIGRATIONS = [
+    "ALTER TABLE document_versions ADD COLUMN visual_prompt TEXT",
+]

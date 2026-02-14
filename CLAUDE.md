@@ -164,7 +164,7 @@ frontend/src/
 |-------|------------|-------------|
 | `sessions` | id, created_at, last_active, metadata | PK: id |
 | `documents` | id, session_id, title, is_active | FK: session_id -> sessions |
-| `document_versions` | id, document_id, version, html_content, edit_summary, model_used | UNIQUE(document_id, version) |
+| `document_versions` | id, document_id, version, html_content, edit_summary, model_used, visual_prompt | UNIQUE(document_id, version) |
 | `chat_messages` | id, session_id, document_id, role, content, message_type | CHECK(role IN user/assistant/system) |
 | `cost_tracking` | id, date, model, request_count, input/output_tokens, estimated_cost_usd | UNIQUE(date, model) |
 

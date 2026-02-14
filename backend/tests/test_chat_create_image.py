@@ -666,6 +666,113 @@ async def test_infographic_iteration_override(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_get_latest_version_prompt_skips_empty_visual_prompt(tmp_path):
+    """_get_latest_version_prompt should skip versions without visual_prompt."""
+    from app.database import init_db, close_db
+    from app.config import settings
+    from app.services.session_service import session_service
+
+    db_path = tmp_path / "test_prompt_walkback.db"
+    with patch.object(settings, "database_path", str(db_path)):
+        await init_db()
+
+        try:
+            from app.api.chat import _get_latest_version_prompt
+
+            sid = await session_service.create_session()
+            doc_id = await session_service.create_document(sid, "Infographic")
+
+            # v1: valid visual prompt (from art director)
+            visual_prompt = "A professional infographic with a large brain illustration..."
+            await session_service.save_version(
+                doc_id, "<html>v1</html>",
+                user_prompt="Create an infographic about AI",
+                visual_prompt=visual_prompt,
+            )
+
+            # v2: corrupted — edit handler saved without visual_prompt
+            await session_service.save_version(
+                doc_id, "<html>v2</html>",
+                user_prompt="make the text bigger",
+            )
+
+            # v3: corrupted — empty visual_prompt
+            await session_service.save_version(
+                doc_id, "<html>v3</html>",
+                user_prompt="less prose",
+                visual_prompt="",
+            )
+
+            result = await _get_latest_version_prompt(session_service, doc_id)
+            assert result == visual_prompt
+
+        finally:
+            await close_db()
+
+
+@pytest.mark.asyncio
+async def test_get_latest_version_prompt_returns_none_when_no_visual(tmp_path):
+    """When no versions have visual_prompt, should return None."""
+    from app.database import init_db, close_db
+    from app.config import settings
+    from app.services.session_service import session_service
+
+    db_path = tmp_path / "test_prompt_none.db"
+    with patch.object(settings, "database_path", str(db_path)):
+        await init_db()
+
+        try:
+            from app.api.chat import _get_latest_version_prompt
+
+            sid = await session_service.create_session()
+            doc_id = await session_service.create_document(sid, "Infographic")
+
+            await session_service.save_version(
+                doc_id, "<html>v1</html>",
+                user_prompt="make it bigger",
+            )
+
+            result = await _get_latest_version_prompt(session_service, doc_id)
+            assert result is None
+
+        finally:
+            await close_db()
+
+
+@pytest.mark.asyncio
+async def test_get_latest_version_prompt_returns_most_recent(tmp_path):
+    """When multiple valid visual_prompts exist, return the most recent."""
+    from app.database import init_db, close_db
+    from app.config import settings
+    from app.services.session_service import session_service
+
+    db_path = tmp_path / "test_prompt_recent.db"
+    with patch.object(settings, "database_path", str(db_path)):
+        await init_db()
+
+        try:
+            from app.api.chat import _get_latest_version_prompt
+
+            sid = await session_service.create_session()
+            doc_id = await session_service.create_document(sid, "Infographic")
+
+            await session_service.save_version(
+                doc_id, "<html>v1</html>",
+                visual_prompt="Old visual prompt about revenue",
+            )
+            await session_service.save_version(
+                doc_id, "<html>v2</html>",
+                visual_prompt="New visual prompt about revenue with bigger text",
+            )
+
+            result = await _get_latest_version_prompt(session_service, doc_id)
+            assert result == "New visual prompt about revenue with bigger text"
+
+        finally:
+            await close_db()
+
+
+@pytest.mark.asyncio
 async def test_edit_route_unchanged(tmp_path):
     """Verify edit route still functions after create/image additions."""
     from app.database import init_db, close_db

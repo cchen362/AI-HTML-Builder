@@ -74,13 +74,18 @@ def _is_infographic_doc(html: str) -> bool:
 async def _get_latest_version_prompt(
     session_service: Any, document_id: str
 ) -> str | None:
-    """Get the user_prompt from the latest version of a document.
+    """Get the art director's visual prompt from version history.
 
-    For infographic docs, this stores the art director's visual prompt.
+    Walks backwards through version history (DESC order) and returns the
+    first non-empty visual_prompt. This provides resilience against versions
+    that were saved without a visual prompt (e.g., failed edits before the
+    route override fix).
     """
     history = await session_service.get_version_history(document_id)
-    if history:
-        return history[0].get("user_prompt")  # history is DESC ordered
+    for version in history:
+        prompt = version.get("visual_prompt")
+        if prompt:
+            return prompt
     return None
 
 
@@ -438,10 +443,11 @@ async def _handle_infographic(
         version = await session_service.save_version(
             doc_id,
             infographic_html,
-            user_prompt=result.visual_prompt,
+            user_prompt=request.message,
             edit_summary="Regenerated infographic",
             model_used=model_used,
             tokens_used=result.prompt_input_tokens + result.prompt_output_tokens,
+            visual_prompt=result.visual_prompt,
         )
         summary = "Regenerated infographic"
     else:
@@ -450,10 +456,11 @@ async def _handle_infographic(
         version = await session_service.save_version(
             doc_id,
             infographic_html,
-            user_prompt=result.visual_prompt,
+            user_prompt=request.message,
             edit_summary=f"Created: {title}",
             model_used=model_used,
             tokens_used=result.prompt_input_tokens + result.prompt_output_tokens,
+            visual_prompt=result.visual_prompt,
         )
         summary = f"Created: {title}"
 
