@@ -22,3 +22,10 @@ export function daysUntilExpiry(lastActive: string): number {
   const expiresAt = new Date(lastActive).getTime() + 30 * 86400000;
   return Math.ceil((expiresAt - Date.now()) / 86400000);
 }
+
+/** Get CSS variable for expiry color based on days remaining. */
+export function expiryColor(daysLeft: number): string {
+  if (daysLeft > 14) return 'var(--signal-success)';
+  if (daysLeft > 7) return 'var(--accent-primary)';
+  return 'var(--signal-error)';
+}

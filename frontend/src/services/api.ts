@@ -1,4 +1,4 @@
-import type { Session, Document, Version, VersionDetail, ChatMessage, User, SessionSummary } from '../types';
+import type { Session, Version, VersionDetail, ChatMessage, User, SessionSummary } from '../types';
 
 const BASE = '';
 
@@ -37,11 +37,6 @@ export const api = {
   /** Get session info with documents and active document. */
   getSession(sessionId: string): Promise<Session> {
     return json(`/api/sessions/${sessionId}`);
-  },
-
-  /** List all documents in a session. */
-  getDocuments(sessionId: string): Promise<{ documents: Document[] }> {
-    return json(`/api/sessions/${sessionId}/documents`);
   },
 
   /** Switch the active document in a session. */
@@ -123,19 +118,6 @@ export const api = {
     }
 
     return res;
-  },
-
-  /** Create a new document from a custom template's HTML. */
-  createFromTemplate(
-    sessionId: string,
-    title: string,
-    htmlContent: string,
-  ): Promise<{ document_id: string; version: number }> {
-    return json(`/api/sessions/${sessionId}/documents/from-template`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, html_content: htmlContent }),
-    });
   },
 
   /** Restore a historical version (creates a new version from old HTML). */

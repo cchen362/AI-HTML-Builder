@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../../services/api';
 import ConfirmDialog from '../ConfirmDialog/ConfirmDialog';
-import { relativeTime, daysUntilExpiry } from './sessionUtils';
+import { relativeTime, daysUntilExpiry, expiryColor } from './sessionUtils';
 import type { SessionSummary } from '../../types';
 import './MySessionsModal.css';
 
@@ -10,12 +10,6 @@ interface MySessionsModalProps {
   onClose: () => void;
   onSelectSession: (sessionId: string) => void;
   currentSessionId: string | null;
-}
-
-function expiryColor(daysLeft: number): string {
-  if (daysLeft > 14) return 'var(--signal-success)';
-  if (daysLeft > 7) return 'var(--accent-primary)';
-  return 'var(--signal-error)';
 }
 
 const PAGE_SIZE = 20;

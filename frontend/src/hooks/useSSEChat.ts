@@ -26,7 +26,6 @@ interface UseSSEChatReturn {
   startNewSession: () => void;
   loadSession: (sessionId: string) => Promise<void>;
   sendFirstMessage: (content: string, templateName?: string, userContent?: string) => Promise<void>;
-  setShowHomeScreen: (show: boolean) => void;
 }
 
 export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
@@ -321,6 +320,5 @@ export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
     startNewSession,
     loadSession,
     sendFirstMessage,
-    setShowHomeScreen,
   };
 }

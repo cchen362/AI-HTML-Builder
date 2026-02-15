@@ -387,7 +387,6 @@ const ChatApp = ({ user }: { user: User }) => {
             messages={messages}
             onSendMessage={handleSendMessage}
             isStreaming={isStreaming}
-            currentStatus={currentStatus}
             streamingContent={streamingContent}
             error={error}
             onDismissError={() => setError(null)}

@@ -263,7 +263,7 @@
   background-image: radial-gradient(ellipse at center, var(--surface-raised) 0%, var(--surface-base) 70%);
 }
 
-.loading-glyph {
+.viewer-loading .loading-glyph {
   font-family: var(--font-mono);
   font-size: 3rem;
   font-weight: var(--fw-bold);
@@ -293,7 +293,7 @@
   background: var(--surface-void);
 }
 
-.loading-glyph {
+.app-loading .loading-glyph {
   font-family: var(--font-mono);
   font-size: var(--fs-display);
   font-weight: var(--fw-heavy);

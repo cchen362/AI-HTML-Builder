@@ -1,18 +1,11 @@
 import React from 'react';
 import type { SessionSummary } from '../../types';
-import { relativeTime, daysUntilExpiry } from './sessionUtils';
+import { relativeTime, daysUntilExpiry, expiryColor } from './sessionUtils';
 
 interface SessionCardProps {
   session: SessionSummary;
   onClick: () => void;
   style?: React.CSSProperties;
-}
-
-/** Get CSS variable for expiry color. */
-function expiryColor(daysLeft: number): string {
-  if (daysLeft > 14) return 'var(--signal-success)';
-  if (daysLeft > 7) return 'var(--accent-primary)';
-  return 'var(--signal-error)';
 }
 
 const SessionCard: React.FC<SessionCardProps> = ({ session, onClick, style }) => {

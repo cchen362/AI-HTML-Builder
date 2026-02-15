@@ -1,6 +1,9 @@
+import json as json_mod
 import uuid
-from app.database import get_db
+
 import structlog
+
+from app.database import get_db
 
 logger = structlog.get_logger()
 
@@ -283,8 +286,6 @@ class SessionService:
         self, user_id: str, limit: int = 20, offset: int = 0
     ) -> list[dict]:
         """Get all sessions for a user with summary info."""
-        import json as json_mod
-
         db = await get_db()
         cursor = await db.execute(
             """SELECT
@@ -341,8 +342,6 @@ class SessionService:
         self, session_id: str, title: str
     ) -> bool:
         """Update the title stored in session metadata JSON."""
-        import json as json_mod
-
         db = await get_db()
         cursor = await db.execute(
             "SELECT metadata FROM sessions WHERE id = ?", (session_id,)
@@ -369,8 +368,6 @@ class SessionService:
         template_name: str | None = None,
         user_content: str | None = None,
     ) -> None:
-        import json as json_mod
-
         db = await get_db()
         await db.execute(
             """INSERT INTO chat_messages

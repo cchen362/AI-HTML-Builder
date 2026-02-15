@@ -10,7 +10,6 @@ interface ChatWindowProps {
   messages: ChatMessage[];
   onSendMessage: (message: string, files?: File[], templateName?: string, userContent?: string) => void;
   isStreaming?: boolean;
-  currentStatus?: string;
   streamingContent?: string;
   error?: string | null;
   onDismissError?: () => void;
