@@ -106,14 +106,17 @@ CREATE INDEX IF NOT EXISTS idx_documents_session ON documents(session_id);
 CREATE INDEX IF NOT EXISTS idx_versions_document ON document_versions(document_id);
 CREATE INDEX IF NOT EXISTS idx_messages_session ON chat_messages(session_id);
 CREATE INDEX IF NOT EXISTS idx_cost_date ON cost_tracking(date);
-CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 """
 
 # Schema migrations — each runs inside a try/except so re-runs are safe.
 # SQLite raises an error if ADD COLUMN targets an existing column.
+# Index creation after ALTER TABLE must also be in migrations (not SCHEMA)
+# because SCHEMA runs via executescript before migrations, and existing DBs
+# won't have the new column yet when the index tries to reference it.
 _MIGRATIONS = [
     "ALTER TABLE document_versions ADD COLUMN visual_prompt TEXT",
     "ALTER TABLE chat_messages ADD COLUMN template_name TEXT",
     "ALTER TABLE chat_messages ADD COLUMN user_content TEXT",
     "ALTER TABLE sessions ADD COLUMN user_id TEXT",
+    "CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)",
 ]
