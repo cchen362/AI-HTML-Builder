@@ -1,8 +1,10 @@
 import React, { useEffect, useRef } from 'react';
-import type { ChatMessage, Document } from '../../types';
+import type { ChatMessage, Document, SessionSummary } from '../../types';
 import type { PromptTemplate } from '../../data/promptTemplates';
 import StreamingMarkdown from '../Chat/StreamingMarkdown';
 import TemplateCards from '../EmptyState/TemplateCards';
+import SessionCard from '../HomeScreen/SessionCard';
+import '../HomeScreen/HomeScreen.css';
 import './MessageList.css';
 
 interface MessageListProps {
@@ -11,6 +13,10 @@ interface MessageListProps {
   streamingContent?: string;
   onSelectTemplate?: (template: PromptTemplate) => void;
   documents?: Document[];
+  showHomeScreen?: boolean;
+  recentSessions?: SessionSummary[];
+  onSelectSession?: (sessionId: string) => void;
+  onViewAllSessions?: () => void;
 }
 
 const MessageList: React.FC<MessageListProps> = ({
@@ -19,6 +25,10 @@ const MessageList: React.FC<MessageListProps> = ({
   streamingContent = '',
   onSelectTemplate,
   documents = [],
+  showHomeScreen,
+  recentSessions,
+  onSelectSession,
+  onViewAllSessions,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const docNameMap = documents.length > 1
@@ -45,9 +55,38 @@ const MessageList: React.FC<MessageListProps> = ({
   return (
     <div className="message-list">
       {showTemplates && (
-        <TemplateCards
-          onSelectTemplate={onSelectTemplate}
-        />
+        <div className="home-content">
+          {showHomeScreen && recentSessions && recentSessions.length > 0 && (
+            <section className="home-section">
+              <div className="home-section-label">PICK UP WHERE YOU LEFT OFF</div>
+              <div className="home-sessions-row">
+                {recentSessions.map((session, i) => (
+                  <SessionCard
+                    key={session.id}
+                    session={session}
+                    onClick={() => onSelectSession?.(session.id)}
+                    style={{ animationDelay: `${i * 80}ms` }}
+                  />
+                ))}
+              </div>
+              <button
+                type="button"
+                className="home-view-all"
+                onClick={onViewAllSessions}
+              >
+                View all sessions &rarr;
+              </button>
+            </section>
+          )}
+          <section className="home-section">
+            <div className="home-section-label">
+              {showHomeScreen && recentSessions?.length
+                ? 'OR START SOMETHING NEW'
+                : 'QUICK START WITH A TEMPLATE, OR TYPE YOUR OWN PROMPT BELOW'}
+            </div>
+            <TemplateCards onSelectTemplate={onSelectTemplate} />
+          </section>
+        </div>
       )}
 
       {messages.map((message) => (

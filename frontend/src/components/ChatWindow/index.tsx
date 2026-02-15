@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
-import type { ChatMessage, Document, User } from '../../types';
+import type { ChatMessage, Document, User, SessionSummary } from '../../types';
 import type { PromptTemplate } from '../../data/promptTemplates';
 
 import './ChatWindow.css';
@@ -21,6 +21,10 @@ interface ChatWindowProps {
   onAdminSettings?: () => void;
   onLogout?: () => void;
   onOpenMySessions?: () => void;
+  showHomeScreen?: boolean;
+  recentSessions?: SessionSummary[];
+  onSelectSession?: (sessionId: string) => void;
+  onViewAllSessions?: () => void;
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({
@@ -38,6 +42,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   onAdminSettings,
   onLogout,
   onOpenMySessions,
+  showHomeScreen,
+  recentSessions,
+  onSelectSession,
+  onViewAllSessions,
 }) => {
   const [pendingTemplate, setPendingTemplate] = useState<PromptTemplate | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -146,6 +154,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         streamingContent={streamingContent}
         onSelectTemplate={handleSelectTemplate}
         documents={documents}
+        showHomeScreen={showHomeScreen}
+        recentSessions={recentSessions}
+        onSelectSession={onSelectSession}
+        onViewAllSessions={onViewAllSessions}
       />
 
       <ChatInput

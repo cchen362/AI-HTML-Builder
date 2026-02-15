@@ -12,11 +12,9 @@ import { AuthProvider, useAuth } from './contexts/AuthContext'
 import LoginPage from './components/Auth/LoginPage'
 import SetupPage from './components/Auth/SetupPage'
 import AdminPanel from './components/Auth/AdminPanel'
-import HomeScreen from './components/HomeScreen/HomeScreen'
 import MySessionsModal from './components/HomeScreen/MySessionsModal'
 import type { Document, User, SessionSummary } from './types'
 import { humanizeError } from './utils/errorUtils'
-import type { PromptTemplate } from './data/promptTemplates'
 import './App.css'
 
 // HTML viewer component with version history side panel
@@ -226,9 +224,14 @@ const ChatApp = ({ user }: { user: User }) => {
     }
     if (message.trim()) {
       setError(null)
-      sendMessage(message, activeDocument?.id, templateName, userContent)
+      if (!sessionId) {
+        // No session yet (home screen) — create one first
+        sendFirstMessage(message, templateName, userContent)
+      } else {
+        sendMessage(message, activeDocument?.id, templateName, userContent)
+      }
     }
-  }, [sendMessage, activeDocument, isCodeViewDirty, viewMode])
+  }, [sendMessage, sendFirstMessage, sessionId, activeDocument, isCodeViewDirty, viewMode])
 
   const handleStartNewSession = useCallback(() => {
     setNewSessionConfirm(true)
@@ -242,18 +245,6 @@ const ChatApp = ({ user }: { user: User }) => {
     await loadSession(targetSessionId)
     setMySessionsOpen(false)
   }, [loadSession])
-
-  const handleHomeTemplate = useCallback((template: PromptTemplate) => {
-    sendFirstMessage(template.template, template.name, '(template only)')
-  }, [sendFirstMessage])
-
-  const handleHomeSendMessage = useCallback((
-    message: string, _files?: File[], templateName?: string, userContent?: string
-  ) => {
-    if (message.trim()) {
-      sendFirstMessage(message, templateName, userContent)
-    }
-  }, [sendFirstMessage])
 
   const handleOpenMySessions = useCallback(() => {
     setMySessionsOpen(true)
@@ -357,28 +348,6 @@ const ChatApp = ({ user }: { user: User }) => {
     )
   }
 
-  // Home screen — shown on login or after "New Session"
-  if (showHomeScreen) {
-    return (
-      <div className="App">
-        <HomeScreen
-          user={user}
-          recentSessions={recentSessions}
-          onSelectSession={handleSelectSession}
-          onSelectTemplate={handleHomeTemplate}
-          onSendMessage={handleHomeSendMessage}
-          onViewAllSessions={handleOpenMySessions}
-        />
-        <MySessionsModal
-          isOpen={mySessionsOpen}
-          onClose={() => setMySessionsOpen(false)}
-          onSelectSession={handleSelectSession}
-          currentSessionId={sessionId}
-        />
-      </div>
-    )
-  }
-
   return (
     <div className="App">
       <SplitPane
@@ -398,6 +367,10 @@ const ChatApp = ({ user }: { user: User }) => {
             onAdminSettings={() => setAdminOpen(true)}
             onLogout={handleLogout}
             onOpenMySessions={handleOpenMySessions}
+            showHomeScreen={showHomeScreen}
+            recentSessions={recentSessions}
+            onSelectSession={handleSelectSession}
+            onViewAllSessions={handleOpenMySessions}
           />
         }
         rightContent={
