@@ -338,6 +338,18 @@ class SessionService:
         await db.commit()
         return cursor.rowcount > 0
 
+    async def get_session_title(self, session_id: str) -> str:
+        """Get the title from session metadata JSON."""
+        db = await get_db()
+        cursor = await db.execute(
+            "SELECT metadata FROM sessions WHERE id = ?", (session_id,)
+        )
+        row = await cursor.fetchone()
+        if not row:
+            return "Untitled Session"
+        metadata = json_mod.loads(row["metadata"] or "{}")
+        return metadata.get("title", "Untitled Session")
+
     async def update_session_title(
         self, session_id: str, title: str
     ) -> bool:

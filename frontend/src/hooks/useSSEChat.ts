@@ -19,6 +19,7 @@ interface UseSSEChatReturn {
   documents: Document[];
   isInitializing: boolean;
   showHomeScreen: boolean;
+  sessionTitle: string;
   sendMessage: (content: string, documentId?: string, templateName?: string, userContent?: string) => Promise<void>;
   cancelRequest: () => void;
   switchDocument: (docId: string) => Promise<void>;
@@ -26,6 +27,7 @@ interface UseSSEChatReturn {
   startNewSession: () => void;
   loadSession: (sessionId: string) => Promise<void>;
   sendFirstMessage: (content: string, templateName?: string, userContent?: string) => Promise<void>;
+  renameSession: (title: string) => Promise<void>;
 }
 
 export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
@@ -41,6 +43,7 @@ export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
   const [activeDocument, setActiveDocument] = useState<Document | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [showHomeScreen, setShowHomeScreen] = useState(true);
+  const [sessionTitle, setSessionTitle] = useState('');
 
   const abortRef = useRef<AbortController | null>(null);
   const sessionIdRef = useRef<string | null>(null);
@@ -65,6 +68,7 @@ export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
       const session = await api.getSession(sid);
       setDocuments(session.documents);
       setActiveDocument(session.active_document);
+      setSessionTitle(session.title || '');
 
       // Load HTML for active document
       if (session.active_document) {
@@ -245,6 +249,7 @@ export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
     setCurrentStatus('');
     setIsStreaming(false);
     setSessionId(null);
+    setSessionTitle('');
     setShowHomeScreen(true);
   }, []);
 
@@ -268,6 +273,7 @@ export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
       const session = await api.getSession(targetSessionId);
       setDocuments(session.documents);
       setActiveDocument(session.active_document);
+      setSessionTitle(session.title || '');
 
       if (session.active_document) {
         const { html } = await api.getDocumentHtml(session.active_document.id);
@@ -302,6 +308,13 @@ export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
     }
   }, [sendMessage, onError]);
 
+  const renameSession = useCallback(async (title: string) => {
+    const sid = sessionIdRef.current;
+    if (!sid) return;
+    await api.updateSessionTitle(sid, title);
+    setSessionTitle(title);
+  }, []);
+
   return {
     sessionId,
     messages,
@@ -317,8 +330,10 @@ export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
     cancelRequest,
     switchDocument,
     refreshDocuments,
+    sessionTitle,
     startNewSession,
     loadSession,
     sendFirstMessage,
+    renameSession,
   };
 }

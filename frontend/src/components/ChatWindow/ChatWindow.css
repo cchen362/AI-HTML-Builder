@@ -47,6 +47,68 @@
   font-size: var(--fs-lg);
   letter-spacing: var(--tracking-tight);
   color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+/* --- Header Right Group --- */
+.header-right-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+/* --- Editable Session Title --- */
+.header-session-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 300px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  letter-spacing: var(--tracking-wide);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: all var(--duration-fast) var(--ease-out-expo);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-session-title:hover {
+  background: var(--surface-highlight);
+  color: var(--text-primary);
+}
+
+.header-title-pencil {
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--duration-fast);
+}
+
+.header-session-title:hover .header-title-pencil {
+  opacity: 0.7;
+}
+
+.header-session-input {
+  max-width: 300px;
+  background: var(--surface-base);
+  border: 1px solid var(--accent-primary);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  outline: none;
+  letter-spacing: var(--tracking-wide);
+}
+
+.header-session-input:focus {
+  box-shadow: 0 0 0 2px var(--accent-primary-muted);
 }
 
 /* --- Header Actions & Menu --- */
@@ -138,9 +200,13 @@
 
   .chat-header h2 {
     font-size: var(--fs-md);
-    margin-bottom: 0.375rem;
   }
 
+  .header-session-title,
+  .header-session-input {
+    max-width: 180px;
+    font-size: var(--fs-xs);
+  }
 }
 
 @media (max-width: 480px) {
@@ -152,4 +218,8 @@
     font-size: var(--fs-base);
   }
 
+  .header-session-title,
+  .header-session-input {
+    display: none;
+  }
 }

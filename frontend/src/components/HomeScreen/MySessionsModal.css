@@ -17,7 +17,7 @@
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
   width: 100%;
-  max-width: 640px;
+  max-width: 860px;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
@@ -57,6 +57,18 @@
   color: var(--text-primary);
 }
 
+.sessions-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sessions-select-all {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
 /* Policy note */
 .sessions-policy {
   padding: 0.75rem 1.5rem;
@@ -65,6 +77,35 @@
   color: var(--text-tertiary);
   font-style: italic;
   border-bottom: 1px solid var(--border-subtle);
+}
+
+/* Search bar */
+.sessions-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.sessions-search-icon {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.sessions-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+}
+
+.sessions-search-input::placeholder {
+  color: var(--text-tertiary);
+  font-style: italic;
 }
 
 /* Error */
@@ -88,16 +129,21 @@
 .sessions-list {
   overflow-y: auto;
   flex: 1;
-  padding: 0.5rem 0;
+  padding: 0;
 }
 
 /* Session row */
 .session-row {
   display: flex;
   align-items: center;
-  padding: 0.75rem 1.5rem;
+  padding: 0.875rem 1.5rem;
   border-left: 3px solid transparent;
+  border-bottom: 1px solid var(--border-subtle);
   transition: background var(--duration-fast);
+}
+
+.session-row:last-of-type {
+  border-bottom: none;
 }
 
 .session-row:hover {
@@ -107,6 +153,41 @@
 .session-row--current {
   border-left-color: var(--accent-primary);
   background: var(--accent-primary-muted);
+}
+
+.session-row--selected {
+  background: var(--accent-primary-muted);
+}
+
+/* Row checkbox */
+.session-row-checkbox-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-right: 0.5rem;
+}
+
+.session-row-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-primary);
+  cursor: pointer;
+  margin: 0;
+}
+
+/* Row icon */
+.session-row-icon {
+  width: 36px;
+  height: 36px;
+  background: var(--signal-active-muted);
+  color: var(--signal-active);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 0.75rem;
 }
 
 .session-row-info {
@@ -142,6 +223,20 @@
   padding: 0.1rem 0.4rem;
   border-radius: var(--radius-sm);
   flex-shrink: 0;
+}
+
+/* Doc count badge */
+.session-doc-badge {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-tertiary);
+  background: var(--surface-highlight);
+  padding: 0.1rem 0.5rem;
+  border-radius: var(--radius-full);
+  margin-left: auto;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 /* Inline rename input */
@@ -236,4 +331,70 @@
 .sessions-load-more:disabled {
   color: var(--text-tertiary);
   cursor: default;
+}
+
+/* Bulk action bar */
+.sessions-bulk-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+  border-top: 1px solid var(--border-default);
+  background: var(--surface-raised);
+  flex-shrink: 0;
+}
+
+.sessions-bulk-count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-primary);
+  letter-spacing: var(--tracking-wide);
+}
+
+.sessions-bulk-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.sessions-bulk-cancel {
+  background: transparent;
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+  padding: 0.4rem 1rem;
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: var(--tracking-wide);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.sessions-bulk-cancel:hover {
+  background: var(--surface-highlight);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.sessions-bulk-delete {
+  background: linear-gradient(135deg, var(--signal-error) 0%, #CC2B47 100%);
+  border: none;
+  color: #fff;
+  padding: 0.4rem 1rem;
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--tracking-wide);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.sessions-bulk-delete:hover {
+  filter: brightness(1.15);
+}
+
+.sessions-bulk-delete:disabled {
+  opacity: 0.6;
+  cursor: default;
+  filter: none;
 }

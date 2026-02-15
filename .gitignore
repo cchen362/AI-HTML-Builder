@@ -65,3 +65,6 @@ exports/
 *.db
 *.db-shm
 *.db-wal
+
+# Personal notes
+CHEAT_SHEET.md

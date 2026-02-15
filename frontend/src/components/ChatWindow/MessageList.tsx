@@ -17,6 +17,7 @@ interface MessageListProps {
   recentSessions?: SessionSummary[];
   onSelectSession?: (sessionId: string) => void;
   onViewAllSessions?: () => void;
+  displayName?: string;
 }
 
 const MessageList: React.FC<MessageListProps> = ({
@@ -29,6 +30,7 @@ const MessageList: React.FC<MessageListProps> = ({
   recentSessions,
   onSelectSession,
   onViewAllSessions,
+  displayName,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const docNameMap = documents.length > 1
@@ -56,6 +58,9 @@ const MessageList: React.FC<MessageListProps> = ({
     <div className="message-list">
       {showTemplates && (
         <div className="home-content">
+          {displayName && (
+            <h1 className="home-welcome">Welcome back, {displayName}</h1>
+          )}
           {showHomeScreen && recentSessions && recentSessions.length > 0 && (
             <section className="home-section">
               <div className="home-section-label">PICK UP WHERE YOU LEFT OFF</div>

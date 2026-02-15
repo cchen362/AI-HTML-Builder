@@ -50,6 +50,7 @@ export interface VersionDetail extends Version {
 /** Session from GET /api/sessions/{sid} */
 export interface Session {
   session_id: string;
+  title: string;
   documents: Document[];
   active_document: Document | null;
 }

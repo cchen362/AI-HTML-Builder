@@ -41,19 +41,26 @@ const LoginPage: React.FC = () => {
 
   return (
     <div className="auth-layout">
-      {/* Left Panel — Branding */}
-      <div className="auth-left">
-        <div className="auth-orb auth-orb--gold" />
-        <div className="auth-orb auth-orb--mint" />
-        <div className="auth-orb auth-orb--coral" />
+      {/* Background orbs */}
+      <div className="auth-orb auth-orb--gold" />
+      <div className="auth-orb auth-orb--mint" />
+      <div className="auth-orb auth-orb--coral" />
+      <div className="auth-orb auth-orb--purple" />
+      <div className="auth-orb auth-orb--teal" />
 
+      <div className="auth-center">
+        {/* Branding */}
         <div className="auth-branding">
           <h1 className="auth-branding-title">AI HTML Builder</h1>
           <p className="auth-branding-subtitle">Create. Edit. Export.</p>
 
           <div className="auth-features">
             <div className="auth-feature">
-              <span className="auth-feature-icon">{ }</span>
+              <span className="auth-feature-icon">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M10 0L12 7L20 10L12 13L10 20L8 13L0 10L8 7Z" fill="currentColor" />
+                </svg>
+              </span>
               <span className="auth-feature-text">AI-powered HTML generation from natural language</span>
             </div>
             <div className="auth-feature">
@@ -61,15 +68,18 @@ const LoginPage: React.FC = () => {
               <span className="auth-feature-text">Zero-drift surgical editing via tool-use</span>
             </div>
             <div className="auth-feature">
-              <span className="auth-feature-icon">&#9632;</span>
+              <span className="auth-feature-icon">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M10 3V13M10 13L6 9M10 13L14 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M4 15H16V17H4V15Z" fill="currentColor" />
+                </svg>
+              </span>
               <span className="auth-feature-text">Export to PDF, PNG, PPTX &amp; HTML</span>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Right Panel — Form */}
-      <div className="auth-right">
+        {/* Form card */}
         <div className="auth-form-container">
           <div className="auth-tab-toggle">
             <button

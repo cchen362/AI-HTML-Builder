@@ -412,20 +412,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
             onClick={() => setIsModalOpen(true)}
             disabled={isProcessing}
           />
-          <button
-            type="button"
-            className="add-visual-btn"
-            disabled={isProcessing}
-            onClick={() => {
-              setMessage((prev) =>
-                prev ? `Generate an image: ${prev}` : 'Generate an image: '
-              );
-              textareaRef.current?.focus();
-            }}
-            title="Add an image or visual to your document"
-          >
-            Add Visual
-          </button>
         </div>
         <div className="footer-right">
           <span className="char-count">{message.length.toLocaleString()} chars</span>

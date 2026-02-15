@@ -190,10 +190,12 @@ const ChatApp = ({ user }: { user: User }) => {
     switchDocument,
     refreshDocuments,
     isInitializing,
+    sessionTitle,
     startNewSession,
     showHomeScreen,
     loadSession,
     sendFirstMessage,
+    renameSession,
   } = useSSEChat({
     onError: (msg) => setError(msg),
   })
@@ -371,6 +373,8 @@ const ChatApp = ({ user }: { user: User }) => {
             recentSessions={recentSessions}
             onSelectSession={handleSelectSession}
             onViewAllSessions={handleOpenMySessions}
+            sessionTitle={sessionTitle}
+            onRenameSession={renameSession}
           />
         }
         rightContent={

@@ -25,12 +25,15 @@ const SetupPage: React.FC = () => {
 
   return (
     <div className="auth-layout">
-      {/* Left Panel — Branding */}
-      <div className="auth-left">
-        <div className="auth-orb auth-orb--gold" />
-        <div className="auth-orb auth-orb--mint" />
-        <div className="auth-orb auth-orb--coral" />
+      {/* Background orbs */}
+      <div className="auth-orb auth-orb--gold" />
+      <div className="auth-orb auth-orb--mint" />
+      <div className="auth-orb auth-orb--coral" />
+      <div className="auth-orb auth-orb--purple" />
+      <div className="auth-orb auth-orb--teal" />
 
+      <div className="auth-center">
+        {/* Branding */}
         <div className="auth-branding">
           <h1 className="auth-branding-title">Welcome to AI HTML Builder</h1>
           <p className="auth-branding-subtitle">First-time setup</p>
@@ -50,10 +53,8 @@ const SetupPage: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Right Panel — Setup Form */}
-      <div className="auth-right">
+        {/* Form card */}
         <div className="auth-form-container">
           <div className="auth-setup-welcome">
             <h2>Create Admin Account</h2>

@@ -377,6 +377,7 @@ All plans in `IMPLEMENTATION_PLANS/` directory:
 | 019 | Export Quality (PDF page breaks, infographic PNG-only, PPTX 16:9) | COMPLETE |
 | 020a | Architecture Refactoring (dead code, shared utils, safety hardening, version pinning) | COMPLETE |
 | 021 | Auth, Session History & UX Polish (auth layer, session browser, version history, error UX, export UX) | COMPLETE |
+| 022 | Post-Implementation UI/UX Polish (login hero, session cards, editable title, modal redesign) | COMPLETE |
 
 ## Known Issues
 

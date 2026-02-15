@@ -225,7 +225,6 @@
 }
 
 /* --- Footer Action Buttons --- */
-.add-visual-btn,
 .attach-file-btn {
   background: none;
   border: 1px solid var(--border-default);
@@ -240,14 +239,12 @@
   transition: all var(--duration-fast) var(--ease-out-expo);
 }
 
-.add-visual-btn:hover:not(:disabled),
 .attach-file-btn:hover:not(:disabled) {
   border-color: var(--border-accent);
   color: var(--accent-primary);
   background: var(--accent-primary-muted);
 }
 
-.add-visual-btn:disabled,
 .attach-file-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;

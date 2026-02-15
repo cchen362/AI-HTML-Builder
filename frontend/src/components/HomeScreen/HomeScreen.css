@@ -22,6 +22,7 @@
   color: var(--text-primary);
   margin: 0 0 2.5rem;
   letter-spacing: var(--tracking-tight);
+  animation: fade-up var(--duration-normal) var(--ease-out-expo);
 }
 
 /* Sections */
@@ -49,25 +50,56 @@
 }
 
 .session-card {
-  flex: 1 1 200px;
-  max-width: 280px;
+  flex: 1 1 240px;
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   background: var(--surface-raised);
   border: 1px solid var(--border-default);
-  border-left: 3px solid transparent;
   border-radius: var(--radius-md);
-  padding: 1rem 1.2rem;
+  padding: 24px;
   cursor: pointer;
   text-align: left;
   transition: all var(--duration-fast) var(--ease-out-expo);
   animation: card-enter var(--duration-slow) var(--ease-out-expo) backwards;
   color: inherit;
   font: inherit;
+  position: relative;
+  overflow: hidden;
+}
+
+.session-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 0;
+  background: var(--accent-primary);
+  transition: height var(--duration-normal) var(--ease-out-expo);
 }
 
 .session-card:hover {
-  border-left-color: var(--accent-primary);
-  background: var(--surface-highlight);
-  transform: translateY(-1px);
+  border-color: var(--border-accent);
+  box-shadow: var(--shadow-glow-accent);
+  transform: translateY(-2px);
+}
+
+.session-card:hover::before {
+  height: 100%;
+}
+
+.session-card-icon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--signal-active-muted);
+  color: var(--signal-active);
+  border: 1px solid var(--signal-active);
+  border-radius: var(--radius-md);
 }
 
 .session-card-title {
@@ -78,7 +110,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-bottom: 0.4rem;
 }
 
 .session-card-meta {
@@ -88,16 +119,6 @@
   display: flex;
   gap: 0.3rem;
   align-items: center;
-  margin-bottom: 0.3rem;
-}
-
-.session-card-dot {
-  opacity: 0.5;
-}
-
-.session-card-expiry {
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
 }
 
 /* View all sessions link */

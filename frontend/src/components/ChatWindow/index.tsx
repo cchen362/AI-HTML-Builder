@@ -25,6 +25,8 @@ interface ChatWindowProps {
   recentSessions?: SessionSummary[];
   onSelectSession?: (sessionId: string) => void;
   onViewAllSessions?: () => void;
+  sessionTitle?: string;
+  onRenameSession?: (title: string) => void;
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({
@@ -46,9 +48,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   recentSessions,
   onSelectSession,
   onViewAllSessions,
+  sessionTitle,
+  onRenameSession,
 }) => {
   const [pendingTemplate, setPendingTemplate] = useState<PromptTemplate | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitleValue, setEditTitleValue] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
 
   const handleSelectTemplate = useCallback((template: PromptTemplate) => {
@@ -79,65 +85,106 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     <div className="chat-window">
       <div className="chat-header">
         <h2>AI HTML Builder</h2>
-        <div className="header-menu-wrapper" ref={menuRef}>
-          <button
-            className={`header-menu-btn${menuOpen ? ' active' : ''}`}
-            onClick={() => setMenuOpen(!menuOpen)}
-            aria-label="Session menu"
-            type="button"
-          >
-            ⋮
-          </button>
-          {menuOpen && (
-            <div className="header-menu-dropdown">
+        <div className="header-right-group">
+          {sessionTitle && !showHomeScreen && (
+            isEditingTitle ? (
+              <input
+                className="header-session-input"
+                value={editTitleValue}
+                onChange={(e) => setEditTitleValue(e.target.value)}
+                onBlur={() => {
+                  if (editTitleValue.trim() && editTitleValue.trim() !== sessionTitle) {
+                    onRenameSession?.(editTitleValue.trim());
+                  }
+                  setIsEditingTitle(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    (e.target as HTMLInputElement).blur();
+                  }
+                  if (e.key === 'Escape') {
+                    setIsEditingTitle(false);
+                  }
+                }}
+                maxLength={200}
+                autoFocus
+              />
+            ) : (
               <button
                 type="button"
+                className="header-session-title"
                 onClick={() => {
-                  setMenuOpen(false);
-                  onStartNewSession?.();
+                  setEditTitleValue(sessionTitle);
+                  setIsEditingTitle(true);
                 }}
-                disabled={isStreaming}
+                title="Click to rename session"
               >
-                New Session
+                {sessionTitle}
+                <svg className="header-title-pencil" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuOpen(false);
-                  onOpenMySessions?.();
-                }}
-              >
-                My Sessions
-              </button>
-              <div className="menu-divider" />
-              {user?.is_admin && (
+            )
+          )}
+          <div className="header-menu-wrapper" ref={menuRef}>
+            <button
+              className={`header-menu-btn${menuOpen ? ' active' : ''}`}
+              onClick={() => setMenuOpen(!menuOpen)}
+              aria-label="Session menu"
+              type="button"
+            >
+              ⋮
+            </button>
+            {menuOpen && (
+              <div className="header-menu-dropdown">
                 <button
                   type="button"
                   onClick={() => {
                     setMenuOpen(false);
-                    onAdminSettings?.();
+                    onStartNewSession?.();
+                  }}
+                  disabled={isStreaming}
+                >
+                  New Session
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onOpenMySessions?.();
                   }}
                 >
-                  Admin Settings
+                  My Sessions
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuOpen(false);
-                  onLogout?.();
-                }}
-              >
-                Logout
-              </button>
-              <div className="session-id-display">
-                {user ? `Signed in as ${user.display_name}` : ''}
+                <div className="menu-divider" />
+                {user?.is_admin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onAdminSettings?.();
+                    }}
+                  >
+                    Admin Settings
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onLogout?.();
+                  }}
+                >
+                  Logout
+                </button>
+                <div className="session-id-display">
+                  {user ? `Signed in as ${user.display_name}` : ''}
+                </div>
+                <div className="session-id-display">
+                  Session: {sessionId?.slice(0, 8) || '—'}
+                </div>
               </div>
-              <div className="session-id-display">
-                Session: {sessionId?.slice(0, 8) || '—'}
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
@@ -158,6 +205,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         recentSessions={recentSessions}
         onSelectSession={onSelectSession}
         onViewAllSessions={onViewAllSessions}
+        displayName={user?.display_name}
       />
 
       <ChatInput

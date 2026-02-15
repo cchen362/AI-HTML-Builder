@@ -98,8 +98,10 @@ async def get_session(session_id: str, user: dict = Depends(get_current_user)):
     await _require_session_ownership(session_id, user["id"])
     docs = await session_service.get_session_documents(session_id)
     active = await session_service.get_active_document(session_id)
+    title = await session_service.get_session_title(session_id)
     return {
         "session_id": session_id,
+        "title": title,
         "documents": docs,
         "active_document": active,
     }
