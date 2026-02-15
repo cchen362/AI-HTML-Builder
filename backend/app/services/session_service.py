@@ -278,12 +278,15 @@ class SessionService:
         content: str,
         document_id: str | None = None,
         message_type: str = "text",
+        template_name: str | None = None,
+        user_content: str | None = None,
     ) -> None:
         db = await get_db()
         await db.execute(
-            """INSERT INTO chat_messages (session_id, document_id, role, content, message_type)
-               VALUES (?, ?, ?, ?, ?)""",
-            (session_id, document_id, role, content, message_type),
+            """INSERT INTO chat_messages
+               (session_id, document_id, role, content, message_type, template_name, user_content)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (session_id, document_id, role, content, message_type, template_name, user_content),
         )
         await db.commit()
 

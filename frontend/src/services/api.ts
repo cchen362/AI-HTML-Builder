@@ -57,8 +57,16 @@ export const api = {
   },
 
   /** Get chat history for a session. */
-  getChatHistory(sessionId: string): Promise<{ messages: ChatMessage[] }> {
-    return json(`/api/sessions/${sessionId}/chat`);
+  async getChatHistory(sessionId: string): Promise<{ messages: ChatMessage[] }> {
+    const raw = await json<{ messages: Record<string, unknown>[] }>(`/api/sessions/${sessionId}/chat`);
+    return {
+      messages: raw.messages.map((m) => ({
+        ...m,
+        // Map snake_case DB columns to camelCase frontend fields
+        templateName: (m.template_name as string | null) ?? undefined,
+        userContent: (m.user_content as string | null) ?? undefined,
+      })) as ChatMessage[],
+    };
   },
 
   /**
@@ -70,10 +78,18 @@ export const api = {
     message: string,
     documentId?: string,
     signal?: AbortSignal,
+    templateName?: string,
+    userContent?: string,
   ): Promise<Response> {
-    const body: { message: string; document_id?: string } = { message };
+    const body: Record<string, string> = { message };
     if (documentId) {
       body.document_id = documentId;
+    }
+    if (templateName) {
+      body.template_name = templateName;
+    }
+    if (userContent) {
+      body.user_content = userContent;
     }
 
     const res = await fetch(`${BASE}/api/chat/${sessionId}`, {

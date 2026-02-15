@@ -336,18 +336,22 @@ result = output.getvalue()
     ) -> bytes:
         for attempt in range(max_retries + 1):
             try:
-                restricted_globals: dict[str, Any] = {
+                # Use a SINGLE dict for both globals and locals. When exec()
+                # receives separate dicts, top-level assignments go into
+                # locals but inner functions can only see globals — causing
+                # NameError for variables like color definitions used inside
+                # helper functions that Claude likes to generate.
+                sandbox_ns: dict[str, Any] = {
                     "__builtins__": _build_restricted_builtins(),
                     **_preloaded_pptx_names(),
                 }
-                exec_locals: dict[str, Any] = {}
 
                 await asyncio.wait_for(
-                    self._run_in_executor(python_code, restricted_globals, exec_locals),
+                    self._run_in_executor(python_code, sandbox_ns),
                     timeout=30.0,
                 )
 
-                result = exec_locals.get("result")
+                result = sandbox_ns.get("result")
                 if not result or not isinstance(result, bytes):
                     raise ExportGenerationError(
                         "Generated code did not produce a 'result' variable containing bytes"
@@ -382,11 +386,10 @@ result = output.getvalue()
     async def _run_in_executor(
         self,
         code: str,
-        globals_dict: dict[str, Any],
-        locals_dict: dict[str, Any],
+        namespace: dict[str, Any],
     ) -> None:
         def execute() -> None:
-            exec(code, globals_dict, locals_dict)  # noqa: S102
+            exec(code, namespace)  # noqa: S102
 
         loop = asyncio.get_running_loop()
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:

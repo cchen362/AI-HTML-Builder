@@ -176,7 +176,7 @@ export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
     setStreamingContent('');
 
     try {
-      const response = await api.sendChatMessage(sid, content, documentId, controller.signal);
+      const response = await api.sendChatMessage(sid, content, documentId, controller.signal, templateName, userContent);
 
       if (!response.body) {
         throw new Error('Response body is null');

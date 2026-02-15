@@ -78,6 +78,8 @@ def _sse(data: dict) -> str:
 class ChatRequest(BaseModel):
     message: str
     document_id: str | None = None  # If None, uses active document
+    template_name: str | None = None
+    user_content: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -499,7 +501,9 @@ async def chat(session_id: str, request: ChatRequest):
     # Save user message
     doc_id = active_doc["id"] if active_doc else None
     await session_service.add_chat_message(
-        session_id, "user", request.message, doc_id
+        session_id, "user", request.message, doc_id,
+        template_name=request.template_name,
+        user_content=request.user_content,
     )
 
     # Classify request

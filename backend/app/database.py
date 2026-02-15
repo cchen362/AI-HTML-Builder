@@ -110,4 +110,6 @@ CREATE INDEX IF NOT EXISTS idx_cost_date ON cost_tracking(date);
 # SQLite raises an error if ADD COLUMN targets an existing column.
 _MIGRATIONS = [
     "ALTER TABLE document_versions ADD COLUMN visual_prompt TEXT",
+    "ALTER TABLE chat_messages ADD COLUMN template_name TEXT",
+    "ALTER TABLE chat_messages ADD COLUMN user_content TEXT",
 ]
