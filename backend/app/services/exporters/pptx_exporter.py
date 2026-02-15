@@ -118,6 +118,36 @@ def _build_restricted_builtins() -> dict[str, Any]:
     }
 
 
+def _preloaded_pptx_names() -> dict[str, Any]:
+    """Pre-import common pptx names into sandbox globals.
+
+    Claude's generated code often references these symbols. By pre-loading
+    them, we avoid NameError when the LLM omits or miswrites an import.
+    """
+    from pptx import Presentation
+    from pptx.util import Inches, Pt, Emu
+    from pptx.dml.color import RGBColor
+    from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+    from pptx.enum.shapes import MSO_SHAPE
+    from io import BytesIO
+    import base64
+    import math
+
+    return {
+        "Presentation": Presentation,
+        "Inches": Inches,
+        "Pt": Pt,
+        "Emu": Emu,
+        "RGBColor": RGBColor,
+        "PP_ALIGN": PP_ALIGN,
+        "MSO_ANCHOR": MSO_ANCHOR,
+        "MSO_SHAPE": MSO_SHAPE,
+        "BytesIO": BytesIO,
+        "base64": base64,
+        "math": math,
+    }
+
+
 class PPTXExporter(BaseExporter):
     """Exports documents as PowerPoint presentations via Claude-generated code."""
 
@@ -308,6 +338,7 @@ result = output.getvalue()
             try:
                 restricted_globals: dict[str, Any] = {
                     "__builtins__": _build_restricted_builtins(),
+                    **_preloaded_pptx_names(),
                 }
                 exec_locals: dict[str, Any] = {}
 
