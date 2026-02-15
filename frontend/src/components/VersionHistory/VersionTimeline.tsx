@@ -27,16 +27,12 @@ const VersionTimeline: React.FC<VersionTimelineProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [restoreConfirm, setRestoreConfirm] = useState(false);
-  const [diffMode, setDiffMode] = useState<'before' | 'after'>('after');
-  const [beforeHtml, setBeforeHtml] = useState<string | null>(null);
 
   // Fetch versions when panel opens or document changes
   useEffect(() => {
     if (!isOpen || !documentId) {
       setVersions([]);
       setSelectedVersion(null);
-      setDiffMode('after');
-      setBeforeHtml(null);
       return;
     }
 
@@ -50,8 +46,6 @@ const VersionTimeline: React.FC<VersionTimelineProps> = ({
         if (!cancelled) {
           setVersions(v);
           setSelectedVersion(null);
-          setDiffMode('after');
-          setBeforeHtml(null);
           setLoading(false);
         }
       })
@@ -82,19 +76,6 @@ const VersionTimeline: React.FC<VersionTimelineProps> = ({
         const detail = await api.getVersion(documentId, ver.version);
         setSelectedVersion(ver.version);
         onVersionPreview(detail.html_content);
-
-        // Pre-fetch previous version for Before/After toggle
-        if (ver.version > 1) {
-          try {
-            const prevDetail = await api.getVersion(documentId, ver.version - 1);
-            setBeforeHtml(prevDetail.html_content);
-          } catch {
-            setBeforeHtml(null);
-          }
-        } else {
-          setBeforeHtml(null);
-        }
-        setDiffMode('after');
       } catch {
         setError('Failed to load version');
       }
@@ -104,32 +85,8 @@ const VersionTimeline: React.FC<VersionTimelineProps> = ({
 
   const handleBackToCurrent = useCallback(() => {
     setSelectedVersion(null);
-    setDiffMode('after');
-    setBeforeHtml(null);
     onBackToCurrent();
   }, [onBackToCurrent]);
-
-  // Keyboard navigation for Before/After toggle
-  useEffect(() => {
-    if (selectedVersion === null) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft' && beforeHtml && selectedVersion > 1) {
-        e.preventDefault();
-        setDiffMode('before');
-        onVersionPreview(beforeHtml);
-      } else if (e.key === 'ArrowRight' && documentId && selectedVersion) {
-        e.preventDefault();
-        setDiffMode('after');
-        api.getVersion(documentId, selectedVersion).then((detail) => {
-          onVersionPreview(detail.html_content);
-        });
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedVersion, beforeHtml, documentId, onVersionPreview]);
 
   if (!isOpen) {
     return null;
@@ -150,37 +107,6 @@ const VersionTimeline: React.FC<VersionTimelineProps> = ({
         <div className="version-preview-bar">
           <span>Viewing v{selectedVersion}</span>
           <div className="version-preview-actions">
-            <div className="version-diff-toggle">
-              <button
-                className={`diff-toggle-btn${diffMode === 'before' ? ' active' : ''}`}
-                onClick={() => {
-                  setDiffMode('before');
-                  if (beforeHtml) onVersionPreview(beforeHtml);
-                }}
-                disabled={!beforeHtml || selectedVersion <= 1}
-                title={
-                  selectedVersion <= 1
-                    ? 'No previous version'
-                    : `Show v${selectedVersion - 1}`
-                }
-                type="button"
-              >
-                ◀ Before
-              </button>
-              <button
-                className={`diff-toggle-btn${diffMode === 'after' ? ' active' : ''}`}
-                onClick={async () => {
-                  setDiffMode('after');
-                  if (documentId && selectedVersion) {
-                    const detail = await api.getVersion(documentId, selectedVersion);
-                    onVersionPreview(detail.html_content);
-                  }
-                }}
-                type="button"
-              >
-                After ▶
-              </button>
-            </div>
             <button
               className="restore-version-btn"
               onClick={() => setRestoreConfirm(true)}
