@@ -18,6 +18,27 @@ def sanitize_title(title: str) -> str:
         c if c.isalnum() or c in (" ", "-", "_") else "_"
         for c in title
     ).strip()
+
+    # Replace spaces with hyphens for cleaner filenames
+    safe = safe.replace(" ", "-")
+
+    # Collapse multiple hyphens/underscores
+    while "--" in safe:
+        safe = safe.replace("--", "-")
+    while "__" in safe:
+        safe = safe.replace("__", "_")
+
+    # Truncate to 60 chars at word boundary
+    if len(safe) > 60:
+        truncated = safe[:60]
+        last_sep = max(truncated.rfind("-"), truncated.rfind("_"))
+        if last_sep > 30:
+            truncated = truncated[:last_sep]
+        safe = truncated
+
+    # Strip trailing separators
+    safe = safe.strip("-_")
+
     return safe or "document"
 
 

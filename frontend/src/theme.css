@@ -113,40 +113,10 @@
   100% { box-shadow: 0 0 0 40px transparent; transform: scale(1); }
 }
 
-@keyframes conduit-sweep {
-  0%   { background-position: 50% -100%; }
-  100% { background-position: 50% 200%; }
-}
-
-@keyframes conduit-pulse {
-  0%, 100% { opacity: 0.4; height: 40%; }
-  50%      { opacity: 1; height: 70%; }
-}
-
-@keyframes status-beacon {
-  0%, 100% { box-shadow: 0 0 4px var(--signal-active); opacity: 1; }
-  50%      { box-shadow: 0 0 16px var(--signal-active-glow); opacity: 0.6; }
-}
-
-@keyframes progress-sweep {
-  0%   { transform: translateX(-100%); }
-  100% { transform: translateX(400%); }
-}
-
-@keyframes skeleton-shimmer {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
 @keyframes materialize {
   0%   { opacity: 0; clip-path: inset(0 0 100% 0); }
   60%  { opacity: 1; clip-path: inset(0 0 20% 0); }
   100% { opacity: 1; clip-path: inset(0 0 0% 0); }
-}
-
-@keyframes completion-glow {
-  0%   { box-shadow: inset 0 0 0 1px var(--signal-active), 0 0 30px var(--signal-active-glow); }
-  100% { box-shadow: inset 0 0 0 1px transparent, 0 0 0 transparent; }
 }
 
 @keyframes cursor-blink {

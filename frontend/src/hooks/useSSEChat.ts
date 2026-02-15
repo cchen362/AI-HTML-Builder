@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { api, setSessionId as setApiSessionId } from '../services/api';
+import { humanizeError } from '../utils/errorUtils';
 import type { ChatMessage, Document, SSEEvent } from '../types';
 
 interface UseSSEChatOptions {
@@ -94,7 +95,7 @@ export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
         return doc ? { ...doc, is_active: true } : prev;
       });
     } catch (err) {
-      onError?.(err instanceof Error ? err.message : 'Failed to switch document');
+      onError?.(humanizeError(err));
     }
   }, [documents, onHtmlUpdate, onError]);
 
@@ -222,8 +223,7 @@ export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
       if (err instanceof Error && err.name === 'AbortError') {
         setCurrentStatus('Cancelled');
       } else {
-        const msg = err instanceof Error ? err.message : 'Unknown error';
-        onError?.(msg);
+        onError?.(humanizeError(err));
         setCurrentStatus('');
       }
     } finally {
@@ -279,7 +279,7 @@ export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
       const { messages: history } = await api.getChatHistory(targetSessionId);
       setMessages(history);
     } catch (err) {
-      onError?.(err instanceof Error ? err.message : 'Failed to load session');
+      onError?.(humanizeError(err));
     }
 
     setShowHomeScreen(false);
@@ -299,7 +299,7 @@ export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
       // Send message (sendMessage reads from sessionIdRef.current)
       await sendMessage(content, undefined, templateName, userContent);
     } catch (err) {
-      onError?.(err instanceof Error ? err.message : 'Failed to create session');
+      onError?.(humanizeError(err));
     }
   }, [sendMessage, onError]);
 

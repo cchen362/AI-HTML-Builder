@@ -84,3 +84,31 @@
   color: var(--text-tertiary);
   font-style: italic;
 }
+
+.export-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border-default);
+  border-top-color: var(--accent-primary);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  vertical-align: middle;
+  margin-right: 0.4rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.export-success {
+  color: var(--signal-success);
+}
+
+.export-infographic-hint {
+  color: var(--text-tertiary);
+  font-size: var(--fs-xs);
+  padding: 0.5rem 1rem;
+  border-top: 1px solid var(--border-subtle);
+  font-style: italic;
+}

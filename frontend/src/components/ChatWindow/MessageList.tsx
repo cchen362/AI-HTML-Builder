@@ -57,7 +57,7 @@ const MessageList: React.FC<MessageListProps> = ({
         >
           <div className="message-header">
             <span className="message-sender">
-              {message.role === 'user' ? 'You' : 'ARCHITECT'}
+              {message.role === 'user' ? 'You' : 'BUILDER'}
             </span>
             <span className="message-meta">
               {docNameMap && message.document_id && docNameMap.has(message.document_id) && (
@@ -91,7 +91,7 @@ const MessageList: React.FC<MessageListProps> = ({
       {isStreaming && (
         <div className="message message-ai processing">
           <div className="message-header">
-            <span className="message-sender">ARCHITECT</span>
+            <span className="message-sender">BUILDER</span>
           </div>
           <div className="message-content">
             {streamingContent ? (

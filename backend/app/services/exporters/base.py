@@ -93,10 +93,6 @@ class BaseExporter(ABC):
 
     def generate_filename(self, options: ExportOptions) -> str:
         """Generate sanitised filename for exported document."""
-        safe_title = "".join(
-            c if c.isalnum() or c in (" ", "-", "_") else "_"
-            for c in options.document_title
-        ).strip()
-        if not safe_title:
-            safe_title = "document"
-        return f"{safe_title}.{self.file_extension}"
+        from app.utils.export_utils import sanitize_title
+
+        return f"{sanitize_title(options.document_title)}.{self.file_extension}"

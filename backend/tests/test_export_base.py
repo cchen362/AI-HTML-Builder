@@ -12,6 +12,7 @@ from app.services.exporters.base import (
     ExportOptions,
     ExportResult,
 )
+from app.utils.export_utils import sanitize_title
 
 
 # ---------------------------------------------------------------------------
@@ -75,7 +76,7 @@ def test_validate_html_invalid():
 def test_generate_filename_basic():
     exporter = MockExporter()
     options = ExportOptions(document_title="Test Document")
-    assert exporter.generate_filename(options) == "Test Document.mock"
+    assert exporter.generate_filename(options) == "Test-Document.mock"
 
 
 def test_generate_filename_sanitization():
@@ -93,6 +94,60 @@ def test_generate_filename_empty_title():
     exporter = MockExporter()
     options = ExportOptions(document_title="")
     assert exporter.generate_filename(options) == "document.mock"
+
+
+# ---------------------------------------------------------------------------
+# sanitize_title tests (shared utility)
+# ---------------------------------------------------------------------------
+
+def test_sanitize_title_spaces_to_hyphens():
+    assert sanitize_title("My Cool Document") == "My-Cool-Document"
+
+
+def test_sanitize_title_special_chars_replaced():
+    # / becomes _, <> becomes __ which collapses to _
+    assert sanitize_title("Hello/World<>Test") == "Hello_World_Test"
+
+
+def test_sanitize_title_collapses_double_hyphens():
+    assert sanitize_title("one - two - three") == "one-two-three"
+
+
+def test_sanitize_title_collapses_double_underscores():
+    assert sanitize_title("a///b") == "a_b"
+
+
+def test_sanitize_title_truncates_at_60_chars():
+    long_title = "A " + "word " * 20  # well over 60 chars
+    result = sanitize_title(long_title)
+    assert len(result) <= 60
+
+
+def test_sanitize_title_truncates_at_word_boundary():
+    # 70 chars with hyphens — should truncate at a separator before 60
+    title = "alpha-bravo-charlie-delta-echo-foxtrot-golf-hotel-india-juliet-kilo-lima"
+    result = sanitize_title(title)
+    assert len(result) <= 60
+    assert not result.endswith("-")
+    assert not result.endswith("_")
+
+
+def test_sanitize_title_strips_trailing_separators():
+    assert sanitize_title("hello-") == "hello"
+    assert sanitize_title("hello_") == "hello"
+    assert sanitize_title("-hello-") == "hello"
+
+
+def test_sanitize_title_empty_returns_document():
+    assert sanitize_title("") == "document"
+
+
+def test_sanitize_title_whitespace_only_returns_document():
+    assert sanitize_title("   ") == "document"
+
+
+def test_sanitize_title_only_special_chars_returns_document():
+    assert sanitize_title("///") == "document"
 
 
 # ---------------------------------------------------------------------------

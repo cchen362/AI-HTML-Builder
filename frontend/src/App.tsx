@@ -15,6 +15,7 @@ import AdminPanel from './components/Auth/AdminPanel'
 import HomeScreen from './components/HomeScreen/HomeScreen'
 import MySessionsModal from './components/HomeScreen/MySessionsModal'
 import type { Document, User, SessionSummary } from './types'
+import { humanizeError } from './utils/errorUtils'
 import type { PromptTemplate } from './data/promptTemplates'
 import './App.css'
 
@@ -310,7 +311,7 @@ const ChatApp = ({ user }: { user: User }) => {
       setHistoryOpen(false);
       setTimeout(() => setHistoryOpen(true), 50);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to restore version');
+      setError(humanizeError(err));
     }
   }, [activeDocument, refreshDocuments])
 
@@ -319,7 +320,7 @@ const ChatApp = ({ user }: { user: User }) => {
       await api.renameDocument(docId, newTitle);
       await refreshDocuments();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to rename document');
+      setError(humanizeError(err));
     }
   }, [refreshDocuments])
 
@@ -329,7 +330,7 @@ const ChatApp = ({ user }: { user: User }) => {
       await api.deleteDocument(sessionId, docId);
       await refreshDocuments();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete document');
+      setError(humanizeError(err));
     }
   }, [sessionId, refreshDocuments])
 
