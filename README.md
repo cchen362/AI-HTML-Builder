@@ -2,7 +2,7 @@
 
 > Three AI models, one chat interface. Create, edit, and export professional HTML documents through conversation.
 
-**Claude Sonnet 4.5** surgically edits your documents without content drift. **Gemini 2.5 Pro** generates new documents with top-tier aesthetics. **Nano Banana Pro** creates images on demand. All outputs are single-file HTML with CSS/JS inlined — no external dependencies, ready to share.
+**Claude Sonnet 4.5** surgically edits your documents without content drift. **Gemini 2.5 Pro** generates new documents with top-tier aesthetics. **Nano Banana Pro** creates images and infographics on demand. All outputs are single-file HTML with CSS/JS inlined — no external dependencies, ready to share.
 
 ## How It Works
 
@@ -13,16 +13,23 @@ React 19 (SSE) ──POST──> FastAPI ──> SQLite WAL
                  v            v            v
           Claude 4.5    Gemini 2.5 Pro  Nano Banana Pro
           (edit)        (create)        (image)
+                              |            |
+                              └──────┬─────┘
+                                     v
+                              InfographicService
+                         (art director + renderer)
 ```
 
-The system automatically routes your request to the right model:
+A lightweight **Haiku 4.5** classifier routes each request to the right model — one token, near-zero cost:
 
 | You say... | What happens | Model |
 |------------|-------------|-------|
 | First message (no document yet) | Creates a new HTML document | Gemini 2.5 Pro |
-| "Create a new...", "Start fresh..." | Creates a new document | Gemini 2.5 Pro |
-| "Generate an image of...", "Add a diagram..." | Generates and embeds an image | Nano Banana Pro |
-| Everything else | Surgically edits your current document | Claude Sonnet 4.5 |
+| "Remove the sidebar", "Delete the footer" | Surgically removes content | Claude Sonnet 4.5 |
+| "Create an infographic about..." | Generates a visual infographic | Gemini 2.5 Pro + Nano Banana Pro |
+| "Turn this into a dashboard" | Transforms the current document | Gemini 2.5 Pro |
+| "Generate an image of...", "Add a photo..." | Generates and embeds an image | Nano Banana Pro |
+| Everything else (with existing document) | Surgically edits your current document | Claude Sonnet 4.5 |
 
 ### The Surgical Editing Engine
 
@@ -40,15 +47,16 @@ Result: edit #50 is just as precise as edit #1.
 
 - **Chat-driven creation** — describe what you want in plain language
 - **Surgical editing** — change a heading color without touching anything else
+- **Infographic generation** — two-LLM pipeline: Gemini art-directs, Nano Banana Pro renders
 - **Multi-document sessions** — work on multiple documents in tabs, unlimited edits
 - **Version history** — browse and restore any previous version
 - **4-format export** — HTML, PowerPoint (PPTX), PDF, and PNG screenshot
 - **File upload** — drag & drop .txt, .md, .docx, .pdf, .csv, .xlsx (up to 50MB) as context
-- **8 builtin templates** — stakeholder briefs, BRDs, proposals, dashboards, and more
+- **Prompt templates** — stakeholder briefs, BRDs, proposals, dashboards, and more
 - **Live code editor** — CodeMirror 6 with syntax highlighting and preview toggle
 - **Image generation** — AI-generated raster images embedded directly in your document
 - **Cost tracking** — per-model token usage and estimated costs
-- **Dark/light theme** — "Obsidian Terminal" dark theme with light mode toggle
+- **Dark theme** — "Cyberpunk Amethyst" dark-mode interface
 
 ## Quick Start
 
@@ -56,7 +64,7 @@ Result: edit #50 is just as precise as edit #1.
 
 - **Node.js** 22+ (frontend)
 - **Python** 3.11+ (backend)
-- **Anthropic API key** (for Claude Sonnet 4.5 — edits)
+- **Anthropic API key** (for Claude Sonnet 4.5 — edits + Haiku 4.5 — routing)
 - **Google API key** (one key covers Gemini 2.5 Pro, Nano Banana Pro, and Flash fallback)
 
 ### Development
@@ -92,21 +100,19 @@ Create a `.env` file in the project root (or use `--env-file` with Docker):
 
 ```bash
 # Required
-ANTHROPIC_API_KEY=sk-ant-...          # Claude Sonnet 4.5 for surgical edits
+ANTHROPIC_API_KEY=sk-ant-...          # Claude Sonnet 4.5 (edits) + Haiku 4.5 (routing)
 GOOGLE_API_KEY=AIza...                # One key covers Gemini 2.5 Pro + Nano Banana Pro + Flash
 
 # Optional (defaults shown)
 DATABASE_PATH=./data/app.db
 LOG_LEVEL=info
-RATE_LIMIT_REQUESTS=30
-RATE_LIMIT_WINDOW=60
-SESSION_TIMEOUT_HOURS=24
 MAX_UPLOAD_SIZE_MB=50
 EDIT_MODEL=claude-sonnet-4-5-20250929
 CREATION_MODEL=gemini-2.5-pro
 IMAGE_MODEL=gemini-3-pro-image-preview
 IMAGE_FALLBACK_MODEL=gemini-2.5-flash-image
 IMAGE_TIMEOUT_SECONDS=90
+ROUTER_MODEL=claude-haiku-4-5-20251001
 ```
 
 ## Tech Stack
@@ -116,8 +122,9 @@ IMAGE_TIMEOUT_SECONDS=90
 | Frontend | React 19, TypeScript 5.8, Vite 7.1 | CodeMirror 6 editor, SSE streaming |
 | Backend | FastAPI, Python 3.11+, aiosqlite | SQLite WAL mode, sse-starlette |
 | AI (Edit) | Claude Sonnet 4.5 | Tool-use with `html_replace` / `html_insert_after` |
-| AI (Create) | Gemini 2.5 Pro | Streaming creation, top aesthetics |
-| AI (Image) | Nano Banana Pro | Raster image generation, Flash fallback |
+| AI (Create) | Gemini 2.5 Pro | Streaming creation, infographic art direction |
+| AI (Image) | Nano Banana Pro | Raster image + infographic rendering, Flash fallback |
+| AI (Route) | Claude Haiku 4.5 | Single-token intent classification |
 | Export | Playwright Chromium | PDF and PNG rendering |
 | Export | python-pptx | PowerPoint generation via sandboxed code execution |
 | Deploy | Docker multi-stage | Node 22-alpine + Python 3.11-slim |
@@ -135,7 +142,6 @@ backend/app/
     sessions.py              # Session + document + version CRUD
     export.py                # Export to HTML/PPTX/PDF/PNG
     upload.py                # File upload processing
-    templates.py             # Builtin template API
     health.py                # Health check (DB + Playwright)
     costs.py                 # Token usage + cost tracking
   providers/
@@ -146,35 +152,38 @@ backend/app/
   services/
     editor.py                # Surgical editing engine (the core)
     creator.py               # Document creation + streaming
-    router.py                # 4-rule request classifier
+    router.py                # 5-rule intent classifier (regex + Haiku LLM)
     image_service.py         # Image generation + fallback
+    infographic_service.py   # Two-LLM infographic pipeline
     session_service.py       # Session/document/version CRUD
     cost_tracker.py          # Per-model cost tracking
     export_service.py        # Export orchestration
     playwright_manager.py    # Browser lifecycle for PDF/PNG
-    exporters/               # HTML, PPTX, PDF, PNG exporters
+    exporters/               # PPTX, PDF, PNG exporters
   utils/
     fuzzy_match.py           # Aider-inspired fuzzy string matching
     html_validator.py        # Post-edit HTML validation
     file_processors.py       # .docx/.pdf/.xlsx/.txt/.md parsing
-    rate_limiter.py          # Per-session rate limiting
-  config/
-    builtin_templates.json   # 8 builtin document templates
 
 frontend/src/
-  App.tsx                    # Root layout, split-pane, routing
+  App.tsx                    # Root layout, split-pane
   hooks/useSSEChat.ts        # Core SSE hook (single source of truth)
-  services/                  # API, template, upload service wrappers
+  services/
+    api.ts                   # All REST API calls
+    uploadService.ts         # Upload API wrapper
+  data/
+    promptTemplates.ts       # Prompt template data (frontend-only)
   components/
     ChatWindow/              # Chat input, message list, prompt library
     CodeViewer/              # CodeMirror 6 + preview toggle
+    ConfirmDialog/           # Confirmation dialogs
     DocumentTabs/            # Multi-document tab bar
     VersionHistory/          # Version timeline with restore
     Export/                  # Format dropdown
     EmptyState/              # Template cards for new sessions
     Chat/                    # Streaming markdown renderer
     Layout/                  # Resizable split pane
-  theme.css                  # CSS custom properties (dark/light)
+  theme.css                  # Cyberpunk Amethyst dark theme
   types/index.ts             # TypeScript interfaces
 ```
 
@@ -184,30 +193,29 @@ frontend/src/
 - `POST /api/chat/{session_id}` — Send message, receive SSE stream of events (`status`, `chunk`, `html`, `summary`, `done`)
 
 ### Sessions & Documents
+
+All document endpoints are session-scoped with ownership validation:
+
 - `POST /api/sessions` — Create session
 - `GET /api/sessions/{sid}` — Session info + documents
 - `GET /api/sessions/{sid}/documents` — List documents
 - `POST /api/sessions/{sid}/documents/{docId}/switch` — Switch active document
 - `POST /api/sessions/{sid}/documents/from-template` — Create from template
-- `PUT /api/sessions/{sid}/documents/{docId}/rename` — Rename document
+- `PATCH /api/sessions/{sid}/documents/{docId}` — Rename document
 - `DELETE /api/sessions/{sid}/documents/{docId}` — Delete document
+- `GET /api/sessions/{sid}/documents/{docId}/html` — Latest HTML
+- `GET /api/sessions/{sid}/documents/{docId}/versions` — Version history
+- `GET /api/sessions/{sid}/documents/{docId}/versions/{ver}` — Specific version
+- `POST /api/sessions/{sid}/documents/{docId}/versions/{ver}/restore` — Restore version
+- `POST /api/sessions/{sid}/documents/{docId}/manual-edit` — Save manual code edit
 - `GET /api/sessions/{sid}/chat` — Chat history
-- `GET /api/documents/{docId}/html` — Latest HTML
-- `GET /api/documents/{docId}/versions` — Version history
-- `GET /api/documents/{docId}/versions/{ver}` — Specific version
-- `POST /api/documents/{docId}/versions/{ver}/restore` — Restore version
 
 ### Export
-- `POST /api/export/{docId}/html` — Download as HTML
-- `POST /api/export/{docId}/pptx` — Export as PowerPoint
-- `POST /api/export/{docId}/pdf` — Export as PDF (Playwright)
-- `POST /api/export/{docId}/png` — Export as PNG screenshot (Playwright)
+- `POST /api/sessions/{sid}/documents/{docId}/export/{format}` — Export document (format: `html`, `pptx`, `pdf`, `png`)
 - `GET /api/export/formats` — List available formats
 
-### Upload, Templates, Costs & Health
+### Upload, Costs & Health
 - `POST /api/upload` — Upload file (.txt/.md/.docx/.pdf/.csv/.xlsx, max 50MB)
-- `GET /api/templates/builtin` — List builtin templates
-- `GET /api/templates/builtin/{id}` — Get specific template
 - `GET /api/costs` — Cost summary (default 30 days)
 - `GET /api/costs/today` — Today's costs
 - `GET /api/health` — DB + Playwright status
@@ -221,7 +229,7 @@ SQLite in WAL mode with 5 tables: `sessions`, `documents`, `document_versions`, 
 ```bash
 # Backend
 cd backend
-pytest                                 # 244+ tests
+pytest                                 # 320 tests
 ruff check .                           # Linting
 mypy .                                 # Type checking
 
