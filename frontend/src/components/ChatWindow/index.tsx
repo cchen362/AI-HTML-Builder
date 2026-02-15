@@ -21,6 +21,7 @@ interface ChatWindowProps {
   user?: User;
   onAdminSettings?: () => void;
   onLogout?: () => void;
+  onOpenMySessions?: () => void;
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({
@@ -37,6 +38,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   user,
   onAdminSettings,
   onLogout,
+  onOpenMySessions,
 }) => {
   const [pendingTemplate, setPendingTemplate] = useState<PromptTemplate | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -90,6 +92,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                 disabled={isStreaming}
               >
                 New Session
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onOpenMySessions?.();
+                }}
+              >
+                My Sessions
               </button>
               <div className="menu-divider" />
               {user?.is_admin && (

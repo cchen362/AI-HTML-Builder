@@ -54,6 +54,16 @@ export interface Session {
   active_document: Document | null;
 }
 
+/** Session summary from GET /api/sessions */
+export interface SessionSummary {
+  id: string;
+  title: string;
+  doc_count: number;
+  first_message_preview: string;
+  last_active: string;
+  created_at: string;
+}
+
 /** SSE event from POST /api/chat/{sid} stream */
 export interface SSEEvent {
   type: 'status' | 'chunk' | 'html' | 'summary' | 'error' | 'done';

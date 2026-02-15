@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.auth_middleware import get_current_user
@@ -34,6 +34,57 @@ async def _require_session_ownership(session_id: str, user_id: str) -> None:
         raise HTTPException(status_code=404, detail="Session not found")
     if row["user_id"] and row["user_id"] != user_id:
         raise HTTPException(status_code=403, detail="Access denied")
+
+
+# --- Session list/delete/update must be BEFORE /api/sessions/{session_id} ---
+
+
+@router.get("/api/sessions")
+async def list_sessions(
+    user: dict = Depends(get_current_user),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+):
+    """List all sessions for the authenticated user."""
+    sessions = await session_service.get_user_sessions(
+        user["id"], limit=limit, offset=offset
+    )
+    return {"sessions": sessions}
+
+
+class UpdateSessionRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+
+
+@router.delete("/api/sessions/{session_id}")
+async def delete_session(
+    session_id: str, user: dict = Depends(get_current_user)
+):
+    """Delete a session and all its documents/versions/messages."""
+    await _require_session_ownership(session_id, user["id"])
+    success = await session_service.delete_session(session_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"success": True}
+
+
+@router.patch("/api/sessions/{session_id}")
+async def update_session(
+    session_id: str,
+    body: UpdateSessionRequest,
+    user: dict = Depends(get_current_user),
+):
+    """Update session title."""
+    await _require_session_ownership(session_id, user["id"])
+    success = await session_service.update_session_title(
+        session_id, body.title
+    )
+    if not success:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"success": True}
+
+
+# --- Existing endpoints ---
 
 
 @router.post("/api/sessions")

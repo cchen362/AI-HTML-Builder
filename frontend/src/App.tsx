@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react'
+import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import SplitPane from './components/Layout/SplitPane'
 import ChatWindow from './components/ChatWindow'
 import { useSSEChat } from './hooks/useSSEChat'
@@ -12,7 +12,10 @@ import { AuthProvider, useAuth } from './contexts/AuthContext'
 import LoginPage from './components/Auth/LoginPage'
 import SetupPage from './components/Auth/SetupPage'
 import AdminPanel from './components/Auth/AdminPanel'
-import type { Document, User } from './types'
+import HomeScreen from './components/HomeScreen/HomeScreen'
+import MySessionsModal from './components/HomeScreen/MySessionsModal'
+import type { Document, User, SessionSummary } from './types'
+import type { PromptTemplate } from './data/promptTemplates'
 import './App.css'
 
 // HTML viewer component with version history side panel
@@ -171,6 +174,8 @@ const ChatApp = ({ user }: { user: User }) => {
   const [newSessionConfirm, setNewSessionConfirm] = useState(false)
   const [isCodeViewDirty, setIsCodeViewDirty] = useState(false)
   const [adminOpen, setAdminOpen] = useState(false)
+  const [mySessionsOpen, setMySessionsOpen] = useState(false)
+  const [recentSessions, setRecentSessions] = useState<SessionSummary[]>([])
   const { logout } = useAuth()
   const {
     sessionId,
@@ -187,6 +192,9 @@ const ChatApp = ({ user }: { user: User }) => {
     refreshDocuments,
     isInitializing,
     startNewSession,
+    showHomeScreen,
+    loadSession,
+    sendFirstMessage,
   } = useSSEChat({
     onError: (msg) => setError(msg),
   })
@@ -200,6 +208,15 @@ const ChatApp = ({ user }: { user: User }) => {
       && currentHtml.includes('data:image')
       && !/<(main|header|section)/i.test(currentHtml);
   }, [currentHtml]);
+
+  // Load recent sessions when home screen is shown
+  useEffect(() => {
+    if (showHomeScreen) {
+      api.listSessions(3, 0)
+        .then(({ sessions }) => setRecentSessions(sessions))
+        .catch(() => setRecentSessions([]));
+    }
+  }, [showHomeScreen]);
 
   const handleSendMessage = useCallback((message: string, _files?: File[], templateName?: string, userContent?: string) => {
     if (isCodeViewDirty && viewMode === 'code') {
@@ -216,9 +233,30 @@ const ChatApp = ({ user }: { user: User }) => {
     setNewSessionConfirm(true)
   }, [])
 
-  const confirmNewSession = useCallback(async () => {
-    await startNewSession()
+  const confirmNewSession = useCallback(() => {
+    startNewSession()
   }, [startNewSession])
+
+  const handleSelectSession = useCallback(async (targetSessionId: string) => {
+    await loadSession(targetSessionId)
+    setMySessionsOpen(false)
+  }, [loadSession])
+
+  const handleHomeTemplate = useCallback((template: PromptTemplate) => {
+    sendFirstMessage(template.template, template.name, '(template only)')
+  }, [sendFirstMessage])
+
+  const handleHomeSendMessage = useCallback((
+    message: string, _files?: File[], templateName?: string, userContent?: string
+  ) => {
+    if (message.trim()) {
+      sendFirstMessage(message, templateName, userContent)
+    }
+  }, [sendFirstMessage])
+
+  const handleOpenMySessions = useCallback(() => {
+    setMySessionsOpen(true)
+  }, [])
 
   const handleExport = useCallback(() => {
     if (!currentHtml) return;
@@ -318,6 +356,28 @@ const ChatApp = ({ user }: { user: User }) => {
     )
   }
 
+  // Home screen — shown on login or after "New Session"
+  if (showHomeScreen) {
+    return (
+      <div className="App">
+        <HomeScreen
+          user={user}
+          recentSessions={recentSessions}
+          onSelectSession={handleSelectSession}
+          onSelectTemplate={handleHomeTemplate}
+          onSendMessage={handleHomeSendMessage}
+          onViewAllSessions={handleOpenMySessions}
+        />
+        <MySessionsModal
+          isOpen={mySessionsOpen}
+          onClose={() => setMySessionsOpen(false)}
+          onSelectSession={handleSelectSession}
+          currentSessionId={sessionId}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="App">
       <SplitPane
@@ -337,6 +397,7 @@ const ChatApp = ({ user }: { user: User }) => {
             user={user}
             onAdminSettings={() => setAdminOpen(true)}
             onLogout={handleLogout}
+            onOpenMySessions={handleOpenMySessions}
           />
         }
         rightContent={
@@ -372,7 +433,7 @@ const ChatApp = ({ user }: { user: User }) => {
       <ConfirmDialog
         isOpen={newSessionConfirm}
         title="Start New Session?"
-        message="Your current documents will remain accessible via session history. A fresh workspace will be created."
+        message="Your current session will be saved. You'll return to the home screen."
         onConfirm={confirmNewSession}
         onCancel={() => setNewSessionConfirm(false)}
         confirmText="Start Fresh"
@@ -382,6 +443,12 @@ const ChatApp = ({ user }: { user: User }) => {
         isOpen={adminOpen}
         onClose={() => setAdminOpen(false)}
         currentUserId={user.id}
+      />
+      <MySessionsModal
+        isOpen={mySessionsOpen}
+        onClose={() => setMySessionsOpen(false)}
+        onSelectSession={handleSelectSession}
+        currentSessionId={sessionId}
       />
     </div>
   )

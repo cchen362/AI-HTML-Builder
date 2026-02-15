@@ -1,4 +1,4 @@
-import type { Session, Document, Version, VersionDetail, ChatMessage, User } from '../types';
+import type { Session, Document, Version, VersionDetail, ChatMessage, User, SessionSummary } from '../types';
 
 const BASE = '';
 
@@ -209,6 +209,29 @@ export const api = {
     a.click();
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+  },
+
+  /** List all sessions for the current user. */
+  listSessions(limit?: number, offset?: number): Promise<{ sessions: SessionSummary[] }> {
+    const params = new URLSearchParams();
+    if (limit !== undefined) params.set('limit', String(limit));
+    if (offset !== undefined) params.set('offset', String(offset));
+    const qs = params.toString();
+    return json(`/api/sessions${qs ? '?' + qs : ''}`);
+  },
+
+  /** Delete a session. */
+  deleteSession(sessionId: string): Promise<{ success: boolean }> {
+    return json(`/api/sessions/${sessionId}`, { method: 'DELETE' });
+  },
+
+  /** Update session title. */
+  updateSessionTitle(sessionId: string, title: string): Promise<{ success: boolean }> {
+    return json(`/api/sessions/${sessionId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title }),
+    });
   },
 };
 

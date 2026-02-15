@@ -1,0 +1,129 @@
+.home-screen {
+  height: 100vh;
+  overflow-y: auto;
+  background: var(--surface-void);
+  background-image: radial-gradient(
+    ellipse 60% 40% at 50% 30%,
+    rgba(30, 27, 50, 0.6) 0%,
+    transparent 70%
+  );
+}
+
+.home-screen-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 3rem 2rem 2rem;
+}
+
+.home-welcome {
+  font-family: var(--font-display);
+  font-weight: var(--fw-heavy);
+  font-size: var(--fs-xl);
+  color: var(--text-primary);
+  margin: 0 0 2.5rem;
+  letter-spacing: var(--tracking-tight);
+}
+
+/* Sections */
+
+.home-section {
+  margin-bottom: 2.5rem;
+}
+
+.home-section-label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--tracking-widest);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+
+/* Recent sessions row */
+
+.home-sessions-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.session-card {
+  flex: 1 1 200px;
+  max-width: 280px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  border-left: 3px solid transparent;
+  border-radius: var(--radius-md);
+  padding: 1rem 1.2rem;
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--duration-fast) var(--ease-out-expo);
+  animation: card-enter var(--duration-slow) var(--ease-out-expo) backwards;
+  color: inherit;
+  font: inherit;
+}
+
+.session-card:hover {
+  border-left-color: var(--accent-primary);
+  background: var(--surface-highlight);
+  transform: translateY(-1px);
+}
+
+.session-card-title {
+  font-family: var(--font-body);
+  font-weight: var(--fw-medium);
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 0.4rem;
+}
+
+.session-card-meta {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+  margin-bottom: 0.3rem;
+}
+
+.session-card-dot {
+  opacity: 0.5;
+}
+
+.session-card-expiry {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+
+/* View all sessions link */
+
+.home-view-all {
+  display: inline-block;
+  margin-top: 0.75rem;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--accent-primary);
+  cursor: pointer;
+  letter-spacing: var(--tracking-wide);
+  transition: color var(--duration-fast);
+}
+
+.home-view-all:hover {
+  color: var(--accent-primary-hover);
+}
+
+/* Chat input at bottom */
+
+.home-chat-input {
+  margin-top: 1rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-subtle);
+}

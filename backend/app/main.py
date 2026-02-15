@@ -61,14 +61,14 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning("PDF/PNG export unavailable", reason=str(exc))
 
-    # Background cleanup: delete sessions inactive for 7+ days (runs every 6 hours)
+    # Background cleanup: delete sessions inactive for 30+ days (runs every 6 hours)
     async def _cleanup_loop() -> None:
         while True:
             try:
                 await asyncio.sleep(6 * 3600)
                 db = await get_db()
                 cursor = await db.execute(
-                    "DELETE FROM sessions WHERE last_active < datetime('now', '-7 days')"
+                    "DELETE FROM sessions WHERE last_active < datetime('now', '-30 days')"
                 )
                 await db.commit()
                 if cursor.rowcount:

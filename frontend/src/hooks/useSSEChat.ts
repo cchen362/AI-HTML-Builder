@@ -17,11 +17,15 @@ interface UseSSEChatReturn {
   activeDocument: Document | null;
   documents: Document[];
   isInitializing: boolean;
+  showHomeScreen: boolean;
   sendMessage: (content: string, documentId?: string, templateName?: string, userContent?: string) => Promise<void>;
   cancelRequest: () => void;
   switchDocument: (docId: string) => Promise<void>;
   refreshDocuments: () => Promise<void>;
-  startNewSession: () => Promise<void>;
+  startNewSession: () => void;
+  loadSession: (sessionId: string) => Promise<void>;
+  sendFirstMessage: (content: string, templateName?: string, userContent?: string) => Promise<void>;
+  setShowHomeScreen: (show: boolean) => void;
 }
 
 export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
@@ -36,6 +40,7 @@ export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [activeDocument, setActiveDocument] = useState<Document | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [showHomeScreen, setShowHomeScreen] = useState(true);
 
   const abortRef = useRef<AbortController | null>(null);
   const sessionIdRef = useRef<string | null>(null);
@@ -47,28 +52,9 @@ export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
     setApiSessionId(sessionId);
   }, [sessionId]);
 
-  // Initialize session on mount — always create fresh
+  // Phase 2: Start on home screen, don't create session until needed
   useEffect(() => {
-    let cancelled = false;
-
-    async function init() {
-      try {
-        const { session_id } = await api.createSession();
-        if (!cancelled) {
-          setSessionId(session_id);
-        }
-      } catch (err) {
-        if (!cancelled && onError) {
-          onError(err instanceof Error ? err.message : 'Failed to initialize session');
-        }
-      } finally {
-        if (!cancelled) setIsInitializing(false);
-      }
-    }
-
-    init();
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    setIsInitializing(false);
   }, []);
 
   const refreshDocuments = useCallback(async () => {
@@ -251,7 +237,20 @@ export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
     abortRef.current?.abort();
   }, []);
 
-  const startNewSession = useCallback(async () => {
+  const startNewSession = useCallback(() => {
+    setMessages([]);
+    setDocuments([]);
+    setActiveDocument(null);
+    setCurrentHtml('');
+    setStreamingContent('');
+    setCurrentStatus('');
+    setIsStreaming(false);
+    setSessionId(null);
+    setShowHomeScreen(true);
+  }, []);
+
+  const loadSession = useCallback(async (targetSessionId: string) => {
+    // Clear all current state
     setMessages([]);
     setDocuments([]);
     setActiveDocument(null);
@@ -260,13 +259,49 @@ export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
     setCurrentStatus('');
     setIsStreaming(false);
 
+    // Set the session — sync ref + module-level var immediately
+    setSessionId(targetSessionId);
+    sessionIdRef.current = targetSessionId;
+    setApiSessionId(targetSessionId);
+
     try {
+      // Load session data
+      const session = await api.getSession(targetSessionId);
+      setDocuments(session.documents);
+      setActiveDocument(session.active_document);
+
+      if (session.active_document) {
+        const { html } = await api.getDocumentHtml(session.active_document.id);
+        setCurrentHtml(html);
+        onHtmlUpdate?.(html);
+      }
+
+      const { messages: history } = await api.getChatHistory(targetSessionId);
+      setMessages(history);
+    } catch (err) {
+      onError?.(err instanceof Error ? err.message : 'Failed to load session');
+    }
+
+    setShowHomeScreen(false);
+  }, [onHtmlUpdate, onError]);
+
+  const sendFirstMessage = useCallback(async (
+    content: string, templateName?: string, userContent?: string
+  ) => {
+    try {
+      // Create session first
       const { session_id } = await api.createSession();
       setSessionId(session_id);
+      sessionIdRef.current = session_id;
+      setApiSessionId(session_id);
+      setShowHomeScreen(false);
+
+      // Send message (sendMessage reads from sessionIdRef.current)
+      await sendMessage(content, undefined, templateName, userContent);
     } catch (err) {
-      onError?.(err instanceof Error ? err.message : 'Failed to create new session');
+      onError?.(err instanceof Error ? err.message : 'Failed to create session');
     }
-  }, [onError]);
+  }, [sendMessage, onError]);
 
   return {
     sessionId,
@@ -278,10 +313,14 @@ export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
     activeDocument,
     documents,
     isInitializing,
+    showHomeScreen,
     sendMessage,
     cancelRequest,
     switchDocument,
     refreshDocuments,
     startNewSession,
+    loadSession,
+    sendFirstMessage,
+    setShowHomeScreen,
   };
 }

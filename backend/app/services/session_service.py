@@ -279,6 +279,86 @@ class SessionService:
         logger.info("Document deleted", doc_id=document_id[:8])
         return True
 
+    async def get_user_sessions(
+        self, user_id: str, limit: int = 20, offset: int = 0
+    ) -> list[dict]:
+        """Get all sessions for a user with summary info."""
+        import json as json_mod
+
+        db = await get_db()
+        cursor = await db.execute(
+            """SELECT
+                 s.id,
+                 s.created_at,
+                 s.last_active,
+                 s.metadata,
+                 COUNT(d.id) as doc_count,
+                 (SELECT content FROM chat_messages
+                  WHERE session_id = s.id AND role = 'user'
+                  ORDER BY id ASC LIMIT 1) as first_message
+               FROM sessions s
+               LEFT JOIN documents d ON d.session_id = s.id
+               WHERE s.user_id = ?
+               GROUP BY s.id
+               ORDER BY s.last_active DESC, s.id DESC
+               LIMIT ? OFFSET ?""",
+            (user_id, limit, offset),
+        )
+        rows = await cursor.fetchall()
+
+        result = []
+        for row in rows:
+            r = dict(row)
+            metadata = json_mod.loads(r.get("metadata") or "{}")
+            title = metadata.get("title", "")
+            if not title and r.get("first_message"):
+                title = r["first_message"][:80]
+            if not title:
+                title = "Untitled Session"
+
+            result.append(
+                {
+                    "id": r["id"],
+                    "title": title,
+                    "doc_count": r["doc_count"],
+                    "first_message_preview": (r.get("first_message") or "")[:80],
+                    "last_active": r["last_active"],
+                    "created_at": r["created_at"],
+                }
+            )
+        return result
+
+    async def delete_session(self, session_id: str) -> bool:
+        """Delete a session. CASCADE handles documents/versions/messages."""
+        db = await get_db()
+        cursor = await db.execute(
+            "DELETE FROM sessions WHERE id = ?", (session_id,)
+        )
+        await db.commit()
+        return cursor.rowcount > 0
+
+    async def update_session_title(
+        self, session_id: str, title: str
+    ) -> bool:
+        """Update the title stored in session metadata JSON."""
+        import json as json_mod
+
+        db = await get_db()
+        cursor = await db.execute(
+            "SELECT metadata FROM sessions WHERE id = ?", (session_id,)
+        )
+        row = await cursor.fetchone()
+        if not row:
+            return False
+        metadata = json_mod.loads(row["metadata"] or "{}")
+        metadata["title"] = title
+        await db.execute(
+            "UPDATE sessions SET metadata = ? WHERE id = ?",
+            (json_mod.dumps(metadata), session_id),
+        )
+        await db.commit()
+        return True
+
     async def add_chat_message(
         self,
         session_id: str,
@@ -289,6 +369,8 @@ class SessionService:
         template_name: str | None = None,
         user_content: str | None = None,
     ) -> None:
+        import json as json_mod
+
         db = await get_db()
         await db.execute(
             """INSERT INTO chat_messages
@@ -296,6 +378,38 @@ class SessionService:
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
             (session_id, document_id, role, content, message_type, template_name, user_content),
         )
+
+        # Update last_active timestamp
+        await db.execute(
+            "UPDATE sessions SET last_active = CURRENT_TIMESTAMP WHERE id = ?",
+            (session_id,),
+        )
+
+        # Auto-title: set session title from first user message
+        if role == "user":
+            cursor = await db.execute(
+                "SELECT metadata FROM sessions WHERE id = ?", (session_id,)
+            )
+            meta_row = await cursor.fetchone()
+            if meta_row:
+                metadata = json_mod.loads(meta_row["metadata"] or "{}")
+                if not metadata.get("title"):
+                    # Prefer template_name, then user_content, then full content
+                    if template_name:
+                        auto_title = template_name
+                    elif (
+                        user_content
+                        and user_content != "(template only)"
+                    ):
+                        auto_title = user_content[:80]
+                    else:
+                        auto_title = content[:80]
+                    metadata["title"] = auto_title
+                    await db.execute(
+                        "UPDATE sessions SET metadata = ? WHERE id = ?",
+                        (json_mod.dumps(metadata), session_id),
+                    )
+
         await db.commit()
 
     async def get_chat_history(
