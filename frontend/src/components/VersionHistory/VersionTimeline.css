@@ -214,3 +214,38 @@
   font-size: 10px;
   color: var(--text-tertiary);
 }
+
+/* --- Version Diff Toggle --- */
+.version-diff-toggle {
+  display: flex;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.diff-toggle-btn {
+  padding: 0.2rem 0.6rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: var(--tracking-wide);
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.diff-toggle-btn + .diff-toggle-btn {
+  border-left: 1px solid var(--border-default);
+}
+
+.diff-toggle-btn.active {
+  background: var(--accent-primary-muted);
+  color: var(--accent-primary);
+}
+
+.diff-toggle-btn:disabled {
+  color: var(--text-tertiary);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
