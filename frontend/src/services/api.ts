@@ -1,21 +1,31 @@
-import type { Session, Document, Version, VersionDetail, ChatMessage } from '../types';
+import type { Session, Document, Version, VersionDetail, ChatMessage, User } from '../types';
 
 const BASE = '';
 
 async function json<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${url}`, init);
+  const res = await fetch(`${BASE}${url}`, {
+    ...init,
+    credentials: 'same-origin',
+  });
+  if (res.status === 401) {
+    window.dispatchEvent(new Event('auth:unauthorized'));
+    throw new Error('Unauthorized');
+  }
   if (!res.ok) {
     throw new Error(`${res.status} ${res.statusText}`);
   }
   return res.json() as Promise<T>;
 }
 
-const SESSION_KEY = 'ai-html-builder-session-id';
+let _sessionId: string | null = null;
+
+export function setSessionId(sid: string | null): void {
+  _sessionId = sid;
+}
 
 function getSessionId(): string {
-  const sid = sessionStorage.getItem(SESSION_KEY);
-  if (!sid) throw new Error('No active session');
-  return sid;
+  if (!_sessionId) throw new Error('No active session');
+  return _sessionId;
 }
 
 export const api = {
@@ -100,7 +110,13 @@ export const api = {
       },
       body: JSON.stringify(body),
       signal,
+      credentials: 'same-origin',
     });
+
+    if (res.status === 401) {
+      window.dispatchEvent(new Event('auth:unauthorized'));
+      throw new Error('Unauthorized');
+    }
 
     if (!res.ok) {
       throw new Error(`${res.status} ${res.statusText}`);
@@ -165,8 +181,13 @@ export const api = {
 
     const res = await fetch(
       `${BASE}/api/sessions/${getSessionId()}/documents/${documentId}/export/${format}?${params.toString()}`,
-      { method: 'POST' },
+      { method: 'POST', credentials: 'same-origin' },
     );
+
+    if (res.status === 401) {
+      window.dispatchEvent(new Event('auth:unauthorized'));
+      throw new Error('Unauthorized');
+    }
 
     if (!res.ok) {
       const errorData = await res.json().catch(() => null);
@@ -188,5 +209,65 @@ export const api = {
     a.click();
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+  },
+};
+
+// === Auth API ===
+
+export const authApi = {
+  needsSetup(): Promise<{ needs_setup: boolean }> {
+    return json('/api/auth/needs-setup');
+  },
+
+  setup(username: string, password: string, displayName: string): Promise<{ user: User }> {
+    return json('/api/auth/setup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, display_name: displayName }),
+    });
+  },
+
+  login(username: string, password: string): Promise<{ user: User }> {
+    return json('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+  },
+
+  register(username: string, password: string, displayName: string, inviteCode: string): Promise<{ user: User }> {
+    return json('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, display_name: displayName, invite_code: inviteCode }),
+    });
+  },
+
+  getMe(): Promise<{ user: User }> {
+    return json('/api/auth/me');
+  },
+
+  logout(): Promise<{ success: boolean }> {
+    return json('/api/auth/logout', { method: 'POST' });
+  },
+};
+
+// === Admin API ===
+
+export const adminApi = {
+  getUsers(): Promise<{ users: User[] }> {
+    return json('/api/admin/users');
+  },
+
+  deleteUser(userId: string): Promise<{ success: boolean }> {
+    return json(`/api/admin/users/${userId}`, { method: 'DELETE' });
+  },
+
+  getInviteCode(): Promise<{ invite_code: string }> {
+    return json('/api/admin/invite-code');
+  },
+
+  regenerateInviteCode(): Promise<{ invite_code: string }> {
+    return json('/api/admin/invite-code', { method: 'POST' });
   },
 };

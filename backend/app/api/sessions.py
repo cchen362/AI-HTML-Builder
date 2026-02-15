@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from app.auth_middleware import get_current_user
 from app.services.session_service import session_service
 
 router = APIRouter()
@@ -20,14 +21,30 @@ async def _require_document_ownership(
         )
 
 
+async def _require_session_ownership(session_id: str, user_id: str) -> None:
+    """Raise 403 if the session doesn't belong to this user."""
+    from app.database import get_db
+
+    db = await get_db()
+    cursor = await db.execute(
+        "SELECT user_id FROM sessions WHERE id = ?", (session_id,)
+    )
+    row = await cursor.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if row["user_id"] and row["user_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+
 @router.post("/api/sessions")
-async def create_session():
-    session_id = await session_service.create_session()
+async def create_session(user: dict = Depends(get_current_user)):
+    session_id = await session_service.create_session(user_id=user["id"])
     return {"session_id": session_id}
 
 
 @router.get("/api/sessions/{session_id}")
-async def get_session(session_id: str):
+async def get_session(session_id: str, user: dict = Depends(get_current_user)):
+    await _require_session_ownership(session_id, user["id"])
     docs = await session_service.get_session_documents(session_id)
     active = await session_service.get_active_document(session_id)
     return {
@@ -38,13 +55,17 @@ async def get_session(session_id: str):
 
 
 @router.get("/api/sessions/{session_id}/documents")
-async def get_documents(session_id: str):
+async def get_documents(session_id: str, user: dict = Depends(get_current_user)):
+    await _require_session_ownership(session_id, user["id"])
     docs = await session_service.get_session_documents(session_id)
     return {"documents": docs}
 
 
 @router.post("/api/sessions/{session_id}/documents/{document_id}/switch")
-async def switch_document(session_id: str, document_id: str):
+async def switch_document(
+    session_id: str, document_id: str, user: dict = Depends(get_current_user)
+):
+    await _require_session_ownership(session_id, user["id"])
     success = await session_service.switch_document(session_id, document_id)
     if not success:
         raise HTTPException(status_code=404, detail="Document not found in session")
@@ -52,14 +73,20 @@ async def switch_document(session_id: str, document_id: str):
 
 
 @router.get("/api/sessions/{session_id}/documents/{document_id}/versions")
-async def get_versions(session_id: str, document_id: str):
+async def get_versions(
+    session_id: str, document_id: str, user: dict = Depends(get_current_user)
+):
+    await _require_session_ownership(session_id, user["id"])
     await _require_document_ownership(document_id, session_id)
     versions = await session_service.get_version_history(document_id)
     return {"versions": versions}
 
 
 @router.get("/api/sessions/{session_id}/documents/{document_id}/versions/{version}")
-async def get_version(session_id: str, document_id: str, version: int):
+async def get_version(
+    session_id: str, document_id: str, version: int, user: dict = Depends(get_current_user)
+):
+    await _require_session_ownership(session_id, user["id"])
     await _require_document_ownership(document_id, session_id)
     ver = await session_service.get_version(document_id, version)
     if not ver:
@@ -68,14 +95,20 @@ async def get_version(session_id: str, document_id: str, version: int):
 
 
 @router.get("/api/sessions/{session_id}/documents/{document_id}/html")
-async def get_latest_html(session_id: str, document_id: str):
+async def get_latest_html(
+    session_id: str, document_id: str, user: dict = Depends(get_current_user)
+):
+    await _require_session_ownership(session_id, user["id"])
     await _require_document_ownership(document_id, session_id)
     html = await session_service.get_latest_html(document_id)
     return {"html": html}
 
 
 @router.post("/api/sessions/{session_id}/documents/{document_id}/versions/{version}/restore")
-async def restore_version(session_id: str, document_id: str, version: int):
+async def restore_version(
+    session_id: str, document_id: str, version: int, user: dict = Depends(get_current_user)
+):
+    await _require_session_ownership(session_id, user["id"])
     await _require_document_ownership(document_id, session_id)
     try:
         new_version = await session_service.restore_version(document_id, version)
@@ -85,7 +118,8 @@ async def restore_version(session_id: str, document_id: str, version: int):
 
 
 @router.get("/api/sessions/{session_id}/chat")
-async def get_chat_history(session_id: str):
+async def get_chat_history(session_id: str, user: dict = Depends(get_current_user)):
+    await _require_session_ownership(session_id, user["id"])
     messages = await session_service.get_chat_history(session_id)
     return {"messages": messages}
 
@@ -96,8 +130,11 @@ class FromTemplateRequest(BaseModel):
 
 
 @router.post("/api/sessions/{session_id}/documents/from-template")
-async def create_from_template(session_id: str, body: FromTemplateRequest):
+async def create_from_template(
+    session_id: str, body: FromTemplateRequest, user: dict = Depends(get_current_user)
+):
     """Create a new document pre-populated with template HTML."""
+    await _require_session_ownership(session_id, user["id"])
     doc_id = await session_service.create_document(session_id, title=body.title)
     version = await session_service.save_version(
         document_id=doc_id,
@@ -119,7 +156,10 @@ class RenameRequest(BaseModel):
 
 
 @router.patch("/api/sessions/{session_id}/documents/{document_id}")
-async def rename_document(session_id: str, document_id: str, body: RenameRequest):
+async def rename_document(
+    session_id: str, document_id: str, body: RenameRequest, user: dict = Depends(get_current_user)
+):
+    await _require_session_ownership(session_id, user["id"])
     await _require_document_ownership(document_id, session_id)
     success = await session_service.rename_document(document_id, body.title)
     if not success:
@@ -128,7 +168,10 @@ async def rename_document(session_id: str, document_id: str, body: RenameRequest
 
 
 @router.delete("/api/sessions/{session_id}/documents/{document_id}")
-async def delete_document(session_id: str, document_id: str):
+async def delete_document(
+    session_id: str, document_id: str, user: dict = Depends(get_current_user)
+):
+    await _require_session_ownership(session_id, user["id"])
     success = await session_service.delete_document(session_id, document_id)
     if not success:
         raise HTTPException(
@@ -139,8 +182,11 @@ async def delete_document(session_id: str, document_id: str):
 
 
 @router.post("/api/sessions/{session_id}/documents/{document_id}/manual-edit")
-async def save_manual_edit(session_id: str, document_id: str, body: ManualEditRequest):
+async def save_manual_edit(
+    session_id: str, document_id: str, body: ManualEditRequest, user: dict = Depends(get_current_user)
+):
     """Save manual HTML edits as a new version."""
+    await _require_session_ownership(session_id, user["id"])
     await _require_document_ownership(document_id, session_id)
     version = await session_service.save_manual_edit(
         document_id, body.html_content

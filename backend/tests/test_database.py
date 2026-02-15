@@ -8,8 +8,12 @@ async def temp_db(tmp_path):
     """Create a temporary database for testing."""
     db_path = str(tmp_path / "test.db")
 
-    with patch("app.config.settings") as mock_settings:
+    with (
+        patch("app.config.settings") as mock_settings,
+        patch("app.database.settings") as mock_db_settings,
+    ):
         mock_settings.database_path = db_path
+        mock_db_settings.database_path = db_path
 
         import app.database as db_module
 
@@ -26,8 +30,12 @@ async def test_init_db_creates_file(tmp_path):
     """Database file should be created on init."""
     db_path = str(tmp_path / "data" / "test.db")
 
-    with patch("app.config.settings") as mock_settings:
+    with (
+        patch("app.config.settings") as mock_settings,
+        patch("app.database.settings") as mock_db_settings,
+    ):
         mock_settings.database_path = db_path
+        mock_db_settings.database_path = db_path
 
         import app.database as db_module
 

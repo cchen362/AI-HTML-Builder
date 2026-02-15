@@ -9,6 +9,7 @@ import structlog
 
 from app.config import settings
 from app.database import init_db, close_db, get_db
+from app.auth_database import init_auth_db, close_auth_db
 
 # Configure structlog with proper log level mapping
 LOG_LEVELS = {
@@ -31,6 +32,7 @@ logger = structlog.get_logger()
 async def lifespan(app: FastAPI):
     # Startup
     await init_db()
+    await init_auth_db()
 
     # Register exporters
     from app.services.export_service import register_exporter, _export_html, list_available_formats
@@ -93,6 +95,7 @@ async def lifespan(app: FastAPI):
         await pw_mgr.shutdown()
     except Exception:
         pass
+    await close_auth_db()
     await close_db()
     logger.info("Application stopped")
 
@@ -100,8 +103,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="AI HTML Builder", lifespan=lifespan)
 
 # Import and register API routers
-from app.api import chat, sessions, health, costs, export, upload  # noqa: E402
+from app.api import auth, chat, sessions, health, costs, export, upload  # noqa: E402
 
+app.include_router(auth.router)
 app.include_router(chat.router)
 app.include_router(sessions.router)
 app.include_router(health.router)

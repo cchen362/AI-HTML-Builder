@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
-import type { ChatMessage, Document } from '../../types';
+import type { ChatMessage, Document, User } from '../../types';
 import type { PromptTemplate } from '../../data/promptTemplates';
 
 import './ChatWindow.css';
@@ -18,6 +18,9 @@ interface ChatWindowProps {
   sessionId?: string | null;
   onStartNewSession?: () => void;
   documents?: Document[];
+  user?: User;
+  onAdminSettings?: () => void;
+  onLogout?: () => void;
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({
@@ -31,6 +34,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   sessionId,
   onStartNewSession,
   documents = [],
+  user,
+  onAdminSettings,
+  onLogout,
 }) => {
   const [pendingTemplate, setPendingTemplate] = useState<PromptTemplate | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -85,6 +91,30 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
               >
                 New Session
               </button>
+              <div className="menu-divider" />
+              {user?.is_admin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onAdminSettings?.();
+                  }}
+                >
+                  Admin Settings
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onLogout?.();
+                }}
+              >
+                Logout
+              </button>
+              <div className="session-id-display">
+                {user ? `Signed in as ${user.display_name}` : ''}
+              </div>
               <div className="session-id-display">
                 Session: {sessionId?.slice(0, 8) || '—'}
               </div>

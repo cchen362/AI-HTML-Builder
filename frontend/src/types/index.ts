@@ -1,5 +1,13 @@
 // === v2 Types (matching backend Plans 001-003) ===
 
+/** Authenticated user from GET /api/auth/me */
+export interface User {
+  id: string;
+  username: string;
+  display_name: string;
+  is_admin: boolean;
+}
+
 /** Chat message from GET /api/sessions/{sid}/chat */
 export interface ChatMessage {
   id: number;

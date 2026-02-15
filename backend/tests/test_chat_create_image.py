@@ -9,6 +9,8 @@ import json
 os.environ.setdefault("ANTHROPIC_API_KEY", "sk-ant-test-key-for-testing")
 
 
+_TEST_USER = {"id": "test-user-id", "username": "testuser", "display_name": "Test", "is_admin": True}
+
 SAMPLE_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head><title>Test</title></head>
@@ -72,7 +74,7 @@ async def test_create_route_streams_and_saves(tmp_path):
                 MockGemini.return_value = mock_gemini
 
                 request = ChatRequest(message="Create a landing page")
-                response = await chat("test-session-create", request)
+                response = await chat("test-session-create", request, user=_TEST_USER)
 
                 body = ""
                 async for chunk in response.body_iterator:
@@ -124,7 +126,7 @@ async def test_create_route_fallback_to_claude(tmp_path):
                  patch("app.services.creator.extract_html", return_value=SAMPLE_HTML):
 
                 request = ChatRequest(message="Create a page")
-                response = await chat("test-session-fallback", request)
+                response = await chat("test-session-fallback", request, user=_TEST_USER)
 
                 body = ""
                 async for chunk in response.body_iterator:
@@ -181,7 +183,7 @@ async def test_create_route_with_existing_html_passes_context(tmp_path):
                  patch("app.services.router.classify_request", new_callable=AsyncMock, return_value="create"):
 
                 request = ChatRequest(message="Turn this into a stakeholder brief")
-                response = await chat(sid, request)
+                response = await chat(sid, request, user=_TEST_USER)
 
                 body = ""
                 async for chunk in response.body_iterator:
@@ -227,7 +229,7 @@ async def test_create_route_without_html_no_context(tmp_path):
                  patch("app.services.creator.extract_html", return_value=SAMPLE_HTML):
 
                 request = ChatRequest(message="Create a landing page")
-                response = await chat("test-session-no-context", request)
+                response = await chat("test-session-no-context", request, user=_TEST_USER)
 
                 body = ""
                 async for chunk in response.body_iterator:
@@ -287,7 +289,7 @@ async def test_create_route_strips_base64_from_context(tmp_path):
                  patch("app.services.router.classify_request", new_callable=AsyncMock, return_value="create"):
 
                 request = ChatRequest(message="Turn this into a stakeholder brief")
-                response = await chat(sid, request)
+                response = await chat(sid, request, user=_TEST_USER)
 
                 body = ""
                 async for chunk in response.body_iterator:
@@ -339,7 +341,7 @@ async def test_image_route_no_provider_returns_error(tmp_path):
                 return_value="image",
             ):
                 request = ChatRequest(message="Add a photo of mountains")
-                response = await chat(sid, request)
+                response = await chat(sid, request, user=_TEST_USER)
 
                 body = ""
                 async for chunk in response.body_iterator:
@@ -371,7 +373,7 @@ async def test_image_route_no_document(tmp_path):
             # Force image route by patching at the source module
             with patch("app.services.router.classify_request", new_callable=AsyncMock, return_value="image"):
                 request = ChatRequest(message="Add a photo of mountains")
-                response = await chat("test-session-no-doc", request)
+                response = await chat("test-session-no-doc", request, user=_TEST_USER)
 
                 body = ""
                 async for chunk in response.body_iterator:
@@ -425,7 +427,7 @@ async def test_image_route_api_image(tmp_path):
                 return_value="image",
             ):
                 request = ChatRequest(message="Add a picture of mountains")
-                response = await chat(sid, request)
+                response = await chat(sid, request, user=_TEST_USER)
 
                 body = ""
                 async for chunk in response.body_iterator:
@@ -530,7 +532,7 @@ async def test_infographic_route_creates_document(tmp_path):
                 return_value="infographic",
             ):
                 request = ChatRequest(message="Create an infographic about revenue")
-                response = await chat("test-session-infographic", request)
+                response = await chat("test-session-infographic", request, user=_TEST_USER)
 
                 body = ""
                 async for chunk in response.body_iterator:
@@ -575,7 +577,7 @@ async def test_infographic_route_no_google_key_returns_error(tmp_path):
                 return_value="infographic",
             ):
                 request = ChatRequest(message="Create an infographic about revenue")
-                response = await chat("test-session-infographic-nokey", request)
+                response = await chat("test-session-infographic-nokey", request, user=_TEST_USER)
 
                 body = ""
                 async for chunk in response.body_iterator:
@@ -645,7 +647,7 @@ async def test_infographic_iteration_override(tmp_path):
                 AsyncMock(),
             ):
                 request = ChatRequest(message="make it less prose and bigger text")
-                response = await chat(sid, request)
+                response = await chat(sid, request, user=_TEST_USER)
 
                 body = ""
                 async for chunk in response.body_iterator:
@@ -808,7 +810,7 @@ async def test_edit_route_unchanged(tmp_path):
                  patch("app.providers.anthropic_provider.AnthropicProvider"), \
                  patch("app.services.router.classify_request", new_callable=AsyncMock, return_value="edit"):
                 request = ChatRequest(message="Change the title to Updated")
-                response = await chat(sid, request)
+                response = await chat(sid, request, user=_TEST_USER)
 
                 body = ""
                 async for chunk in response.body_iterator:

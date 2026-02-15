@@ -115,6 +115,12 @@
   cursor: not-allowed;
 }
 
+.menu-divider {
+  height: 1px;
+  background: var(--border-default);
+  margin: 0.25rem 0;
+}
+
 .session-id-display {
   padding: 0.5rem 1rem;
   font-family: var(--font-mono);

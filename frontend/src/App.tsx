@@ -8,7 +8,11 @@ import VersionTimeline from './components/VersionHistory/VersionTimeline'
 import ExportDropdown from './components/Export/ExportDropdown'
 import { api } from './services/api'
 import ConfirmDialog from './components/ConfirmDialog/ConfirmDialog'
-import type { Document } from './types'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
+import LoginPage from './components/Auth/LoginPage'
+import SetupPage from './components/Auth/SetupPage'
+import AdminPanel from './components/Auth/AdminPanel'
+import type { Document, User } from './types'
 import './App.css'
 
 // HTML viewer component with version history side panel
@@ -159,13 +163,15 @@ const HtmlViewer = React.memo(({
 })
 
 // Main chat application component
-const ChatApp = () => {
+const ChatApp = ({ user }: { user: User }) => {
   const [viewMode, setViewMode] = useState<'preview' | 'code'>('preview')
   const [error, setError] = useState<string | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [previewHtml, setPreviewHtml] = useState<string | null>(null)
   const [newSessionConfirm, setNewSessionConfirm] = useState(false)
   const [isCodeViewDirty, setIsCodeViewDirty] = useState(false)
+  const [adminOpen, setAdminOpen] = useState(false)
+  const { logout } = useAuth()
   const {
     sessionId,
     messages,
@@ -297,11 +303,15 @@ const ChatApp = () => {
     }
   }, [refreshDocuments, historyOpen])
 
+  const handleLogout = useCallback(async () => {
+    await logout()
+  }, [logout])
+
   if (isInitializing) {
     return (
       <div className="App">
         <div className="app-loading">
-          <div className="loading-glyph">[█]</div>
+          <div className="loading-glyph">[&#9608;]</div>
           <div className="loading-text">INITIALIZING...</div>
         </div>
       </div>
@@ -324,6 +334,9 @@ const ChatApp = () => {
             sessionId={sessionId}
             onStartNewSession={handleStartNewSession}
             documents={documents}
+            user={user}
+            onAdminSettings={() => setAdminOpen(true)}
+            onLogout={handleLogout}
           />
         }
         rightContent={
@@ -365,12 +378,41 @@ const ChatApp = () => {
         confirmText="Start Fresh"
         cancelText="Stay Here"
       />
+      <AdminPanel
+        isOpen={adminOpen}
+        onClose={() => setAdminOpen(false)}
+        currentUserId={user.id}
+      />
     </div>
   )
 }
 
+// Auth gate — decides what to show based on auth state
+function AuthGate() {
+  const { user, isLoading, needsSetup } = useAuth()
+
+  if (isLoading) {
+    return (
+      <div className="App">
+        <div className="app-loading">
+          <div className="loading-glyph">[&#9608;]</div>
+          <div className="loading-text">LOADING...</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (needsSetup) return <SetupPage />
+  if (!user) return <LoginPage />
+  return <ChatApp user={user} />
+}
+
 function App() {
-  return <ChatApp />
+  return (
+    <AuthProvider>
+      <AuthGate />
+    </AuthProvider>
+  )
 }
 
 export default App

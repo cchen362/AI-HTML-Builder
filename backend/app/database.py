@@ -53,6 +53,7 @@ async def close_db() -> None:
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS sessions (
     id TEXT PRIMARY KEY,
+    user_id TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     metadata TEXT DEFAULT '{}'
@@ -105,6 +106,7 @@ CREATE INDEX IF NOT EXISTS idx_documents_session ON documents(session_id);
 CREATE INDEX IF NOT EXISTS idx_versions_document ON document_versions(document_id);
 CREATE INDEX IF NOT EXISTS idx_messages_session ON chat_messages(session_id);
 CREATE INDEX IF NOT EXISTS idx_cost_date ON cost_tracking(date);
+CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 """
 
 # Schema migrations — each runs inside a try/except so re-runs are safe.
@@ -113,4 +115,5 @@ _MIGRATIONS = [
     "ALTER TABLE document_versions ADD COLUMN visual_prompt TEXT",
     "ALTER TABLE chat_messages ADD COLUMN template_name TEXT",
     "ALTER TABLE chat_messages ADD COLUMN user_content TEXT",
+    "ALTER TABLE sessions ADD COLUMN user_id TEXT",
 ]

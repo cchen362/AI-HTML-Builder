@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import structlog
-from fastapi import APIRouter, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
+
+from app.auth_middleware import get_current_user
 
 from app.config import settings
 
@@ -12,7 +14,7 @@ logger = structlog.get_logger()
 
 
 @router.post("/api/upload")
-async def upload_file(file: UploadFile) -> dict:
+async def upload_file(file: UploadFile, user: dict = Depends(get_current_user)) -> dict:
     """
     Upload and process a file for context injection into chat.
 

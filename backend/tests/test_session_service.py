@@ -7,8 +7,12 @@ async def db_and_service(tmp_path):
     """Set up a temp database and session service for testing."""
     db_path = str(tmp_path / "test.db")
 
-    with patch("app.config.settings") as mock_settings:
+    with (
+        patch("app.config.settings") as mock_settings,
+        patch("app.database.settings") as mock_db_settings,
+    ):
         mock_settings.database_path = db_path
+        mock_db_settings.database_path = db_path
 
         import app.database as db_module
 

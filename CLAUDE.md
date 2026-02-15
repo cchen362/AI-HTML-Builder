@@ -108,10 +108,13 @@ Server: text/event-stream
 backend/app/
   config.py                  # Pydantic settings (all env vars)
   database.py                # SQLite init, schema (5 tables), WAL mode
+  auth_database.py           # Auth SQLite (users, auth_sessions, settings)
+  auth_middleware.py          # get_current_user, require_admin FastAPI deps
   main.py                    # FastAPI app, lifespan, router registration
   api/
+    auth.py                  # Auth + admin endpoints (login, register, setup, invite codes)
     chat.py                  # POST /api/chat/{sid} - SSE streaming (4 handlers: edit, create, image, infographic)
-    sessions.py              # Session + document + version CRUD
+    sessions.py              # Session + document + version CRUD (all endpoints auth-protected)
     export.py                # Export to HTML/PPTX/PDF/PNG (single parameterized endpoint)
     upload.py                # File upload (.txt/.md/.docx/.pdf/.csv/.xlsx)
     health.py                # Health check (DB + Playwright)
@@ -127,6 +130,7 @@ backend/app/
     router.py                # classify_request() - Haiku 4.5 LLM intent classification
     image_service.py         # Image generation + embedding (raster only)
     infographic_service.py   # Two-LLM infographic pipeline (Gemini art director + Nano Banana Pro renderer)
+    auth_service.py          # AuthService: login, register, tokens, invite codes
     session_service.py       # Session/document/version/chat CRUD
     cost_tracker.py          # Per-model token + cost tracking
     export_service.py        # Export orchestration via dict-based dispatch
@@ -140,7 +144,8 @@ backend/app/
     image_retry.py           # Shared image generation retry logic with fallback
 
 frontend/src/
-  App.tsx                    # Root layout, split-pane
+  App.tsx                    # Root layout, AuthProvider gate, split-pane
+  contexts/AuthContext.tsx    # AuthProvider + useAuth() hook (cookie auth state)
   hooks/useSSEChat.ts        # Core SSE hook - all chat state flows through here
   services/
     api.ts                   # All REST API calls
@@ -150,6 +155,7 @@ frontend/src/
     CodeViewer/              # CodeMirror 6 editor + preview toggle
     DocumentTabs/            # Multi-document tab bar
     VersionHistory/          # Version timeline
+    Auth/                    # LoginPage, SetupPage, AdminPanel, Auth.css
     Export/                  # Export format dropdown
     EmptyState/              # Template cards (frontend-only data)
     Chat/                    # StreamingMarkdown renderer
@@ -160,17 +166,27 @@ frontend/src/
 
 ## Database (SQLite WAL)
 
+### Auth Database (`auth.db` — separate file)
+3 tables in `auth_database.py`, WAL mode + foreign keys enabled:
+
+| Table | Key Columns | Notes |
+|-------|------------|-------|
+| `users` | id, username, password_hash, display_name, is_admin | bcrypt hashed passwords |
+| `auth_sessions` | id, user_id, token, expires_at | FK cascade on delete |
+| `settings` | key, value | Stores invite_code |
+
+### App Database (`app.db`)
 5 tables in `database.py`, WAL mode + foreign keys enabled:
 
 | Table | Key Columns | Constraints |
 |-------|------------|-------------|
-| `sessions` | id, created_at, last_active, metadata | PK: id |
+| `sessions` | id, user_id, created_at, last_active, metadata | PK: id |
 | `documents` | id, session_id, title, is_active | FK: session_id -> sessions |
 | `document_versions` | id, document_id, version, html_content, edit_summary, model_used, visual_prompt | UNIQUE(document_id, version) |
 | `chat_messages` | id, session_id, document_id, role, content, message_type | CHECK(role IN user/assistant/system) |
 | `cost_tracking` | id, date, model, request_count, input/output_tokens, estimated_cost_usd | UNIQUE(date, model) |
 
-Indexes: `idx_documents_session`, `idx_versions_document`, `idx_messages_session`, `idx_cost_date`
+Indexes: `idx_documents_session`, `idx_versions_document`, `idx_messages_session`, `idx_cost_date`, `idx_sessions_user`
 
 ## API Endpoints
 
@@ -197,10 +213,26 @@ Indexes: `idx_documents_session`, `idx_versions_document`, `idx_messages_session
 ### Upload
 - `POST /api/upload` - Multipart file upload (.txt/.md/.docx/.pdf/.csv/.xlsx, max 50MB)
 
+### Auth (public — no cookie required)
+- `GET /api/auth/needs-setup` - Check if admin exists
+- `POST /api/auth/setup` - Create first admin user (one-time)
+- `POST /api/auth/login` - Login, sets `auth_token` cookie
+- `POST /api/auth/register` - Register with invite code
+
+### Auth (requires cookie)
+- `GET /api/auth/me` - Current user info
+- `POST /api/auth/logout` - Clear session
+
+### Admin (requires admin cookie)
+- `GET /api/admin/users` - List all users
+- `DELETE /api/admin/users/{user_id}` - Delete user
+- `GET /api/admin/invite-code` - Get current invite code
+- `POST /api/admin/invite-code` - Regenerate invite code
+
 ### Costs & Health
-- `GET /api/costs` - Cost summary (default 30 days)
-- `GET /api/costs/today` - Today's costs
-- `GET /api/health` - DB + Playwright status
+- `GET /api/costs` - Cost summary (admin-only, default 30 days)
+- `GET /api/costs/today` - Today's costs (admin-only)
+- `GET /api/health` - DB + Playwright status (public — Docker healthcheck)
 
 ## Environment Variables
 
@@ -212,6 +244,9 @@ ANTHROPIC_API_KEY=sk-ant-...          # Claude Sonnet 4.5 for surgical edits
 GOOGLE_API_KEY=AIza...                # ONE key covers Gemini 2.5 Pro, Nano Banana Pro, AND Flash
 
 # Optional (defaults shown)
+AUTH_DATABASE_PATH=./data/auth.db
+AUTH_SESSION_EXPIRY_DAYS=30
+DEV_MODE=false                        # Set true for local dev (disables secure cookie flag)
 DATABASE_PATH=./data/app.db
 LOG_LEVEL=info
 MAX_UPLOAD_SIZE_MB=50
@@ -294,14 +329,24 @@ For generated HTML documents, unless user specifies otherwise:
 ### Frontend
 - `useSSEChat.ts` is the single source of truth for chat state, session lifecycle, document switching
 - SSE parsing: manual `ReadableStream` reader (POST-based, NOT `EventSource` which only supports GET)
-- Session ID persisted in `sessionStorage` with key `ai-html-builder-session-id`
+- Session ID stored in module-level `_sessionId` variable in `api.ts` (synced from `useSSEChat` via `setSessionId()`)
 - Vite dev proxy: `/api` routes to `http://localhost:8000`
 
+### Authentication
+- HTTP-only cookie auth (`auth_token`), separate `auth.db` SQLite
+- `get_current_user` / `require_admin` as FastAPI `Depends()` — all endpoints except health + public auth
+- `_require_session_ownership()` in `sessions.py` checks user_id on session row (allows NULL for pre-auth sessions)
+- `DEV_MODE=true` env var disables `secure` flag on auth cookie (for HTTP local dev)
+- 401 interceptor: `api.ts` dispatches `window.dispatchEvent(new Event('auth:unauthorized'))`, AuthContext listens
+
 ### Testing
-- 305+ tests across 20+ test files, `asyncio_mode = "auto"` in pyproject.toml
-- 1 known pre-existing failure: `test_init_db_creates_file`
+- 346 tests across 23+ test files, `asyncio_mode = "auto"` in pyproject.toml
 - Patches must target source module, not consumer (e.g., `app.utils.file_processors.*`, not `app.api.upload.*`)
 - `pytest-asyncio` auto mode: no need for `@pytest.mark.asyncio` decorators
+- **Auth override in conftest.py**: `dependency_overrides` for `get_current_user` and `require_admin` — all existing tests run as admin
+- **CRITICAL patching lesson**: `database.py` and `auth_database.py` import `settings` at module level (`from app.config import settings`). Patching `app.config.settings` does NOT affect these modules — you MUST also patch `app.database.settings` and `app.auth_database.settings`. Lazy imports inside functions (e.g., `from app.config import settings` inside `auth_service._create_auth_session()`) DO see `app.config.settings` patches since they re-import each call.
+- **Mock tests with `_require_session_ownership`**: API tests that mock `session_service` must also mock `app.api.sessions._require_session_ownership` (it's a module-level function that queries real DB, not a service method)
+- **Direct `chat()` calls need `user=` kwarg**: Tests that call `chat()` directly (not via TestClient) must pass `user={"id": "...", ...}` — `Depends()` default doesn't resolve outside FastAPI request cycle
 
 ## Implementation Plans
 
@@ -331,13 +376,12 @@ All plans in `IMPLEMENTATION_PLANS/` directory:
 | 018 | NotebookLM-Style Infographic Generation | COMPLETE |
 | 019 | Export Quality (PDF page breaks, infographic PNG-only, PPTX 16:9) | COMPLETE |
 | 020a | Architecture Refactoring (dead code, shared utils, safety hardening, version pinning) | COMPLETE |
+| 021 | Auth, Session History & UX Polish (auth layer, session browser, version diff, error UX, export UX) | PHASE 1 COMPLETE |
 
 ## Known Issues
 
 - `docker-compose.yml` at root is still the v1 Redis-only file (dead, Plan 008 will replace)
-- 1 test failure: `test_init_db_creates_file` (pre-existing, non-blocking)
 - `.env.example` at root may be out of sync with `backend/app/config.py` - always trust `config.py`
-- Custom templates removed (no auth mechanism). Will be re-introduced when Plan 008 adds Nginx Proxy Manager authentication.
 
 ### Future Improvements
 - **Infographic text legibility**: Nano Banana Pro renders small text at reduced quality. If needed, tighten the art director prompt to enforce fewer words, larger minimum font sizes, and discourage text below ~24pt. A more advanced option: hybrid overlay (image for visuals, HTML text positioned on top) but this has alignment complexity.
@@ -357,7 +401,7 @@ All plans in `IMPLEMENTATION_PLANS/` directory:
 ---
 
 **Last Updated**: February 2026
-**Architecture**: v2 rebuild (Plans 001-020a complete)
+**Architecture**: v2 rebuild (Plans 001-020a complete, Plan 021 Phase 1 complete)
 **AI Models**: Haiku 4.5 (routing) + Claude Sonnet 4.5 (edits) + Gemini 2.5 Pro (creation + infographic art direction) + Nano Banana Pro (images + infographic rendering)
 **Database**: SQLite WAL (no Redis)
 **Communication**: SSE + HTTP POST (no WebSocket)

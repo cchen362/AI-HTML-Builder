@@ -26,3 +26,6 @@ openpyxl==3.1.5
 # Utilities
 structlog==25.5.0
 python-multipart==0.0.22
+
+# Authentication
+bcrypt==4.3.0

@@ -1,7 +1,7 @@
 # Plan 020: Comprehensive Review Findings
 
 **Date**: February 2026
-**Status**: REVIEW — Each item to be discussed and marked PROCEED / DEFER / DROP
+**Status**: REVIEWED — Decisions made. PROCEED items in Plan 021.
 
 Two independent reviews were conducted from a fresh perspective:
 - **UX Review**: Is the app actually useful? Would people want to use it?
@@ -17,7 +17,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: Users who work on documents across multiple days lose access to their work. They'd have to complete everything in one sitting or lose it. For a corporate tool, this is a deal-breaker — people don't finish reports in one sitting.
 
-**Decision**: `_________`
+**Decision**: `PROCEED` → Plan 021 Phase 1 (Auth) + Phase 2 (Session Browser)
 
 ---
 
@@ -27,7 +27,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: Every AI mistake is expensive — users waste time retyping. After a few bad experiences, they'll start writing shorter, less detailed prompts (which actually makes the AI perform worse). Frustration compounds.
 
-**Decision**: `_________`
+**Decision**: `DEFER` — Low ROI for short prompts typical in this tool
 
 ---
 
@@ -37,7 +37,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: The entire selling point of this tool is "surgical editing" — precise, targeted changes. But users can't verify that. If the AI says "Changed the header color," the user has no way to confirm it didn't also change something else. Trust erodes over time.
 
-**Decision**: `_________`
+**Decision**: `PROCEED` → Plan 021 Phase 3 (Before/After toggle in version history)
 
 ---
 
@@ -47,7 +47,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: Users with muscle memory from Word/Google Docs will instinctively hit Ctrl+Z and nothing will happen. Mildly frustrating every time, especially during rapid iteration cycles.
 
-**Decision**: `_________`
+**Decision**: `DEFER` — Version restore works; U3 diff view improves visibility
 
 ---
 
@@ -57,7 +57,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: The app feels "alien" to corporate users. It signals "developer toy" rather than "business productivity tool." It's not broken, but it creates a subconscious barrier. Some users might actually like it (it is distinctive), others will find it unprofessional.
 
-**Decision**: `_________`
+**Decision**: `DROP` — Personal tool, owner's theme preference
 
 ---
 
@@ -67,7 +67,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: For a visual document builder, the preview is read-only and passive. Users are working blind — they can see the output but can't interact with it in any meaningful way. This limits the tool to "generate and hope" rather than "generate and refine visually."
 
-**Decision**: `_________`
+**Decision**: `DROP` — Iframe is already unsandboxed and interactive (tabs, buttons, forms all work)
 
 ---
 
@@ -80,7 +80,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: Users don't know when things go wrong, or when they do, the messages are unhelpful. They'll blame the tool when it "loses" their document (stale UI) or shows cryptic errors. Trust erodes.
 
-**Decision**: `_________`
+**Decision**: `PROCEED` → Plan 021 Phase 4 (humanizeError + Toast component)
 
 ---
 
@@ -90,7 +90,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: Users wonder if the export is stuck. They might click the button again, triggering duplicate exports. Minor annoyance but makes the tool feel unpolished.
 
-**Decision**: `_________`
+**Decision**: `PROCEED` → Plan 021 Phase 4 (spinner + success message in dropdown)
 
 ---
 
@@ -100,7 +100,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: If your 2-5 users only use desktops, this doesn't matter. If anyone wants to check a document on their phone, they can't. Given the corporate desktop context, this is probably fine to defer.
 
-**Decision**: `_________`
+**Decision**: `DROP` — Desktop-only tool
 
 ---
 
@@ -110,7 +110,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: Power users won't discover shortcuts. New users have to guess. Minor friction.
 
-**Decision**: `_________`
+**Decision**: `DROP` — Existing shortcuts (Enter, Shift+Enter, Escape) are intuitive enough
 
 ---
 
@@ -120,7 +120,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: Minimal. Cosmetic confusion at worst. Easy fix (change one string).
 
-**Decision**: `_________`
+**Decision**: `PROCEED` → Plan 021 Phase 4 (ARCHITECT → BUILDER)
 
 ---
 
@@ -130,7 +130,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: Users might not notice they can cancel, or might miss-click. Minor annoyance.
 
-**Decision**: `_________`
+**Decision**: `DROP` — Current cancel button works fine
 
 ---
 
@@ -140,7 +140,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: Templates feel technical and intimidating rather than inviting. Users who don't know HTML might be confused. But users who DO know HTML might actually find it useful.
 
-**Decision**: `_________`
+**Decision**: `DROP` — Technical preview provides useful transparency for this audience
 
 ---
 
@@ -150,7 +150,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: Users rename the file after downloading. Minor inconvenience.
 
-**Decision**: `_________`
+**Decision**: `PROCEED` → Plan 021 Phase 4 (smarter auto-truncation, no filename input)
 
 ---
 
@@ -160,7 +160,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: Users wonder why they can't export their infographic as PDF. They might think it's a bug. A simple tooltip ("Infographics are rendered as images — only PNG export is available") would fix this.
 
-**Decision**: `_________`
+**Decision**: `PROCEED` → Plan 021 Phase 4 (inline text explanation in dropdown)
 
 ---
 
@@ -170,7 +170,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: For your 2-5 users who you can train personally, this doesn't matter much. For any new user onboarding without you, they'll fumble for a few minutes.
 
-**Decision**: `_________`
+**Decision**: `DEFER` — Wait for other enhancements to stabilize first
 
 ---
 
@@ -180,7 +180,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: Users might not realize they can have multiple documents in one session, or won't know how to create another one.
 
-**Decision**: `_________`
+**Decision**: `PROCEED (with U1)` → No "+" button. Sessions = projects. Use "New Session" + session browser instead.
 
 ---
 
@@ -190,7 +190,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: For long sessions, finding a specific message becomes tedious. Minor for short sessions.
 
-**Decision**: `_________`
+**Decision**: `DROP` — Chat messages too terse to warrant search
 
 ---
 
@@ -200,7 +200,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: No functional impact. Just code clutter (~25 lines). Easy cleanup.
 
-**Decision**: `_________`
+**Decision**: `PROCEED` → Plan 021 Phase 4 (dead CSS cleanup)
 
 ---
 
@@ -212,7 +212,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: 130 lines of dead code that confuses anyone reading the file. No functional harm, but it gives a false impression that SVG generation is still a feature. Clean delete, zero risk.
 
-**Decision**: `_________`
+**Decision**: `RESOLVED in Plan 020a`
 
 ---
 
@@ -222,7 +222,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: If we ever need to change retry behavior (add a third attempt, change timeout, add logging), we'd need to change it in two places and hope we don't forget one. Classic maintenance trap. But at 2 services, it's manageable.
 
-**Decision**: `_________`
+**Decision**: `RESOLVED in Plan 020a`
 
 ---
 
@@ -232,7 +232,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: Same as A2 — changes need to happen in two places. Easy to forget one. Low risk at current scale but a code smell.
 
-**Decision**: `_________`
+**Decision**: `RESOLVED in Plan 020a`
 
 ---
 
@@ -242,7 +242,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: ~50-100ms extra latency per message and slightly more memory usage. Imperceptible for 2-5 users. The pattern was chosen deliberately for easier testing. Not worth fixing unless we scale significantly.
 
-**Decision**: `_________`
+**Decision**: `RESOLVED in Plan 020a`
 
 ---
 
@@ -252,7 +252,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: Extremely unlikely to trigger (the router has explicit fallbacks), but if it ever does, the user gets zero feedback. A one-line fix to yield an error message instead.
 
-**Decision**: `_________`
+**Decision**: `RESOLVED in Plan 020a`
 
 ---
 
@@ -262,7 +262,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: If a migration genuinely fails (not a duplicate column), we'd never know. The app would continue running with a broken schema. Low probability but high severity if it happens.
 
-**Decision**: `_________`
+**Decision**: `RESOLVED in Plan 020a`
 
 ---
 
@@ -272,7 +272,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: We don't use `-O` in production (Docker runs plain `python`), so this works today. But it's bad practice — if someone changes the Docker command or runs the code differently, these safety checks vanish. Easy fix: replace with `if/raise`.
 
-**Decision**: `_________`
+**Decision**: `RESOLVED in Plan 020a`
 
 ---
 
@@ -282,7 +282,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: Slower Docker builds (more data to send), slightly larger intermediate layers. The final image is fine (multi-stage build discards extras), but the build process is slower than necessary.
 
-**Decision**: `_________`
+**Decision**: `RESOLVED in Plan 020a`
 
 ---
 
@@ -292,7 +292,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: A future `pip install` could pull a breaking change in a dependency, causing the app to fail on a fresh deploy. Hasn't happened yet, but it's a time bomb. However, pinning versions mid-project requires careful testing — you need to verify the exact set works together.
 
-**Decision**: `_________`
+**Decision**: `RESOLVED in Plan 020a`
 
 ---
 
@@ -302,7 +302,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: A perpetually failing test is worse than no test — it trains developers to ignore test failures. "Oh, that one always fails." Then a real failure gets ignored too. One-line fix: remove `templates` from the expected list.
 
-**Decision**: `_________`
+**Decision**: `RESOLVED in Plan 020a`
 
 ---
 
@@ -312,7 +312,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: If someone uploads a 50MB PDF, all other users are frozen for a few seconds while it parses. With 2-5 users, the chance of overlap is low. But it violates the async contract.
 
-**Decision**: `_________`
+**Decision**: `RESOLVED in Plan 020a`
 
 ---
 
@@ -322,7 +322,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: Makes debugging harder. You'd have to reproduce the error locally to find the source. One-line fix.
 
-**Decision**: `_________`
+**Decision**: `RESOLVED in Plan 020a`
 
 ---
 
@@ -332,7 +332,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: Zero functional impact. Just visual inconsistency for anyone reading the code.
 
-**Decision**: `_________`
+**Decision**: `RESOLVED in Plan 020a`
 
 ---
 
@@ -342,7 +342,7 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: Zero functional impact. Just slightly confusing to read. Cosmetic cleanup.
 
-**Decision**: `_________`
+**Decision**: `RESOLVED in Plan 020a`
 
 ---
 
@@ -352,17 +352,33 @@ Two independent reviews were conducted from a fresh perspective:
 
 **Implication**: In practice, the code explicitly uses the Anthropic provider for tool-based editing and never passes Gemini where tools are needed. So this never actually fails. But it's an architectural smell — the base class promises something that one implementation can't deliver.
 
-**Decision**: `_________`
+**Decision**: `RESOLVED in Plan 020a`
 
 ---
 
 ## Decision Summary
 
-After reviewing, mark each item:
+Workshop conducted February 2026. Decisions below. Items marked PROCEED are in **Plan 021**. Architecture items (A1-A15) were addressed in **Plan 020a** (already COMPLETE).
 
-| Item | Decision | Notes |
-|------|----------|-------|
-| U1-U19 | | |
-| A1-A15 | | |
-
-Items marked PROCEED will be grouped into implementation phases.
+| Item | Decision | Plan/Phase |
+|------|----------|------------|
+| U1 | **PROCEED** | 021 Phase 1 (Auth) + Phase 2 (Session History) |
+| U2 | DEFER | Low ROI for short prompts |
+| U3 | **PROCEED** | 021 Phase 3 (Version Diff) |
+| U4 | DEFER | |
+| U5 | DROP | Personal theme preference |
+| U6 | DROP | Iframe already interactive (no sandbox) |
+| U7 | **PROCEED** | 021 Phase 4 (UX Polish) |
+| U8 | **PROCEED** | 021 Phase 4 (UX Polish) |
+| U9 | DROP | Desktop-only tool |
+| U10 | DROP | Existing shortcuts intuitive enough |
+| U11 | **PROCEED** | 021 Phase 4 (UX Polish) |
+| U12 | DROP | Current cancel button is fine |
+| U13 | DROP | Technical preview useful for this audience |
+| U14 | **PROCEED** | 021 Phase 4 (UX Polish) |
+| U15 | **PROCEED** | 021 Phase 4 (UX Polish) |
+| U16 | DEFER | Wait for enhancements to stabilize |
+| U17 | **PROCEED** (with U1) | 021 Phase 2 — No "+" button, use session browser instead |
+| U18 | DROP | Chat messages too terse to warrant search |
+| U19 | **PROCEED** | 021 Phase 4 (UX Polish) |
+| A1-A15 | RESOLVED | All addressed in Plan 020a (COMPLETE) |

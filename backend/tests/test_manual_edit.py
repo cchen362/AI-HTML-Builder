@@ -19,7 +19,10 @@ from fastapi.testclient import TestClient
 def mock_session_service():
     mock_svc = AsyncMock()
     mock_svc.verify_document_ownership.return_value = True
-    with patch("app.api.sessions.session_service", mock_svc):
+    with (
+        patch("app.api.sessions.session_service", mock_svc),
+        patch("app.api.sessions._require_session_ownership", new_callable=AsyncMock),
+    ):
         yield mock_svc
 
 
@@ -75,8 +78,12 @@ def test_manual_edit_missing_content_rejected(
 @pytest.fixture()
 async def db_and_service(tmp_path):
     db_path = str(tmp_path / "test.db")
-    with patch("app.config.settings") as mock_settings:
+    with (
+        patch("app.config.settings") as mock_settings,
+        patch("app.database.settings") as mock_db_settings,
+    ):
         mock_settings.database_path = db_path
+        mock_db_settings.database_path = db_path
         import app.database as db_module
 
         db_module._db = None

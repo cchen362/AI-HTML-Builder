@@ -8,18 +8,20 @@ logger = structlog.get_logger()
 class SessionService:
     """Manages sessions, documents, and versions in SQLite."""
 
-    async def create_session(self) -> str:
+    async def create_session(self, user_id: str | None = None) -> str:
         db = await get_db()
         session_id = str(uuid.uuid4())
         await db.execute(
-            "INSERT INTO sessions (id) VALUES (?)",
-            (session_id,),
+            "INSERT INTO sessions (id, user_id) VALUES (?, ?)",
+            (session_id, user_id),
         )
         await db.commit()
         logger.info("Session created", session_id=session_id[:8])
         return session_id
 
-    async def get_or_create_session(self, session_id: str) -> str:
+    async def get_or_create_session(
+        self, session_id: str, user_id: str | None = None
+    ) -> str:
         db = await get_db()
         cursor = await db.execute(
             "SELECT id FROM sessions WHERE id = ?", (session_id,)
@@ -32,7 +34,7 @@ class SessionService:
             )
             await db.commit()
             return session_id
-        return await self.create_session()
+        return await self.create_session(user_id=user_id)
 
     async def create_document(
         self, session_id: str, title: str = "Untitled"

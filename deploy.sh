@@ -9,12 +9,16 @@ if [ ! -f .env.prod ]; then
     exit 1
 fi
 
-# Backup database if it exists
+# Backup databases if they exist
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+mkdir -p backups
 if [ -f data/app.db ]; then
-    mkdir -p backups
-    TIMESTAMP=$(date +%Y%m%d_%H%M%S)
     cp data/app.db "backups/app_${TIMESTAMP}.db"
     echo "Database backed up to backups/app_${TIMESTAMP}.db"
+fi
+if [ -f data/auth.db ]; then
+    cp data/auth.db "backups/auth_${TIMESTAMP}.db"
+    echo "Auth database backed up to backups/auth_${TIMESTAMP}.db"
 fi
 
 # Pull latest code

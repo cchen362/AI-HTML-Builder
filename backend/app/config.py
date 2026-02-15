@@ -21,6 +21,11 @@ class Settings(BaseSettings):
     image_timeout_seconds: int = 90
     router_model: str = "claude-haiku-4-5-20251001"
 
+    # Authentication
+    auth_database_path: str = "./data/auth.db"
+    auth_session_expiry_days: int = 30
+    dev_mode: bool = False
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",

@@ -3,8 +3,10 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
+
+from app.auth_middleware import get_current_user
 from pydantic import BaseModel
 import asyncio
 import json
@@ -475,7 +477,7 @@ async def _handle_infographic(
 
 
 @router.post("/api/chat/{session_id}")
-async def chat(session_id: str, request: ChatRequest):
+async def chat(session_id: str, request: ChatRequest, user: dict = Depends(get_current_user)):
     """
     Process a chat message and stream the response via SSE.
 
@@ -488,7 +490,7 @@ async def chat(session_id: str, request: ChatRequest):
     from app.services.router import classify_request
 
     # Ensure session exists
-    session_id = await session_service.get_or_create_session(session_id)
+    session_id = await session_service.get_or_create_session(session_id, user_id=user["id"])
 
     # Get active document and current HTML (if any)
     active_doc = await session_service.get_active_document(session_id)

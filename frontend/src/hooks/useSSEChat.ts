@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { api } from '../services/api';
+import { api, setSessionId as setApiSessionId } from '../services/api';
 import type { ChatMessage, Document, SSEEvent } from '../types';
 
 interface UseSSEChatOptions {
@@ -24,8 +24,6 @@ interface UseSSEChatReturn {
   startNewSession: () => Promise<void>;
 }
 
-const SESSION_KEY = 'ai-html-builder-session-id';
-
 export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
   const { onHtmlUpdate, onError } = options;
 
@@ -46,54 +44,18 @@ export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
   // Keep ref in sync for use in callbacks
   useEffect(() => {
     sessionIdRef.current = sessionId;
+    setApiSessionId(sessionId);
   }, [sessionId]);
 
-  // Initialize session on mount
+  // Initialize session on mount — always create fresh
   useEffect(() => {
     let cancelled = false;
 
     async function init() {
       try {
-        // Check sessionStorage for existing session
-        const stored = sessionStorage.getItem(SESSION_KEY);
-        let sid = stored;
-
-        if (sid) {
-          // Validate the stored session still exists
-          try {
-            const session = await api.getSession(sid);
-            if (!cancelled) {
-              setDocuments(session.documents);
-              setActiveDocument(session.active_document);
-
-              // Load current HTML if there's an active document
-              if (session.active_document) {
-                const { html } = await api.getDocumentHtml(session.active_document.id);
-                if (!cancelled) setCurrentHtml(html);
-              }
-            }
-          } catch {
-            // Session doesn't exist or is invalid, create new one
-            sid = null;
-          }
-        }
-
-        if (!sid) {
-          const { session_id } = await api.createSession();
-          sid = session_id;
-          sessionStorage.setItem(SESSION_KEY, sid);
-        }
-
+        const { session_id } = await api.createSession();
         if (!cancelled) {
-          setSessionId(sid);
-
-          // Load chat history
-          try {
-            const { messages: history } = await api.getChatHistory(sid);
-            if (!cancelled) setMessages(history);
-          } catch {
-            // No history yet, that's fine
-          }
+          setSessionId(session_id);
         }
       } catch (err) {
         if (!cancelled && onError) {
@@ -290,7 +252,6 @@ export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
   }, []);
 
   const startNewSession = useCallback(async () => {
-    sessionStorage.removeItem(SESSION_KEY);
     setMessages([]);
     setDocuments([]);
     setActiveDocument(null);
@@ -301,7 +262,6 @@ export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
 
     try {
       const { session_id } = await api.createSession();
-      sessionStorage.setItem(SESSION_KEY, session_id);
       setSessionId(session_id);
     } catch (err) {
       onError?.(err instanceof Error ? err.message : 'Failed to create new session');

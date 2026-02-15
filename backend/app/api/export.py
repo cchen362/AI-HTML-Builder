@@ -5,7 +5,9 @@ from __future__ import annotations
 import io
 
 import structlog
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+
+from app.auth_middleware import get_current_user
 from fastapi.responses import StreamingResponse
 
 from app.services.export_service import export_document, list_available_formats
@@ -21,6 +23,7 @@ async def export(
     session_id: str,
     document_id: str,
     format_key: str,
+    user: dict = Depends(get_current_user),
     version: int | None = Query(None, description="Document version (None = latest)"),
     title: str = Query("document", description="Document title for filename"),
     # PPTX-specific
@@ -77,6 +80,6 @@ async def export(
 
 
 @router.get("/api/export/formats")
-async def get_formats() -> dict:
+async def get_formats(user: dict = Depends(get_current_user)) -> dict:
     """List available export formats."""
     return {"formats": list_available_formats()}
