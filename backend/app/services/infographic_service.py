@@ -102,24 +102,38 @@ class InfographicService:
             is_iteration=previous_visual_prompt is not None,
         )
 
-        result = await self.prompt_provider.generate(
-            system=ART_DIRECTOR_SYSTEM_PROMPT,
-            messages=messages,
-            max_tokens=2000,
-            temperature=0.7,
-        )
-        visual_prompt = result.text.strip()
+        # Retry once on empty — Gemini 2.5 Pro sporadically returns
+        # finish_reason=MAX_TOKENS with 0 output tokens on first attempt.
+        visual_prompt = ""
+        for art_attempt in range(2):
+            result = await self.prompt_provider.generate(
+                system=ART_DIRECTOR_SYSTEM_PROMPT,
+                messages=messages,
+                max_tokens=2000,
+                temperature=0.7,
+            )
+            visual_prompt = result.text.strip()
 
-        logger.info(
-            "Visual prompt generated",
-            prompt_length=len(visual_prompt),
-            input_tokens=result.input_tokens,
-            output_tokens=result.output_tokens,
-        )
+            logger.info(
+                "Visual prompt generated",
+                prompt_length=len(visual_prompt),
+                input_tokens=result.input_tokens,
+                output_tokens=result.output_tokens,
+                attempt=art_attempt + 1,
+            )
+
+            if visual_prompt:
+                break
+
+            logger.warning(
+                "Art director returned empty prompt, retrying",
+                attempt=art_attempt + 1,
+                input_tokens=result.input_tokens,
+            )
 
         if not visual_prompt:
             logger.error(
-                "Art director returned empty visual prompt",
+                "Art director returned empty visual prompt after retries",
                 input_tokens=result.input_tokens,
                 user_message=user_message[:80],
             )
