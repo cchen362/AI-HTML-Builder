@@ -37,7 +37,7 @@
 .auth-orb {
   position: absolute;
   border-radius: 50%;
-  opacity: 0.35;
+  opacity: 0.5;
   pointer-events: none;
   will-change: transform;
 }
@@ -46,7 +46,7 @@
   width: 400px;
   height: 400px;
   background: radial-gradient(circle, var(--accent-primary) 0%, transparent 70%);
-  filter: blur(90px);
+  filter: blur(70px);
   top: 10%;
   left: 15%;
   animation: orb-gold 11s ease-in-out infinite;
@@ -57,7 +57,7 @@
   width: 300px;
   height: 300px;
   background: radial-gradient(circle, var(--signal-active) 0%, transparent 70%);
-  filter: blur(80px);
+  filter: blur(60px);
   bottom: 15%;
   right: 10%;
   animation: orb-mint 9s ease-in-out infinite;
@@ -68,7 +68,7 @@
   width: 250px;
   height: 250px;
   background: radial-gradient(circle, var(--text-secondary) 0%, transparent 70%);
-  filter: blur(85px);
+  filter: blur(65px);
   top: 55%;
   left: 5%;
   animation: orb-coral 13s ease-in-out infinite;
@@ -79,7 +79,7 @@
   width: 350px;
   height: 350px;
   background: radial-gradient(circle, var(--text-tertiary) 0%, transparent 70%);
-  filter: blur(100px);
+  filter: blur(75px);
   top: 8%;
   right: 15%;
   animation: orb-purple 10s ease-in-out infinite;
@@ -90,7 +90,7 @@
   width: 200px;
   height: 200px;
   background: radial-gradient(circle, #14B8A6 0%, transparent 70%);
-  filter: blur(70px);
+  filter: blur(55px);
   bottom: 10%;
   left: 45%;
   animation: orb-teal 8s ease-in-out infinite;
@@ -99,41 +99,41 @@
 
 @keyframes orb-gold {
   0%   { transform: translate(0, 0) scale(1); }
-  20%  { transform: translate(60px, -80px) scale(1.08); }
-  45%  { transform: translate(-40px, 30px) scale(0.94); }
-  70%  { transform: translate(90px, 50px) scale(1.05); }
+  20%  { transform: translate(120px, -160px) scale(1.15); }
+  45%  { transform: translate(-80px, 60px) scale(0.88); }
+  70%  { transform: translate(180px, 100px) scale(1.1); }
   100% { transform: translate(0, 0) scale(1); }
 }
 
 @keyframes orb-mint {
   0%   { transform: translate(0, 0) scale(1); }
-  20%  { transform: translate(-50px, -60px) scale(0.95); }
-  45%  { transform: translate(70px, -20px) scale(1.06); }
-  70%  { transform: translate(-30px, 80px) scale(0.97); }
+  20%  { transform: translate(-100px, -120px) scale(0.9); }
+  45%  { transform: translate(140px, -40px) scale(1.12); }
+  70%  { transform: translate(-60px, 160px) scale(0.93); }
   100% { transform: translate(0, 0) scale(1); }
 }
 
 @keyframes orb-coral {
   0%   { transform: translate(0, 0) scale(1); }
-  20%  { transform: translate(40px, 60px) scale(1.04); }
-  45%  { transform: translate(-70px, -30px) scale(0.92); }
-  70%  { transform: translate(20px, -70px) scale(1.07); }
+  20%  { transform: translate(80px, 120px) scale(1.08); }
+  45%  { transform: translate(-140px, -60px) scale(0.85); }
+  70%  { transform: translate(40px, -140px) scale(1.14); }
   100% { transform: translate(0, 0) scale(1); }
 }
 
 @keyframes orb-purple {
   0%   { transform: translate(0, 0) scale(1); }
-  20%  { transform: translate(-80px, 40px) scale(1.06); }
-  45%  { transform: translate(50px, 70px) scale(0.93); }
-  70%  { transform: translate(-60px, -50px) scale(1.03); }
+  20%  { transform: translate(-160px, 80px) scale(1.12); }
+  45%  { transform: translate(100px, 140px) scale(0.87); }
+  70%  { transform: translate(-120px, -100px) scale(1.06); }
   100% { transform: translate(0, 0) scale(1); }
 }
 
 @keyframes orb-teal {
   0%   { transform: translate(0, 0) scale(1); }
-  20%  { transform: translate(55px, -45px) scale(0.96); }
-  45%  { transform: translate(-35px, 55px) scale(1.08); }
-  70%  { transform: translate(45px, 30px) scale(0.94); }
+  20%  { transform: translate(110px, -90px) scale(0.92); }
+  45%  { transform: translate(-70px, 110px) scale(1.15); }
+  70%  { transform: translate(90px, 60px) scale(0.88); }
   100% { transform: translate(0, 0) scale(1); }
 }
 
