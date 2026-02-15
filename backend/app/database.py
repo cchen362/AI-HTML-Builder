@@ -30,12 +30,13 @@ async def init_db() -> None:
     # Create tables
     await _db.executescript(SCHEMA)
 
-    # Migrations (safe to re-run — ADD COLUMN is a no-op if column exists)
+    # Migrations (safe to re-run — ADD COLUMN raises "duplicate column" if exists)
     for migration in _MIGRATIONS:
         try:
             await _db.execute(migration)
-        except Exception:
-            pass  # Column already exists
+        except Exception as e:
+            if "duplicate column" not in str(e).lower():
+                raise
 
     await _db.commit()
     logger.info("Database initialized", path=str(db_path))

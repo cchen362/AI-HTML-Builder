@@ -17,7 +17,7 @@ npm install
 npm run dev                                        # http://localhost:5173
 
 # Quality checks
-cd backend && pytest                               # 290+ tests
+cd backend && pytest                               # 305+ tests
 ruff check backend/ && mypy backend/               # Lint + types
 cd frontend && npm run lint && npm run build        # ESLint + TypeScript + Vite
 
@@ -125,7 +125,7 @@ backend/app/
     editor.py                # SurgicalEditor - tool_use + fuzzy match (THE core)
     creator.py               # DocumentCreator - streaming creation, Claude fallback
     router.py                # classify_request() - Haiku 4.5 LLM intent classification
-    image_service.py         # Image generation + SVG templates
+    image_service.py         # Image generation + embedding (raster only)
     infographic_service.py   # Two-LLM infographic pipeline (Gemini art director + Nano Banana Pro renderer)
     session_service.py       # Session/document/version/chat CRUD
     cost_tracker.py          # Per-model token + cost tracking
@@ -136,6 +136,8 @@ backend/app/
     fuzzy_match.py           # Aider-inspired fuzzy string matching
     html_validator.py        # Post-edit HTML structure validation
     file_processors.py       # File parsing (.docx/.pdf/.xlsx/.txt/.md)
+    export_utils.py          # Shared export utilities (validation, filename generation)
+    image_retry.py           # Shared image generation retry logic with fallback
 
 frontend/src/
   App.tsx                    # Root layout, split-pane
@@ -296,7 +298,7 @@ For generated HTML documents, unless user specifies otherwise:
 - Vite dev proxy: `/api` routes to `http://localhost:8000`
 
 ### Testing
-- 320+ tests across 20+ test files, `asyncio_mode = "auto"` in pyproject.toml
+- 305+ tests across 20+ test files, `asyncio_mode = "auto"` in pyproject.toml
 - 1 known pre-existing failure: `test_init_db_creates_file`
 - Patches must target source module, not consumer (e.g., `app.utils.file_processors.*`, not `app.api.upload.*`)
 - `pytest-asyncio` auto mode: no need for `@pytest.mark.asyncio` decorators
@@ -328,6 +330,7 @@ All plans in `IMPLEMENTATION_PLANS/` directory:
 | 017 | UI/UX Makeover (Cyberpunk Amethyst theme) | COMPLETE |
 | 018 | NotebookLM-Style Infographic Generation | COMPLETE |
 | 019 | Export Quality (PDF page breaks, infographic PNG-only, PPTX 16:9) | COMPLETE |
+| 020a | Architecture Refactoring (dead code, shared utils, safety hardening, version pinning) | COMPLETE |
 
 ## Known Issues
 
@@ -354,7 +357,7 @@ All plans in `IMPLEMENTATION_PLANS/` directory:
 ---
 
 **Last Updated**: February 2026
-**Architecture**: v2 rebuild (Plans 001-018 complete)
+**Architecture**: v2 rebuild (Plans 001-020a complete)
 **AI Models**: Haiku 4.5 (routing) + Claude Sonnet 4.5 (edits) + Gemini 2.5 Pro (creation + infographic art direction) + Nano Banana Pro (images + infographic rendering)
 **Database**: SQLite WAL (no Redis)
 **Communication**: SSE + HTTP POST (no WebSocket)

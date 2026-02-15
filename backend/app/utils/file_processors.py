@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import csv
 import io
 from typing import Any
@@ -42,8 +43,15 @@ def _get_extension(filename: str) -> str:
 
 
 async def process_file(filename: str, content: bytes) -> dict[str, Any]:
+    """Process an uploaded file and return extracted content.
+
+    Runs synchronous file parsing in a thread to avoid blocking the event loop.
     """
-    Process an uploaded file and return extracted content.
+    return await asyncio.to_thread(_process_file_sync, filename, content)
+
+
+def _process_file_sync(filename: str, content: bytes) -> dict[str, Any]:
+    """Synchronous file processing implementation.
 
     Returns dict with keys:
         filename, file_type, content_type ("text"|"data"),
@@ -176,7 +184,8 @@ def _process_xlsx(
 
     wb = load_workbook(io.BytesIO(content), read_only=True, data_only=True)
     sheet = wb.active
-    assert sheet is not None
+    if sheet is None:
+        raise FileProcessingError("Excel workbook has no active sheet")
     sheet_name: str = sheet.title or "Sheet1"
 
     headers: list[str] = []

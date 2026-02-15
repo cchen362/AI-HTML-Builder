@@ -68,7 +68,6 @@ class LLMProvider(ABC):
         # yield is needed to make this an async generator in implementations
         yield ""  # pragma: no cover
 
-    @abstractmethod
     async def generate_with_tools(
         self,
         system: str | list[dict],
@@ -77,8 +76,14 @@ class LLMProvider(ABC):
         max_tokens: int = 4096,
         temperature: float = 0.0,
     ) -> ToolResult:
-        """Generate a response using tool definitions. Used for surgical editing."""
-        ...
+        """Generate a response using tool definitions. Used for surgical editing.
+
+        Not all providers support tool use. Override in providers that do
+        (e.g., AnthropicProvider). Default raises NotImplementedError.
+        """
+        raise NotImplementedError(
+            f"{type(self).__name__} does not support tool-based generation"
+        )
 
 
 class ImageProvider(ABC):

@@ -202,7 +202,7 @@ async def test_stream_skips_empty_chunks(mock_genai, provider):
 
 @pytest.mark.asyncio
 async def test_generate_with_tools_raises_not_implemented(mock_genai, provider):
-    with pytest.raises(NotImplementedError, match="Gemini is not used"):
+    with pytest.raises(NotImplementedError, match="does not support tool-based generation"):
         await provider.generate_with_tools(
             system="sys",
             messages=[{"role": "user", "content": "test"}],

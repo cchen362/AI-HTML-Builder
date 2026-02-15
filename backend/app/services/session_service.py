@@ -119,7 +119,10 @@ class SessionService:
             (document_id,),
         )
         row = await cursor.fetchone()
-        assert row is not None  # COALESCE guarantees a result
+        if row is None:
+            raise RuntimeError(
+                f"Failed to determine next version for document {document_id}"
+            )
         version = row["next_ver"]
         await db.execute(
             """INSERT INTO document_versions
@@ -229,7 +232,10 @@ class SessionService:
             (session_id,),
         )
         row = await cursor.fetchone()
-        assert row is not None
+        if row is None:
+            raise RuntimeError(
+                f"Failed to count documents for session {session_id}"
+            )
         if row["cnt"] <= 1:
             return False
 

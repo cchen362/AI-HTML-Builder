@@ -9,13 +9,12 @@ modifies its previous visual prompt based on user feedback.
 
 from __future__ import annotations
 
-import asyncio
 import base64
 from dataclasses import dataclass
 
 import structlog
 
-from app.providers.base import ImageProvider, ImageResponse, LLMProvider
+from app.providers.base import ImageProvider, LLMProvider
 
 logger = structlog.get_logger()
 
@@ -143,7 +142,17 @@ class InfographicService:
             )
 
         # Step 2: Renderer — generate image from visual prompt
-        img_response = await self._generate_image_with_retry(visual_prompt, "2k")
+        from app.config import settings
+        from app.utils.image_retry import generate_image_with_retry
+
+        img_response = await generate_image_with_retry(
+            primary=self.image_provider,
+            prompt=visual_prompt,
+            resolution="2k",
+            timeout=settings.image_timeout_seconds,
+            fallback=self.fallback_image_provider,
+            context="infographic",
+        )
 
         # Compress if needed
         image_bytes = img_response.image_bytes
@@ -221,71 +230,6 @@ class InfographicService:
         # Current user request
         messages.append({"role": "user", "content": user_message})
         return messages
-
-    async def _generate_image_with_retry(
-        self,
-        prompt: str,
-        resolution: str,
-    ) -> ImageResponse:
-        """Generate image with retry on primary, then fallback to secondary model.
-
-        Strategy (identical to ImageService):
-            1. Primary model, attempt 1 (timeout from settings)
-            2. Primary model, attempt 2 — most 503s resolve on retry
-            3. Fallback model (30s timeout) — different capacity pool
-        """
-        from app.config import settings
-
-        timeout = settings.image_timeout_seconds
-
-        # Attempt 1: Primary
-        try:
-            return await asyncio.wait_for(
-                self.image_provider.generate_image(prompt, resolution),
-                timeout=timeout,
-            )
-        except (asyncio.TimeoutError, RuntimeError, Exception) as e:
-            logger.warning(
-                "Infographic image attempt 1 failed",
-                error=str(e),
-                error_type=type(e).__name__,
-            )
-
-        # Attempt 2: Primary retry
-        try:
-            return await asyncio.wait_for(
-                self.image_provider.generate_image(prompt, resolution),
-                timeout=timeout,
-            )
-        except (asyncio.TimeoutError, RuntimeError, Exception) as e:
-            logger.warning(
-                "Infographic image attempt 2 failed",
-                error=str(e),
-                error_type=type(e).__name__,
-            )
-
-        # Attempt 3: Fallback model
-        if self.fallback_image_provider:
-            logger.info("Falling back to secondary image model for infographic")
-            try:
-                return await asyncio.wait_for(
-                    self.fallback_image_provider.generate_image(prompt, resolution),
-                    timeout=30,
-                )
-            except (asyncio.TimeoutError, RuntimeError, Exception) as e:
-                logger.error(
-                    "Fallback infographic image generation failed",
-                    error=str(e),
-                    error_type=type(e).__name__,
-                )
-                raise RuntimeError(
-                    "Infographic image generation failed after all attempts"
-                ) from e
-        else:
-            raise RuntimeError(
-                "Infographic image generation failed and no fallback configured"
-            )
-
 
 def wrap_infographic_html(
     image_bytes: bytes, image_format: str, alt_text: str

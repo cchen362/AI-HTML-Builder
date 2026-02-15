@@ -547,6 +547,16 @@ async def chat(session_id: str, request: ChatRequest):
             if handler:
                 async for event in handler:
                     yield _sse(event)
+            else:
+                logger.warning(
+                    "Unexpected route from classifier",
+                    route=route,
+                    session_id=session_id[:8],
+                )
+                yield _sse({
+                    "type": "error",
+                    "content": "Unable to process your request. Please try again.",
+                })
 
             yield _sse({"type": "done"})
 
@@ -556,6 +566,7 @@ async def chat(session_id: str, request: ChatRequest):
                 error=str(e),
                 error_type=type(e).__name__,
                 session_id=session_id[:8],
+                exc_info=True,
             )
             user_msg = (
                 "Something went wrong. Please try again "

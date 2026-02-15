@@ -13,12 +13,11 @@ Matching chain:
 
 import re
 import difflib
-from typing import Optional
 
 
 def fuzzy_find_and_replace(
     html: str, old_text: str, new_text: str
-) -> Optional[str]:
+) -> str | None:
     """
     Try to find and replace old_text in html using fuzzy matching.
     Returns modified html if a match was found, None otherwise.
@@ -46,7 +45,7 @@ def fuzzy_find_and_replace(
 
 def _try_stripped_whitespace(
     html: str, old_text: str, new_text: str
-) -> Optional[str]:
+) -> str | None:
     """Match after stripping trailing whitespace from each line."""
     old_lines = [line.rstrip() for line in old_text.split("\n")]
     old_stripped = "\n".join(old_lines)
@@ -69,7 +68,7 @@ def _try_stripped_whitespace(
 
 def _try_normalized_whitespace(
     html: str, old_text: str, new_text: str
-) -> Optional[str]:
+) -> str | None:
     """Match using regex with flexible whitespace."""
     old_normalized = " ".join(old_text.split())
     if not old_normalized:
@@ -94,7 +93,7 @@ def _try_sequence_match(
     old_text: str,
     new_text: str,
     threshold: float = 0.85,
-) -> Optional[str]:
+) -> str | None:
     """Match using difflib SequenceMatcher with a high similarity threshold."""
     old_lines = old_text.strip().split("\n")
     html_lines = html.split("\n")

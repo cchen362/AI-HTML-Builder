@@ -8,6 +8,7 @@ import structlog
 
 from app.services.session_service import session_service
 from app.services.exporters.base import ExportError, ExportOptions, ExportResult
+from app.utils.export_utils import validate_html, sanitize_title
 from app.utils.html_validator import is_infographic_html
 
 logger = structlog.get_logger()
@@ -25,33 +26,15 @@ def register_exporter(format_key: str, format_name: str, fn: ExporterFn) -> None
     logger.info("Registered exporter", format=format_key, name=format_name)
 
 
-def _validate_html(html_content: str) -> None:
-    """Validate HTML content before export."""
-    if not html_content or not html_content.strip():
-        raise ExportError("HTML content is empty")
-    stripped = html_content.strip()
-    if not stripped.startswith("<!DOCTYPE") and not stripped.startswith("<html"):
-        raise ExportError("Invalid HTML: must start with <!DOCTYPE or <html>")
-
-
-def _sanitize_title(title: str) -> str:
-    """Sanitize document title for use in filenames."""
-    safe = "".join(
-        c if c.isalnum() or c in (" ", "-", "_") else "_"
-        for c in title
-    ).strip()
-    return safe or "document"
-
-
 async def _export_html(html_content: str, options: ExportOptions) -> ExportResult:
     """Export raw HTML as a downloadable file."""
-    _validate_html(html_content)
+    validate_html(html_content)
     content_bytes = html_content.encode("utf-8")
     return ExportResult(
         content=content_bytes,
         content_type="text/html",
         file_extension="html",
-        filename=f"{_sanitize_title(options.document_title)}.html",
+        filename=f"{sanitize_title(options.document_title)}.html",
         metadata={
             "size_bytes": len(content_bytes),
             "encoding": "utf-8",
@@ -89,14 +72,13 @@ async def export_document(
                 raise ExportError(
                     "Infographic documents can only be exported as PNG"
                 )
-            if format_key.lower() == "png":
-                from app.services.exporters.playwright_exporter import (
-                    export_infographic_png,
-                )
+            from app.services.exporters.playwright_exporter import (
+                export_infographic_png,
+            )
 
-                if options is None:
-                    options = ExportOptions(document_title=document_id[:50])
-                return await export_infographic_png(html_content, options)
+            if options is None:
+                options = ExportOptions(document_title=document_id[:50])
+            return await export_infographic_png(html_content, options)
 
         # Look up exporter
         entry = _exporters.get(format_key.lower())

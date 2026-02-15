@@ -72,7 +72,6 @@ async def test_tables_created(temp_db):
         "document_versions",
         "chat_messages",
         "cost_tracking",
-        "templates",
     }
     assert expected.issubset(table_names)
 

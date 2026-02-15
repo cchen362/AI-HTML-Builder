@@ -16,7 +16,6 @@ import structlog
 from app.providers.base import (
     GenerationResult,
     LLMProvider,
-    ToolResult,
 )
 from app.config import settings
 
@@ -96,18 +95,6 @@ class GeminiProvider(LLMProvider):
         ):
             if chunk.text:
                 yield chunk.text
-
-    async def generate_with_tools(
-        self,
-        system: str | list[dict],
-        messages: list[dict],
-        tools: list[dict],
-        max_tokens: int = 4096,
-        temperature: float = 0.0,
-    ) -> ToolResult:
-        raise NotImplementedError(
-            "Gemini is not used for tool-based editing. Use AnthropicProvider."
-        )
 
     def _convert_messages(
         self, messages: list[dict]

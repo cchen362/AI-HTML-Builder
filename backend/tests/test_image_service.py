@@ -9,12 +9,9 @@ from app.services.image_service import (
     ImageService,
     _insert_into_html,
     _compress_image,
-    _flowchart_svg,
-    _chart_svg,
-    _timeline_svg,
-    _placeholder_svg,
 )
 from app.providers.base import ImageProvider, ImageResponse
+from app.utils.image_retry import generate_image_with_retry
 
 
 SAMPLE_HTML = """<!DOCTYPE html>
@@ -43,44 +40,6 @@ def service(mock_provider):
     return ImageService(mock_provider)
 
 
-# --- should_use_svg tests ---
-
-
-def test_should_use_svg_flowchart(service):
-    use_svg, svg_type = service.should_use_svg("Add a flowchart showing the process")
-    assert use_svg is True
-    assert svg_type == "flowchart"
-
-
-def test_should_use_svg_chart(service):
-    use_svg, svg_type = service.should_use_svg("Create a bar chart of revenue")
-    assert use_svg is True
-    assert svg_type == "chart"
-
-
-def test_should_use_svg_timeline(service):
-    use_svg, svg_type = service.should_use_svg("Show a timeline of milestones")
-    assert use_svg is True
-    assert svg_type == "timeline"
-
-
-def test_should_use_svg_diagram(service):
-    use_svg, svg_type = service.should_use_svg("Add a diagram of the architecture")
-    assert use_svg is True
-    assert svg_type == "flowchart"  # "diagram" maps to flowchart
-
-
-def test_should_use_svg_false_for_photo(service):
-    use_svg, svg_type = service.should_use_svg("Add a photo of mountains")
-    assert use_svg is False
-    assert svg_type == ""
-
-
-def test_should_use_svg_false_for_generic(service):
-    use_svg, svg_type = service.should_use_svg("Change the header color")
-    assert use_svg is False
-    assert svg_type == ""
-
 
 # --- _insert_into_html tests ---
 
@@ -101,38 +60,6 @@ def test_insert_fallback_appends():
     result = _insert_into_html(html, "<p>Appended</p>")
     assert result == "<div>No body tag</div><p>Appended</p>"
 
-
-# --- generate_svg_and_embed tests ---
-
-
-def test_generate_svg_and_embed_flowchart(service):
-    result = service.generate_svg_and_embed(SAMPLE_HTML, "flowchart", "test process")
-    assert '<div class="generated-svg"' in result
-    assert "<svg" in result
-    assert "#0D7377" in result  # Project color palette
-    assert "Start" in result
-    assert "Process" in result
-    assert "End" in result
-
-
-def test_generate_svg_and_embed_chart(service):
-    result = service.generate_svg_and_embed(SAMPLE_HTML, "chart", "revenue data")
-    assert "<svg" in result
-    assert "Q1" in result
-    assert "Q2" in result
-
-
-def test_generate_svg_and_embed_timeline(service):
-    result = service.generate_svg_and_embed(SAMPLE_HTML, "timeline", "project milestones")
-    assert "<svg" in result
-    assert "Phase 1" in result
-    assert "Complete" in result
-
-
-def test_generate_svg_and_embed_placeholder(service):
-    result = service.generate_svg_and_embed(SAMPLE_HTML, "unknown", "some diagram")
-    assert "<svg" in result
-    assert "some diagram" in result
 
 
 # --- generate_and_embed tests ---
@@ -167,34 +94,6 @@ async def test_generate_and_embed_no_provider():
         await service.generate_and_embed(SAMPLE_HTML, "test")
 
 
-# --- SVG templates use project palette ---
-
-
-def test_flowchart_svg_uses_project_colors():
-    svg = _flowchart_svg()
-    assert "#0D7377" in svg  # Deep Teal
-    assert "#14B8A6" in svg  # Teal
-    assert "#059669" in svg  # Emerald
-
-
-def test_chart_svg_uses_project_colors():
-    svg = _chart_svg()
-    assert "#0D7377" in svg
-    assert "#14B8A6" in svg
-
-
-def test_timeline_svg_uses_project_colors():
-    svg = _timeline_svg()
-    assert "#0D7377" in svg
-    assert "#059669" in svg
-
-
-def test_placeholder_svg_escapes_html():
-    svg = _placeholder_svg('Test "with" <special> & chars')
-    assert "&quot;" in svg or '"' not in svg.split("</text>")[0]
-    assert "&lt;" in svg
-    assert "&amp;" in svg
-
 
 # --- _compress_image tests ---
 
@@ -215,13 +114,13 @@ def test_compress_image_already_small():
     assert len(result) <= 5 * 1024 * 1024
 
 
-# --- Retry / Fallback Tests ---
+# --- Retry / Fallback Tests (standalone function) ---
 
 
 async def test_retry_succeeds_on_second_attempt():
     """Primary fails once, succeeds on retry."""
-    mock_provider = AsyncMock(spec=ImageProvider)
-    mock_provider.generate_image.side_effect = [
+    mock_primary = AsyncMock(spec=ImageProvider)
+    mock_primary.generate_image.side_effect = [
         RuntimeError("503 overloaded"),
         ImageResponse(
             image_bytes=b"fake-png-data",
@@ -232,12 +131,12 @@ async def test_retry_succeeds_on_second_attempt():
             prompt="test",
         ),
     ]
-    service = ImageService(mock_provider)
-    with patch("app.config.settings") as mock_settings:
-        mock_settings.image_timeout_seconds = 90
-        result = await service._generate_with_retry("test prompt", "hd")
+    result = await generate_image_with_retry(
+        primary=mock_primary, prompt="test prompt", resolution="hd",
+        timeout=90, context="image",
+    )
     assert result.model == "gemini-3-pro-image-preview"
-    assert mock_provider.generate_image.call_count == 2
+    assert mock_primary.generate_image.call_count == 2
 
 
 async def test_fallback_to_flash_on_double_failure():
@@ -255,10 +154,10 @@ async def test_fallback_to_flash_on_double_failure():
         prompt="test",
     )
 
-    service = ImageService(mock_primary, fallback_provider=mock_fallback)
-    with patch("app.config.settings") as mock_settings:
-        mock_settings.image_timeout_seconds = 90
-        result = await service._generate_with_retry("test prompt", "hd")
+    result = await generate_image_with_retry(
+        primary=mock_primary, prompt="test prompt", resolution="hd",
+        timeout=90, fallback=mock_fallback, context="image",
+    )
     assert result.model == "gemini-2.5-flash-image"
     assert mock_primary.generate_image.call_count == 2
     assert mock_fallback.generate_image.call_count == 1
@@ -282,10 +181,10 @@ async def test_timeout_triggers_retry():
         prompt="test",
     )
 
-    service = ImageService(mock_primary, fallback_provider=mock_fallback)
-    with patch("app.config.settings") as mock_settings:
-        mock_settings.image_timeout_seconds = 1  # Short timeout for test speed
-        result = await service._generate_with_retry("test prompt", "hd")
+    result = await generate_image_with_retry(
+        primary=mock_primary, prompt="test prompt", resolution="hd",
+        timeout=1, fallback=mock_fallback, context="image",
+    )
     assert result.model == "gemini-2.5-flash-image"
 
 
@@ -297,11 +196,11 @@ async def test_all_attempts_fail_raises():
     mock_fallback = AsyncMock(spec=ImageProvider)
     mock_fallback.generate_image.side_effect = RuntimeError("Flash also failed")
 
-    service = ImageService(mock_primary, fallback_provider=mock_fallback)
-    with patch("app.config.settings") as mock_settings:
-        mock_settings.image_timeout_seconds = 90
-        with pytest.raises(RuntimeError, match="Image generation failed"):
-            await service._generate_with_retry("test prompt", "hd")
+    with pytest.raises(RuntimeError, match="generation failed after all attempts"):
+        await generate_image_with_retry(
+            primary=mock_primary, prompt="test prompt", resolution="hd",
+            timeout=90, fallback=mock_fallback, context="image",
+        )
 
 
 async def test_no_fallback_provider_raises_after_retries():
@@ -309,9 +208,9 @@ async def test_no_fallback_provider_raises_after_retries():
     mock_primary = AsyncMock(spec=ImageProvider)
     mock_primary.generate_image.side_effect = RuntimeError("503")
 
-    service = ImageService(mock_primary)  # No fallback
-    with patch("app.config.settings") as mock_settings:
-        mock_settings.image_timeout_seconds = 90
-        with pytest.raises(RuntimeError, match="no fallback"):
-            await service._generate_with_retry("test prompt", "hd")
+    with pytest.raises(RuntimeError, match="no fallback configured"):
+        await generate_image_with_retry(
+            primary=mock_primary, prompt="test prompt", resolution="hd",
+            timeout=90, context="image",
+        )
     assert mock_primary.generate_image.call_count == 2

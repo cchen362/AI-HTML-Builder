@@ -8,6 +8,7 @@ import re
 import structlog
 
 from app.services.playwright_manager import playwright_manager
+from app.utils.export_utils import validate_html, generate_filename
 from .base import ExportError, ExportGenerationError, ExportOptions, ExportResult
 
 logger = structlog.get_logger()
@@ -61,26 +62,6 @@ _DATA_URI_IMAGE_RE = re.compile(
 )
 
 
-def _validate_html(html_content: str) -> None:
-    """Validate HTML content before export."""
-    if not html_content or not html_content.strip():
-        raise ExportError("HTML content is empty")
-    stripped = html_content.strip()
-    if not stripped.startswith("<!DOCTYPE") and not stripped.startswith("<html"):
-        raise ExportError("Invalid HTML: must start with <!DOCTYPE or <html>")
-
-
-def _generate_filename(title: str, extension: str) -> str:
-    """Generate sanitised filename for exported document."""
-    safe_title = "".join(
-        c if c.isalnum() or c in (" ", "-", "_") else "_"
-        for c in title
-    ).strip()
-    if not safe_title:
-        safe_title = "document"
-    return f"{safe_title}.{extension}"
-
-
 async def _render_page(
     html_content: str,
     viewport_width: int = 1920,
@@ -96,7 +77,7 @@ async def _render_page(
 
 async def export_pdf(html_content: str, options: ExportOptions) -> ExportResult:
     """Export HTML as PDF via Playwright."""
-    _validate_html(html_content)
+    validate_html(html_content)
     html_content = _inject_print_css(html_content)
     page = None
     try:
@@ -119,7 +100,7 @@ async def export_pdf(html_content: str, options: ExportOptions) -> ExportResult:
             content=pdf_bytes,
             content_type="application/pdf",
             file_extension="pdf",
-            filename=_generate_filename(options.document_title, "pdf"),
+            filename=generate_filename(options.document_title, "pdf"),
             metadata={
                 "size_bytes": len(pdf_bytes),
                 "page_format": options.page_format,
@@ -139,7 +120,7 @@ async def export_pdf(html_content: str, options: ExportOptions) -> ExportResult:
 
 async def export_png(html_content: str, options: ExportOptions) -> ExportResult:
     """Export HTML as PNG screenshot via Playwright."""
-    _validate_html(html_content)
+    validate_html(html_content)
     page = None
     try:
         viewport_width = options.width or 1920
@@ -174,7 +155,7 @@ async def export_png(html_content: str, options: ExportOptions) -> ExportResult:
             content=png_bytes,
             content_type="image/png",
             file_extension="png",
-            filename=_generate_filename(options.document_title, "png"),
+            filename=generate_filename(options.document_title, "png"),
             metadata=metadata,
         )
     except ExportError:
@@ -217,7 +198,7 @@ async def export_infographic_png(
         content=image_bytes,
         content_type=content_type,
         file_extension=ext,
-        filename=_generate_filename(options.document_title, ext),
+        filename=generate_filename(options.document_title, ext),
         metadata={
             "size_bytes": len(image_bytes),
             "source": "direct-base64-extraction",
