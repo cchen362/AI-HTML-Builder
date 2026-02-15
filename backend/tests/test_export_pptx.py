@@ -292,3 +292,45 @@ result = output.getvalue()
 
     # Provider should only be called once (second call uses cache)
     assert mock_provider.generate.call_count == 1
+
+
+# ---------------------------------------------------------------------------
+# Plan 019: PPTX quality improvements
+# ---------------------------------------------------------------------------
+
+def test_default_slide_dimensions_16_9():
+    """ExportOptions should default to 16:9 widescreen."""
+    opts = ExportOptions()
+    assert opts.slide_width == 13.333
+    assert opts.slide_height == 7.5
+
+
+def test_base64_stripped_from_prompt(exporter: PPTXExporter):
+    """Base64 image data should be replaced with placeholder in prompt."""
+    html = '<html><body><img src="data:image/png;base64,' + 'A' * 500 + '"/></body></html>'
+    prompt = exporter._build_generation_prompt(html, ExportOptions())
+    assert 'AAAA' not in prompt
+    assert '[IMAGE_DATA_REMOVED]' in prompt
+
+
+def test_prompt_includes_slide_dimensions(exporter: PPTXExporter):
+    """Prompt should reference the configured slide dimensions."""
+    options = ExportOptions(slide_width=13.333, slide_height=7.5)
+    prompt = exporter._build_generation_prompt(SAMPLE_HTML, options)
+    assert '13.333' in prompt
+    assert '7.5' in prompt
+
+
+def test_prompt_includes_color_extraction(exporter: PPTXExporter):
+    """Prompt should instruct Claude to extract colors from HTML."""
+    prompt = exporter._build_generation_prompt(SAMPLE_HTML, ExportOptions())
+    assert 'COLOR EXTRACTION' in prompt
+    assert 'RGBColor' in prompt
+
+
+def test_prompt_includes_formatting_rules(exporter: PPTXExporter):
+    """Prompt should include visual formatting rules."""
+    prompt = exporter._build_generation_prompt(SAMPLE_HTML, ExportOptions())
+    assert 'MSO_SHAPE' in prompt
+    assert 'NEVER use fonts smaller than 14pt' in prompt
+    assert 'Maximum 5 bullet points' in prompt

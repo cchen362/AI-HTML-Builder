@@ -24,7 +24,7 @@ async def export(
     version: int | None = Query(None, description="Document version (None = latest)"),
     title: str = Query("document", description="Document title for filename"),
     # PPTX-specific
-    slide_width: int = Query(10, description="Slide width in inches"),
+    slide_width: float = Query(13.333, description="Slide width in inches (13.333 for 16:9)"),
     slide_height: float = Query(7.5, description="Slide height in inches"),
     theme: str = Query("default", description="Presentation theme"),
     # PDF-specific

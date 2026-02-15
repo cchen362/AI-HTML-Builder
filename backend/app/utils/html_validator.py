@@ -1,3 +1,33 @@
+import re
+
+# Regex to match base64 image data URIs (100+ chars of base64 payload)
+_BASE64_IMAGE_RE = re.compile(
+    r'data:image/[^;]+;base64,[A-Za-z0-9+/=]{100,}'
+)
+
+
+def is_infographic_html(html: str) -> bool:
+    """Detect infographic wrapper docs (minimal HTML with single base64 <img>).
+
+    Infographic documents have a distinctive structure created by
+    wrap_infographic_html(): <600 chars of HTML after removing base64
+    payloads, with a single <img> tag and no structural content tags
+    (<main>, <header>, <section>).
+
+    Regular docs with embedded images are excluded by the structural
+    tag check.
+    """
+    stripped = _BASE64_IMAGE_RE.sub("", html)
+    if len(stripped) >= 600:
+        return False
+    if "<img" not in html or "data:image" not in html:
+        return False
+    lower = html.lower()
+    if "<main" in lower or "<header" in lower or "<section" in lower:
+        return False
+    return True
+
+
 def validate_edit_result(original: str, modified: str) -> tuple[bool, str]:
     """Validate that edits didn't break the document structure."""
     if not modified or not modified.strip():

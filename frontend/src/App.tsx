@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
 import SplitPane from './components/Layout/SplitPane'
 import ChatWindow from './components/ChatWindow'
 import { useSSEChat } from './hooks/useSSEChat'
@@ -34,6 +34,7 @@ const HtmlViewer = React.memo(({
   onDeleteDocument,
   onCodeViewSaved,
   onDirtyChange,
+  isInfographic,
 }: {
   currentHtml: string;
   viewMode: 'preview' | 'code';
@@ -56,6 +57,7 @@ const HtmlViewer = React.memo(({
   onDeleteDocument?: (docId: string) => void;
   onCodeViewSaved?: () => void;
   onDirtyChange?: (dirty: boolean) => void;
+  isInfographic?: boolean;
 }) => {
   const displayHtml = previewHtml ?? currentHtml;
 
@@ -98,6 +100,7 @@ const HtmlViewer = React.memo(({
               disabled={!currentHtml}
               documentId={activeDocumentId}
               documentTitle={documentTitle}
+              isInfographic={isInfographic}
             />
           </div>
           <button
@@ -181,6 +184,16 @@ const ChatApp = () => {
   } = useSSEChat({
     onError: (msg) => setError(msg),
   })
+
+  const isInfographic = useMemo(() => {
+    if (!currentHtml) return false;
+    const stripped = currentHtml.replace(
+      /data:image\/[^;]+;base64,[A-Za-z0-9+/=]{100,}/g, ''
+    );
+    return stripped.length < 600
+      && currentHtml.includes('data:image')
+      && !/<(main|header|section)/i.test(currentHtml);
+  }, [currentHtml]);
 
   const handleSendMessage = useCallback((message: string, _files?: File[], templateName?: string, userContent?: string) => {
     if (isCodeViewDirty && viewMode === 'code') {
@@ -336,6 +349,7 @@ const ChatApp = () => {
             onDeleteDocument={handleDeleteDocument}
             onCodeViewSaved={handleCodeViewSaved}
             onDirtyChange={setIsCodeViewDirty}
+            isInfographic={isInfographic}
           />
         }
         defaultPosition={50}

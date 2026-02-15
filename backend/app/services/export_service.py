@@ -8,6 +8,7 @@ import structlog
 
 from app.services.session_service import session_service
 from app.services.exporters.base import ExportError, ExportOptions, ExportResult
+from app.utils.html_validator import is_infographic_html
 
 logger = structlog.get_logger()
 
@@ -81,6 +82,21 @@ async def export_document(
             raise ExportError(
                 f"Document {document_id} not found or has no content"
             )
+
+        # Infographic detection: restrict to PNG/HTML only
+        if is_infographic_html(html_content):
+            if format_key.lower() not in ("png", "html"):
+                raise ExportError(
+                    "Infographic documents can only be exported as PNG or HTML"
+                )
+            if format_key.lower() == "png":
+                from app.services.exporters.playwright_exporter import (
+                    export_infographic_png,
+                )
+
+                if options is None:
+                    options = ExportOptions(document_title=document_id[:50])
+                return await export_infographic_png(html_content, options)
 
         # Look up exporter
         entry = _exporters.get(format_key.lower())

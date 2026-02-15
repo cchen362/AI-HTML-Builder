@@ -7,6 +7,7 @@ interface ExportDropdownProps {
   disabled?: boolean;
   documentId: string | null;
   documentTitle?: string;
+  isInfographic?: boolean;
 }
 
 type ExportFormat = 'pptx' | 'pdf' | 'png';
@@ -16,6 +17,7 @@ const ExportDropdown: React.FC<ExportDropdownProps> = ({
   disabled = false,
   documentId,
   documentTitle,
+  isInfographic = false,
 }) => {
   const [open, setOpen] = useState(false);
   const [loadingFormat, setLoadingFormat] = useState<ExportFormat | null>(null);
@@ -81,28 +83,32 @@ const ExportDropdown: React.FC<ExportDropdownProps> = ({
           >
             HTML
           </button>
-          <button
-            className="export-dropdown-item"
-            onClick={() => handleExport('pptx')}
-            disabled={!documentId || loadingFormat === 'pptx'}
-          >
-            {loadingFormat === 'pptx' ? (
-              <span className="export-loading">Exporting...</span>
-            ) : (
-              'PowerPoint'
-            )}
-          </button>
-          <button
-            className="export-dropdown-item"
-            onClick={() => handleExport('pdf')}
-            disabled={!documentId || loadingFormat === 'pdf'}
-          >
-            {loadingFormat === 'pdf' ? (
-              <span className="export-loading">Exporting...</span>
-            ) : (
-              'PDF'
-            )}
-          </button>
+          {!isInfographic && (
+            <button
+              className="export-dropdown-item"
+              onClick={() => handleExport('pptx')}
+              disabled={!documentId || loadingFormat === 'pptx'}
+            >
+              {loadingFormat === 'pptx' ? (
+                <span className="export-loading">Exporting...</span>
+              ) : (
+                'PowerPoint'
+              )}
+            </button>
+          )}
+          {!isInfographic && (
+            <button
+              className="export-dropdown-item"
+              onClick={() => handleExport('pdf')}
+              disabled={!documentId || loadingFormat === 'pdf'}
+            >
+              {loadingFormat === 'pdf' ? (
+                <span className="export-loading">Exporting...</span>
+              ) : (
+                'PDF'
+              )}
+            </button>
+          )}
           <button
             className="export-dropdown-item"
             onClick={() => handleExport('png')}

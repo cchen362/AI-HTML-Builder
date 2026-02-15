@@ -14,6 +14,7 @@ import asyncio
 import builtins
 import concurrent.futures
 import hashlib
+import re
 from typing import Any
 
 import structlog
@@ -22,6 +23,9 @@ from app.providers.base import LLMProvider
 from .base import BaseExporter, ExportGenerationError, ExportOptions, ExportResult
 
 logger = structlog.get_logger()
+
+# Regex to strip base64 image payloads before sending to LLM
+_BASE64_RE = re.compile(r'(data:image/[^;]+;base64,)[A-Za-z0-9+/=]{100,}')
 
 # Modules the sandbox is allowed to import
 _ALLOWED_BASE_MODULES = frozenset({"pptx", "io", "base64", "typing", "math", "collections"})
@@ -197,52 +201,70 @@ class PPTXExporter(BaseExporter):
     def _build_generation_prompt(
         self, html_content: str, options: ExportOptions
     ) -> str:
-        return f"""Analyze the following HTML document and generate Python code using the python-pptx library to create a PowerPoint presentation that captures the document's content and structure.
+        # Strip base64 images to save tokens and reduce noise
+        clean_html = _BASE64_RE.sub(r'\1[IMAGE_DATA_REMOVED]', html_content)
+
+        return f"""Analyze this HTML document and generate Python code using python-pptx to create a professional PowerPoint presentation.
 
 HTML DOCUMENT:
 ```html
-{html_content}
+{clean_html}
 ```
 
-REQUIREMENTS:
-1. Use ONLY the python-pptx library. Key imports:
-   - from pptx import Presentation
-   - from pptx.util import Inches, Pt, Emu
-   - from pptx.dml.color import RGBColor  (NOT from pptx.util)
-   - from pptx.enum.text import PP_ALIGN
-2. Create a Presentation object and add slides to represent the document
-3. Analyze the HTML structure to determine appropriate slide layouts:
-   - Headers (h1, h2) typically become slide titles
-   - Sections become separate slides
-   - Lists, tables, and content blocks become slide content
-   - Preserve hierarchy and grouping
-4. Apply professional formatting:
-   - Slide size: {options.slide_width}" x {options.slide_height}"
-   - Use appropriate fonts and sizes
-   - Add colors and styling where appropriate
-   - Maintain visual hierarchy
-5. Return the presentation as bytes using io.BytesIO()
+SLIDE DIMENSIONS:
+- Width: {options.slide_width} inches, Height: {options.slide_height} inches
+- Set via: prs.slide_width = Inches({options.slide_width}); prs.slide_height = Inches({options.slide_height})
 
-SECURITY CONSTRAINTS:
-- Do NOT import any modules except: pptx, io, base64, typing
-- Do NOT access the file system
-- Do NOT make network requests
-- Do NOT use eval, exec, or compile
+COLOR EXTRACTION (CRITICAL):
+- Extract the primary, secondary, and accent colors from the HTML's <style> block, CSS variables, or inline styles.
+- Use these EXACT colors as RGBColor values throughout the presentation.
+- If colors are in hex (e.g., #0D7377), convert: RGBColor(0x0D, 0x73, 0x77).
+- Do NOT default to plain black text on white slides — match the document's color palette.
 
-OUTPUT FORMAT:
-Return ONLY executable Python code. The code must:
-1. Create a Presentation object
-2. Add slides with content
-3. Save to BytesIO and set the result variable
+SLIDE STRUCTURE RULES:
+1. Slide 1 = Title slide: document's h1 as title, first subtitle/description text below.
+2. Each h2 heading starts a NEW slide. Never put two h2 sections on one slide.
+3. Maximum 5 bullet points per slide. If more content exists, split into continuation slides titled "Section Name (1/2)", "(2/2)".
+4. Maximum ~10 words per bullet point. Summarize if the HTML text is longer.
+5. Tables get their own slide. Render as a python-pptx Table shape.
 
-The code MUST end with:
+VISUAL FORMATTING (MANDATORY):
+- Title bar: Add a filled rectangle shape (MSO_SHAPE.RECTANGLE) across the top 1.2 inches of each slide, filled with the primary color. Place the slide title as white text ON this bar.
+- Body text: 16-18pt Calibri, dark color from the palette, 1.15 line spacing.
+- Sub-headings within slides: bold, accent color, 20pt.
+- Card-like groups: If the HTML uses cards or boxed sections, create rounded rectangle shapes (MSO_SHAPE.ROUNDED_RECTANGLE) with a light fill (10% opacity of accent) behind the text.
+- Accent line: Add a thin horizontal line shape below the title bar using the accent color.
+- Content margins: All text content starts at 0.7 inches from left/right edges, 1.5 inches from top (below title bar).
+
+FONT SIZES:
+- Slide title (on title bar): 28-32pt, bold, white
+- Body text: 16-18pt
+- Bullet sub-text: 14pt
+- NEVER use fonts smaller than 14pt
+
+IMPORTS TO USE:
+```python
+from pptx import Presentation
+from pptx.util import Inches, Pt, Emu
+from pptx.dml.color import RGBColor
+from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+from pptx.enum.shapes import MSO_SHAPE
+from io import BytesIO
+```
+
+DO NOT:
+- Cram excessive text onto slides — split instead
+- Use fonts smaller than 14pt
+- Leave text running to slide edges (maintain 0.7" margins)
+- Use default blank layouts with unstyled text — add visual shapes
+- Import modules other than: pptx, io, base64, typing, math, collections
+
+OUTPUT: Return ONLY executable Python code ending with:
 ```
 output = BytesIO()
 prs.save(output)
 result = output.getvalue()
-```
-
-Generate the Python code now:"""
+```"""
 
     def _extract_code(self, response: str) -> str:
         if "```python" in response:

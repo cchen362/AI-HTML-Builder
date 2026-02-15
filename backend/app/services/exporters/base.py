@@ -32,7 +32,7 @@ class ExportOptions:
     scale: float = 1.0
 
     # PPTX specific
-    slide_width: int = 10
+    slide_width: float = 13.333
     slide_height: float = 7.5
     theme: str = "default"
 

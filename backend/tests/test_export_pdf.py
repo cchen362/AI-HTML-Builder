@@ -1,5 +1,6 @@
 """Tests for PDF and PNG exporters (both use Playwright mocks)."""
 
+import base64
 import os
 
 os.environ.setdefault("ANTHROPIC_API_KEY", "sk-ant-test-key-for-testing")
@@ -7,8 +8,13 @@ os.environ.setdefault("ANTHROPIC_API_KEY", "sk-ant-test-key-for-testing")
 import pytest
 from unittest.mock import AsyncMock, patch
 
-from app.services.exporters.base import ExportGenerationError, ExportOptions
-from app.services.exporters.playwright_exporter import export_pdf, export_png
+from app.services.exporters.base import ExportError, ExportGenerationError, ExportOptions
+from app.services.exporters.playwright_exporter import (
+    _inject_print_css,
+    export_infographic_png,
+    export_pdf,
+    export_png,
+)
 
 SAMPLE_HTML = "<!DOCTYPE html><html><body><h1>Test</h1></body></html>"
 
@@ -172,3 +178,89 @@ class TestPNGExporter:
         assert result.metadata is not None
         assert result.metadata["width"] == 1024
         assert result.metadata["height"] == 768
+
+
+# ---------------------------------------------------------------------------
+# Print CSS injection tests
+# ---------------------------------------------------------------------------
+
+class TestPrintCSSInjection:
+    def test_inject_print_css_inserts_before_head(self):
+        html = '<!DOCTYPE html><html><head><title>Test</title></head><body></body></html>'
+        result = _inject_print_css(html)
+        assert '@media print' in result
+        assert result.index('@media print') < result.index('</head>')
+
+    def test_inject_print_css_no_head_tag(self):
+        html = '<html><body>no head</body></html>'
+        result = _inject_print_css(html)
+        assert result == html  # unchanged
+
+    def test_inject_print_css_includes_break_rules(self):
+        html = '<html><head></head><body></body></html>'
+        result = _inject_print_css(html)
+        assert 'break-inside: avoid' in result
+        assert 'break-after: avoid' in result
+        assert 'orphans: 3' in result
+
+    def test_inject_print_css_only_replaces_first_head(self):
+        html = '<html><head></head><body></body></html><!-- </head> -->'
+        result = _inject_print_css(html)
+        assert result.count('@media print') == 1
+
+    @pytest.mark.asyncio
+    async def test_pdf_export_includes_print_css(self):
+        """Verify that export_pdf injects print CSS before rendering."""
+        html_with_head = '<!DOCTYPE html><html><head><title>T</title></head><body><h1>Test</h1></body></html>'
+        mock_page = _make_mock_page()
+        with patch("app.services.exporters.playwright_exporter.playwright_manager") as mock_mgr:
+            mock_mgr.create_page = AsyncMock(return_value=mock_page)
+            await export_pdf(html_with_head, ExportOptions())
+
+        # The HTML passed to set_content should include our print CSS
+        set_content_call = mock_page.set_content.call_args
+        rendered_html = set_content_call[0][0]
+        assert '@media print' in rendered_html
+
+
+# ---------------------------------------------------------------------------
+# Infographic PNG export tests
+# ---------------------------------------------------------------------------
+
+class TestInfographicPNGExport:
+    @pytest.mark.asyncio
+    async def test_export_infographic_png_extracts_bytes(self):
+        test_bytes = b'\x89PNG\r\n\x1a\n' + b'\x00' * 100
+        b64 = base64.b64encode(test_bytes).decode()
+        html = f'<html><body><img src="data:image/png;base64,{b64}" alt="test"/></body></html>'
+        result = await export_infographic_png(html, ExportOptions())
+        assert result.content == test_bytes
+        assert result.content_type == 'image/png'
+        assert result.file_extension == 'png'
+
+    @pytest.mark.asyncio
+    async def test_export_infographic_png_jpeg_format(self):
+        test_bytes = b'\xff\xd8\xff' + b'\x00' * 100
+        b64 = base64.b64encode(test_bytes).decode()
+        html = f'<html><body><img src="data:image/jpeg;base64,{b64}" /></body></html>'
+        result = await export_infographic_png(html, ExportOptions())
+        assert result.content == test_bytes
+        assert result.content_type == 'image/jpeg'
+        assert result.file_extension == 'jpg'
+
+    @pytest.mark.asyncio
+    async def test_export_infographic_png_no_image(self):
+        html = '<html><body>No image here</body></html>'
+        with pytest.raises(ExportError, match="No embedded image"):
+            await export_infographic_png(html, ExportOptions())
+
+    @pytest.mark.asyncio
+    async def test_export_infographic_png_metadata(self):
+        test_bytes = b'\x89PNG' + b'\x00' * 50
+        b64 = base64.b64encode(test_bytes).decode()
+        html = f'<html><body><img src="data:image/png;base64,{b64}" /></body></html>'
+        result = await export_infographic_png(html, ExportOptions(document_title="info"))
+        assert result.metadata is not None
+        assert result.metadata["source"] == "direct-base64-extraction"
+        assert result.metadata["size_bytes"] == len(test_bytes)
+        assert result.filename == "info.png"

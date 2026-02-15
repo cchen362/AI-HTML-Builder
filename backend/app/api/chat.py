@@ -11,6 +11,8 @@ import json
 import re
 import structlog
 
+from app.utils.html_validator import is_infographic_html
+
 logger = structlog.get_logger()
 router = APIRouter()
 
@@ -48,27 +50,6 @@ def _strip_base64_for_context(html: str) -> str:
     """
     return _BASE64_RE.sub(r'\1[image-removed]', html)
 
-
-def _is_infographic_doc(html: str) -> bool:
-    """Detect infographic wrapper docs (minimal HTML with single base64 <img>).
-
-    Infographic documents have a distinctive structure: <500 chars of HTML
-    after removing base64 payloads, with a single <img> tag. This is how
-    wrap_infographic_html() creates them — no <main>, <header>, <section>.
-
-    Regular docs with embedded images are excluded by checking for structural
-    HTML tags that infographic wrappers never contain.
-    """
-    stripped = _BASE64_RE.sub("", html)
-    if len(stripped) >= 600:
-        return False
-    if "<img" not in html or "data:image" not in html:
-        return False
-    # Infographic wrappers have no structural content tags
-    lower = html.lower()
-    if "<main" in lower or "<header" in lower or "<section" in lower:
-        return False
-    return True
 
 
 async def _get_latest_version_prompt(
@@ -392,7 +373,7 @@ async def _handle_infographic(
     previous_visual_prompt = None
     is_iteration = False
 
-    if active_doc and current_html and _is_infographic_doc(current_html):
+    if active_doc and current_html and is_infographic_html(current_html):
         # Active doc IS an infographic → iteration mode
         is_iteration = True
         previous_visual_prompt = await _get_latest_version_prompt(
@@ -526,7 +507,7 @@ async def chat(session_id: str, request: ChatRequest):
 
     # Override: if active doc is an infographic, route edit/create to infographic
     # so iteration works without requiring the "infographic" keyword every time
-    if route in ("edit", "create") and current_html and _is_infographic_doc(current_html):
+    if route in ("edit", "create") and current_html and is_infographic_html(current_html):
         logger.info(
             "[ROUTER] Active doc is infographic, overriding to INFOGRAPHIC",
             original_route=route,

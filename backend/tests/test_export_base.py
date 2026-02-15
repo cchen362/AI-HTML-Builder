@@ -105,7 +105,7 @@ def test_export_options_defaults():
     assert opts.page_format == "A4"
     assert opts.landscape is False
     assert opts.scale == 1.0
-    assert opts.slide_width == 10
+    assert opts.slide_width == 13.333
     assert opts.slide_height == 7.5
     assert opts.full_page is True
     assert opts.width is None
