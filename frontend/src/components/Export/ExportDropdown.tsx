@@ -74,15 +74,17 @@ const ExportDropdown: React.FC<ExportDropdownProps> = ({
               <button type="button" onClick={() => setExportError(null)}>&times;</button>
             </div>
           )}
-          <button
-            className="export-dropdown-item"
-            onClick={() => {
-              onExportHtml();
-              setOpen(false);
-            }}
-          >
-            HTML
-          </button>
+          {!isInfographic && (
+            <button
+              className="export-dropdown-item"
+              onClick={() => {
+                onExportHtml();
+                setOpen(false);
+              }}
+            >
+              HTML
+            </button>
+          )}
           {!isInfographic && (
             <button
               className="export-dropdown-item"

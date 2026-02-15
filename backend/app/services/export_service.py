@@ -83,11 +83,11 @@ async def export_document(
                 f"Document {document_id} not found or has no content"
             )
 
-        # Infographic detection: restrict to PNG/HTML only
+        # Infographic detection: restrict to PNG only
         if is_infographic_html(html_content):
-            if format_key.lower() not in ("png", "html"):
+            if format_key.lower() != "png":
                 raise ExportError(
-                    "Infographic documents can only be exported as PNG or HTML"
+                    "Infographic documents can only be exported as PNG"
                 )
             if format_key.lower() == "png":
                 from app.services.exporters.playwright_exporter import (

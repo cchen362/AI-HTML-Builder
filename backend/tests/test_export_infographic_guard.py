@@ -33,7 +33,7 @@ async def test_infographic_pdf_export_blocked(mock_session_service):
     """PDF export of infographic should raise ExportError."""
     from app.services.export_service import export_document
 
-    with pytest.raises(ExportError, match="can only be exported as PNG or HTML"):
+    with pytest.raises(ExportError, match="can only be exported as PNG"):
         await export_document("doc-123", "pdf")
 
 
@@ -42,7 +42,7 @@ async def test_infographic_pptx_export_blocked(mock_session_service):
     """PPTX export of infographic should raise ExportError."""
     from app.services.export_service import export_document
 
-    with pytest.raises(ExportError, match="can only be exported as PNG or HTML"):
+    with pytest.raises(ExportError, match="can only be exported as PNG"):
         await export_document("doc-123", "pptx")
 
 
