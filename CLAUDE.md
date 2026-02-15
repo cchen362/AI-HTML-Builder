@@ -296,7 +296,7 @@ For generated HTML documents, unless user specifies otherwise:
 - Vite dev proxy: `/api` routes to `http://localhost:8000`
 
 ### Testing
-- 290+ tests across 20+ test files, `asyncio_mode = "auto"` in pyproject.toml
+- 320+ tests across 20+ test files, `asyncio_mode = "auto"` in pyproject.toml
 - 1 known pre-existing failure: `test_init_db_creates_file`
 - Patches must target source module, not consumer (e.g., `app.utils.file_processors.*`, not `app.api.upload.*`)
 - `pytest-asyncio` auto mode: no need for `@pytest.mark.asyncio` decorators
@@ -327,6 +327,7 @@ All plans in `IMPLEMENTATION_PLANS/` directory:
 | 016 | Transformation Context + Document Ownership Validation | COMPLETE |
 | 017 | UI/UX Makeover (Cyberpunk Amethyst theme) | COMPLETE |
 | 018 | NotebookLM-Style Infographic Generation | COMPLETE |
+| 019 | Export Quality (PDF page breaks, infographic PNG-only, PPTX 16:9) | COMPLETE |
 
 ## Known Issues
 
