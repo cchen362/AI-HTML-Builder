@@ -316,43 +316,48 @@
   animation-delay: -3s;
 }
 
+/* Gold starts top-left → sweeps toward center-right and bottom-center */
 @keyframes ph-orb-a {
   0%   { transform: translate(0, 0) scale(1); }
-  20%  { transform: translate(120px, -140px) scale(1.15); }
-  45%  { transform: translate(-80px, 60px) scale(0.88); }
-  70%  { transform: translate(160px, 100px) scale(1.1); }
+  20%  { transform: translate(250px, 120px) scale(1.15); }
+  45%  { transform: translate(80px, 250px) scale(0.88); }
+  70%  { transform: translate(300px, 60px) scale(1.1); }
   100% { transform: translate(0, 0) scale(1); }
 }
 
+/* Mint starts bottom-right → sweeps toward center-left and top-center */
 @keyframes ph-orb-b {
   0%   { transform: translate(0, 0) scale(1); }
-  20%  { transform: translate(-100px, -120px) scale(0.9); }
-  45%  { transform: translate(130px, -40px) scale(1.12); }
-  70%  { transform: translate(-60px, 140px) scale(0.93); }
+  20%  { transform: translate(-200px, -180px) scale(0.9); }
+  45%  { transform: translate(-300px, -80px) scale(1.12); }
+  70%  { transform: translate(-100px, -260px) scale(0.93); }
   100% { transform: translate(0, 0) scale(1); }
 }
 
+/* Purple starts top-right → sweeps toward center-left and bottom */
 @keyframes ph-orb-c {
   0%   { transform: translate(0, 0) scale(1); }
-  20%  { transform: translate(-140px, 80px) scale(1.12); }
-  45%  { transform: translate(100px, 120px) scale(0.87); }
-  70%  { transform: translate(-120px, -90px) scale(1.06); }
+  20%  { transform: translate(-280px, 150px) scale(1.12); }
+  45%  { transform: translate(-120px, 280px) scale(0.87); }
+  70%  { transform: translate(-250px, -60px) scale(1.06); }
   100% { transform: translate(0, 0) scale(1); }
 }
 
+/* Coral starts mid-left → sweeps across to right and up/down */
 @keyframes ph-orb-d {
   0%   { transform: translate(0, 0) scale(1); }
-  20%  { transform: translate(80px, 110px) scale(1.08); }
-  45%  { transform: translate(-130px, -60px) scale(0.85); }
-  70%  { transform: translate(40px, -130px) scale(1.14); }
+  20%  { transform: translate(260px, -120px) scale(1.08); }
+  45%  { transform: translate(180px, 140px) scale(0.85); }
+  70%  { transform: translate(320px, -40px) scale(1.14); }
   100% { transform: translate(0, 0) scale(1); }
 }
 
+/* Teal starts center-bottom → sweeps up and across both sides */
 @keyframes ph-orb-e {
   0%   { transform: translate(0, 0) scale(1); }
-  20%  { transform: translate(100px, -80px) scale(0.92); }
-  45%  { transform: translate(-70px, 100px) scale(1.15); }
-  70%  { transform: translate(80px, 50px) scale(0.88); }
+  20%  { transform: translate(160px, -220px) scale(0.92); }
+  45%  { transform: translate(-200px, -140px) scale(1.15); }
+  70%  { transform: translate(100px, -280px) scale(0.88); }
   100% { transform: translate(0, 0) scale(1); }
 }
 
