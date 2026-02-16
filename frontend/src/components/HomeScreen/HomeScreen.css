@@ -18,7 +18,7 @@
 .home-welcome {
   font-family: var(--font-display);
   font-weight: var(--fw-heavy);
-  font-size: 2.5rem;
+  font-size: var(--fs-display);
   color: var(--text-primary);
   margin: 0 0 2.5rem;
   letter-spacing: var(--tracking-tight);

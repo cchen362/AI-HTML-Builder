@@ -216,6 +216,7 @@
 
 /* --- Empty Placeholder --- */
 .placeholder {
+  position: relative;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -224,21 +225,12 @@
   color: var(--text-tertiary);
   text-align: center;
   background: var(--surface-base);
-  background-image: radial-gradient(ellipse at center, var(--surface-raised) 0%, var(--surface-base) 70%);
-}
-
-.placeholder-glyph {
-  font-family: var(--font-mono);
-  font-size: 4rem;
-  font-weight: var(--fw-bold);
-  color: var(--accent-primary);
-  opacity: 0.25;
-  text-shadow: 0 0 60px var(--accent-primary-glow);
-  animation: fade-pulse 4s ease-in-out infinite;
-  margin-bottom: 1.5rem;
+  overflow: hidden;
 }
 
 .placeholder h3 {
+  position: relative;
+  z-index: 1;
   font-family: var(--font-mono);
   font-size: var(--fs-base);
   font-weight: var(--fw-regular);
@@ -249,9 +241,77 @@
 }
 
 .placeholder p {
+  position: relative;
+  z-index: 1;
   font-family: var(--font-body);
   font-size: var(--fs-base);
   color: var(--text-tertiary);
+}
+
+/* --- Floating Orbs (ambient life) --- */
+.placeholder-orb {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.4;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.placeholder-orb--gold {
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, var(--accent-primary) 0%, transparent 70%);
+  filter: blur(60px);
+  top: 15%;
+  left: 10%;
+  animation: ph-orb-a 12s ease-in-out infinite;
+}
+
+.placeholder-orb--mint {
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, var(--signal-active) 0%, transparent 70%);
+  filter: blur(55px);
+  bottom: 15%;
+  right: 10%;
+  animation: ph-orb-b 10s ease-in-out infinite;
+  animation-delay: -3s;
+}
+
+.placeholder-orb--purple {
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, var(--text-tertiary) 0%, transparent 70%);
+  filter: blur(50px);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: ph-orb-c 13s ease-in-out infinite;
+  animation-delay: -7s;
+}
+
+@keyframes ph-orb-a {
+  0%   { transform: translate(0, 0) scale(1); }
+  25%  { transform: translate(100px, -80px) scale(1.1); }
+  50%  { transform: translate(-60px, 50px) scale(0.9); }
+  75%  { transform: translate(80px, 80px) scale(1.08); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+
+@keyframes ph-orb-b {
+  0%   { transform: translate(0, 0) scale(1); }
+  25%  { transform: translate(-80px, -100px) scale(0.92); }
+  50%  { transform: translate(100px, -30px) scale(1.1); }
+  75%  { transform: translate(-50px, 90px) scale(0.94); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+
+@keyframes ph-orb-c {
+  0%   { transform: translate(-50%, -50%) scale(1); }
+  25%  { transform: translate(calc(-50% + 70px), calc(-50% - 60px)) scale(1.12); }
+  50%  { transform: translate(calc(-50% - 90px), calc(-50% + 40px)) scale(0.88); }
+  75%  { transform: translate(calc(-50% + 40px), calc(-50% + 80px)) scale(1.05); }
+  100% { transform: translate(-50%, -50%) scale(1); }
 }
 
 .html-preview {
