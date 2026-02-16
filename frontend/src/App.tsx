@@ -133,6 +133,8 @@ const HtmlViewer = React.memo(({
                 <div className="placeholder-orb placeholder-orb--gold" />
                 <div className="placeholder-orb placeholder-orb--mint" />
                 <div className="placeholder-orb placeholder-orb--purple" />
+                <div className="placeholder-orb placeholder-orb--coral" />
+                <div className="placeholder-orb placeholder-orb--teal" />
                 <h3>No content yet</h3>
                 <p>Send a message to generate HTML content</p>
               </div>

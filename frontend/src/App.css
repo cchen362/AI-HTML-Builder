@@ -248,70 +248,112 @@
   color: var(--text-tertiary);
 }
 
-/* --- Floating Orbs (ambient life) --- */
+/* --- Floating Orbs (5-orb ambient field — mirrors login page density) --- */
 .placeholder-orb {
   position: absolute;
   border-radius: 50%;
-  opacity: 0.4;
+  opacity: 0.45;
   pointer-events: none;
   will-change: transform;
 }
 
+/* Gold — large, top-left anchor */
 .placeholder-orb--gold {
-  width: 300px;
-  height: 300px;
+  width: 400px;
+  height: 400px;
   background: radial-gradient(circle, var(--accent-primary) 0%, transparent 70%);
-  filter: blur(60px);
-  top: 15%;
-  left: 10%;
-  animation: ph-orb-a 12s ease-in-out infinite;
+  filter: blur(70px);
+  top: 10%;
+  left: 8%;
+  animation: ph-orb-a 11s ease-in-out infinite;
 }
 
+/* Mint — bottom-right counterweight */
 .placeholder-orb--mint {
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, var(--signal-active) 0%, transparent 70%);
+  filter: blur(65px);
+  bottom: 10%;
+  right: 5%;
+  animation: ph-orb-b 9s ease-in-out infinite;
+  animation-delay: -2s;
+}
+
+/* Purple — large, top-right */
+.placeholder-orb--purple {
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, var(--text-tertiary) 0%, transparent 70%);
+  filter: blur(70px);
+  top: 8%;
+  right: 12%;
+  animation: ph-orb-c 10s ease-in-out infinite;
+  animation-delay: -6s;
+}
+
+/* Coral — mid-left, crossing paths with gold */
+.placeholder-orb--coral {
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, var(--text-secondary) 0%, transparent 70%);
+  filter: blur(60px);
+  top: 50%;
+  left: 5%;
+  animation: ph-orb-d 13s ease-in-out infinite;
+  animation-delay: -4s;
+}
+
+/* Teal — center-bottom, weaves between mint and purple */
+.placeholder-orb--teal {
   width: 250px;
   height: 250px;
-  background: radial-gradient(circle, var(--signal-active) 0%, transparent 70%);
+  background: radial-gradient(circle, #14B8A6 0%, transparent 70%);
   filter: blur(55px);
-  bottom: 15%;
-  right: 10%;
-  animation: ph-orb-b 10s ease-in-out infinite;
+  bottom: 12%;
+  left: 40%;
+  animation: ph-orb-e 8s ease-in-out infinite;
   animation-delay: -3s;
-}
-
-.placeholder-orb--purple {
-  width: 200px;
-  height: 200px;
-  background: radial-gradient(circle, var(--text-tertiary) 0%, transparent 70%);
-  filter: blur(50px);
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  animation: ph-orb-c 13s ease-in-out infinite;
-  animation-delay: -7s;
 }
 
 @keyframes ph-orb-a {
   0%   { transform: translate(0, 0) scale(1); }
-  25%  { transform: translate(100px, -80px) scale(1.1); }
-  50%  { transform: translate(-60px, 50px) scale(0.9); }
-  75%  { transform: translate(80px, 80px) scale(1.08); }
+  20%  { transform: translate(120px, -140px) scale(1.15); }
+  45%  { transform: translate(-80px, 60px) scale(0.88); }
+  70%  { transform: translate(160px, 100px) scale(1.1); }
   100% { transform: translate(0, 0) scale(1); }
 }
 
 @keyframes ph-orb-b {
   0%   { transform: translate(0, 0) scale(1); }
-  25%  { transform: translate(-80px, -100px) scale(0.92); }
-  50%  { transform: translate(100px, -30px) scale(1.1); }
-  75%  { transform: translate(-50px, 90px) scale(0.94); }
+  20%  { transform: translate(-100px, -120px) scale(0.9); }
+  45%  { transform: translate(130px, -40px) scale(1.12); }
+  70%  { transform: translate(-60px, 140px) scale(0.93); }
   100% { transform: translate(0, 0) scale(1); }
 }
 
 @keyframes ph-orb-c {
-  0%   { transform: translate(-50%, -50%) scale(1); }
-  25%  { transform: translate(calc(-50% + 70px), calc(-50% - 60px)) scale(1.12); }
-  50%  { transform: translate(calc(-50% - 90px), calc(-50% + 40px)) scale(0.88); }
-  75%  { transform: translate(calc(-50% + 40px), calc(-50% + 80px)) scale(1.05); }
-  100% { transform: translate(-50%, -50%) scale(1); }
+  0%   { transform: translate(0, 0) scale(1); }
+  20%  { transform: translate(-140px, 80px) scale(1.12); }
+  45%  { transform: translate(100px, 120px) scale(0.87); }
+  70%  { transform: translate(-120px, -90px) scale(1.06); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+
+@keyframes ph-orb-d {
+  0%   { transform: translate(0, 0) scale(1); }
+  20%  { transform: translate(80px, 110px) scale(1.08); }
+  45%  { transform: translate(-130px, -60px) scale(0.85); }
+  70%  { transform: translate(40px, -130px) scale(1.14); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+
+@keyframes ph-orb-e {
+  0%   { transform: translate(0, 0) scale(1); }
+  20%  { transform: translate(100px, -80px) scale(0.92); }
+  45%  { transform: translate(-70px, 100px) scale(1.15); }
+  70%  { transform: translate(80px, 50px) scale(0.88); }
+  100% { transform: translate(0, 0) scale(1); }
 }
 
 .html-preview {
