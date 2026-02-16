@@ -130,6 +130,7 @@ const HtmlViewer = React.memo(({
               </div>
             ) : (
               <div className="placeholder">
+                <div className="placeholder-glyph">&lt;/&gt;</div>
                 <h3>No content yet</h3>
                 <p>Send a message to generate HTML content</p>
               </div>

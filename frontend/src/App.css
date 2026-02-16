@@ -227,9 +227,20 @@
   background-image: radial-gradient(ellipse at center, var(--surface-raised) 0%, var(--surface-base) 70%);
 }
 
+.placeholder-glyph {
+  font-family: var(--font-mono);
+  font-size: 4rem;
+  font-weight: var(--fw-bold);
+  color: var(--accent-primary);
+  opacity: 0.25;
+  text-shadow: 0 0 60px var(--accent-primary-glow);
+  animation: fade-pulse 4s ease-in-out infinite;
+  margin-bottom: 1.5rem;
+}
+
 .placeholder h3 {
   font-family: var(--font-mono);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-base);
   font-weight: var(--fw-regular);
   text-transform: uppercase;
   letter-spacing: var(--tracking-widest);
@@ -239,9 +250,8 @@
 
 .placeholder p {
   font-family: var(--font-body);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-base);
   color: var(--text-tertiary);
-  opacity: 0.6;
 }
 
 .html-preview {

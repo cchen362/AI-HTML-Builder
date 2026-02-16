@@ -8,7 +8,7 @@
 
 .template-cards-heading {
   font-family: var(--font-mono);
-  font-size: var(--fs-base);
+  font-size: var(--fs-sm);
   font-weight: var(--fw-regular);
   text-transform: uppercase;
   letter-spacing: var(--tracking-widest);
@@ -89,13 +89,13 @@
 
 .template-card-title {
   font-family: var(--font-body);
-  font-size: var(--fs-md);
+  font-size: var(--fs-base);
   font-weight: var(--fw-medium);
   color: var(--text-primary);
 }
 
 .template-card-desc {
-  font-size: var(--fs-base);
+  font-size: var(--fs-sm);
   color: var(--text-tertiary);
   line-height: var(--leading-normal);
 }
