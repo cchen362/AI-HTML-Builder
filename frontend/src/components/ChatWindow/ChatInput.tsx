@@ -36,7 +36,6 @@ const useAutosizeTextArea = (
       const finalHeight = Math.min(height, maxHeight);
 
       textAreaRef.current.style.height = `${finalHeight}px`;
-      textAreaRef.current.style.overflowY = height > maxHeight ? 'auto' : 'hidden';
     }
   }, [textAreaRef, value]);
 };

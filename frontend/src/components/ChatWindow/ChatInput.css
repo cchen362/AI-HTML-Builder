@@ -93,8 +93,7 @@
   color: var(--text-primary);
   background: transparent;
   min-height: 24px;
-  max-height: 300px;
-  overflow-y: hidden;
+  overflow-y: auto;
   transition: color var(--duration-fast);
 }
 
