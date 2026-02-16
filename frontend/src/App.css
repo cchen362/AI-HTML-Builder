@@ -265,7 +265,7 @@
   filter: blur(70px);
   top: 10%;
   left: 8%;
-  animation: ph-orb-a 11s ease-in-out infinite;
+  animation: ph-orb-a 15s ease-in-out infinite;
 }
 
 /* Mint — bottom-right counterweight */
@@ -276,7 +276,7 @@
   filter: blur(65px);
   bottom: 10%;
   right: 5%;
-  animation: ph-orb-b 9s ease-in-out infinite;
+  animation: ph-orb-b 13s ease-in-out infinite;
   animation-delay: -2s;
 }
 
@@ -288,11 +288,11 @@
   filter: blur(70px);
   top: 8%;
   right: 12%;
-  animation: ph-orb-c 10s ease-in-out infinite;
+  animation: ph-orb-c 14s ease-in-out infinite;
   animation-delay: -6s;
 }
 
-/* Coral — mid-left, crossing paths with gold */
+/* Coral — mid-left */
 .placeholder-orb--coral {
   width: 280px;
   height: 280px;
@@ -300,11 +300,11 @@
   filter: blur(60px);
   top: 50%;
   left: 5%;
-  animation: ph-orb-d 13s ease-in-out infinite;
+  animation: ph-orb-d 17s ease-in-out infinite;
   animation-delay: -4s;
 }
 
-/* Teal — center-bottom, weaves between mint and purple */
+/* Teal — center-bottom */
 .placeholder-orb--teal {
   width: 250px;
   height: 250px;
@@ -312,52 +312,52 @@
   filter: blur(55px);
   bottom: 12%;
   left: 40%;
-  animation: ph-orb-e 8s ease-in-out infinite;
+  animation: ph-orb-e 12s ease-in-out infinite;
   animation-delay: -3s;
 }
 
-/* Gold starts top-left → sweeps toward center-right and bottom-center */
+/* Gold: drifts right and down-right, stays in upper half */
 @keyframes ph-orb-a {
   0%   { transform: translate(0, 0) scale(1); }
-  20%  { transform: translate(250px, 120px) scale(1.15); }
-  45%  { transform: translate(80px, 250px) scale(0.88); }
-  70%  { transform: translate(300px, 60px) scale(1.1); }
+  20%  { transform: translate(200px, 60px) scale(1.1); }
+  45%  { transform: translate(350px, 180px) scale(0.9); }
+  70%  { transform: translate(120px, 220px) scale(1.06); }
   100% { transform: translate(0, 0) scale(1); }
 }
 
-/* Mint starts bottom-right → sweeps toward center-left and top-center */
+/* Mint: drifts left and upward from bottom-right corner */
 @keyframes ph-orb-b {
   0%   { transform: translate(0, 0) scale(1); }
-  20%  { transform: translate(-200px, -180px) scale(0.9); }
-  45%  { transform: translate(-300px, -80px) scale(1.12); }
-  70%  { transform: translate(-100px, -260px) scale(0.93); }
+  20%  { transform: translate(-180px, -60px) scale(0.92); }
+  45%  { transform: translate(-100px, -200px) scale(1.08); }
+  70%  { transform: translate(-300px, -100px) scale(0.95); }
   100% { transform: translate(0, 0) scale(1); }
 }
 
-/* Purple starts top-right → sweeps toward center-left and bottom */
+/* Purple: drifts left and down from top-right */
 @keyframes ph-orb-c {
   0%   { transform: translate(0, 0) scale(1); }
-  20%  { transform: translate(-280px, 150px) scale(1.12); }
-  45%  { transform: translate(-120px, 280px) scale(0.87); }
-  70%  { transform: translate(-250px, -60px) scale(1.06); }
+  20%  { transform: translate(-160px, 180px) scale(1.08); }
+  45%  { transform: translate(-320px, 80px) scale(0.88); }
+  70%  { transform: translate(-200px, 260px) scale(1.04); }
   100% { transform: translate(0, 0) scale(1); }
 }
 
-/* Coral starts mid-left → sweeps across to right and up/down */
+/* Coral: drifts right and up-down from mid-left */
 @keyframes ph-orb-d {
   0%   { transform: translate(0, 0) scale(1); }
-  20%  { transform: translate(260px, -120px) scale(1.08); }
-  45%  { transform: translate(180px, 140px) scale(0.85); }
-  70%  { transform: translate(320px, -40px) scale(1.14); }
+  20%  { transform: translate(220px, -160px) scale(1.06); }
+  45%  { transform: translate(380px, 60px) scale(0.88); }
+  70%  { transform: translate(160px, -200px) scale(1.1); }
   100% { transform: translate(0, 0) scale(1); }
 }
 
-/* Teal starts center-bottom → sweeps up and across both sides */
+/* Teal: drifts up and to the right from center-bottom */
 @keyframes ph-orb-e {
   0%   { transform: translate(0, 0) scale(1); }
-  20%  { transform: translate(160px, -220px) scale(0.92); }
-  45%  { transform: translate(-200px, -140px) scale(1.15); }
-  70%  { transform: translate(100px, -280px) scale(0.88); }
+  20%  { transform: translate(180px, -160px) scale(0.94); }
+  45%  { transform: translate(-120px, -240px) scale(1.1); }
+  70%  { transform: translate(240px, -100px) scale(0.9); }
   100% { transform: translate(0, 0) scale(1); }
 }
 
