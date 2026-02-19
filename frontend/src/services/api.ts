@@ -275,4 +275,37 @@ export const adminApi = {
   regenerateInviteCode(): Promise<{ invite_code: string }> {
     return json('/api/admin/invite-code', { method: 'POST' });
   },
+
+  getCosts(days: number = 30): Promise<{
+    summary: {
+      total_requests: number | null;
+      total_input_tokens: number | null;
+      total_output_tokens: number | null;
+      total_images: number | null;
+      total_cost_usd: number | null;
+    };
+    by_model: Array<{
+      model: string;
+      total_requests: number;
+      total_input_tokens: number;
+      total_output_tokens: number;
+      total_images: number;
+      total_cost_usd: number;
+    }>;
+  }> {
+    return json(`/api/costs?days=${days}`);
+  },
+
+  getTodayCosts(): Promise<{
+    costs: Array<{
+      model: string;
+      request_count: number;
+      input_tokens: number;
+      output_tokens: number;
+      images_generated: number;
+      estimated_cost_usd: number;
+    }>;
+  }> {
+    return json('/api/costs/today');
+  },
 };
