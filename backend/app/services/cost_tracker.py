@@ -9,9 +9,18 @@ MODEL_PRICING: dict[str, dict[str, float]] = {
     "claude-sonnet-4-6": {"input": 3.0, "output": 15.0},
     "claude-sonnet-4-5-20250929": {"input": 3.0, "output": 15.0},  # historical
     "gemini-2.5-pro": {"input": 1.25, "output": 10.0},
-    "gemini-3-pro-image-preview": {"input": 0.0, "output": 120.0},
-    "gemini-2.5-flash-image": {"input": 0.0, "output": 30.0},
+    "gemini-3-pro-image-preview": {"input": 2.0, "output": 120.0},
+    "gemini-2.5-flash-image": {"input": 0.30, "output": 30.0},
     "claude-haiku-4-5-20251001": {"input": 0.8, "output": 4.0},
+}
+
+# Per-image cost (USD) for image generation models.
+# These models charge per output image (token-based), not via the token
+# counts we record — we pass 0 tokens and images_generated=1 instead.
+# Source: https://ai.google.dev/gemini-api/docs/pricing
+IMAGE_COST_PER_IMAGE: dict[str, float] = {
+    "gemini-3-pro-image-preview": 0.134,   # 1120 output tokens @ $120/M
+    "gemini-2.5-flash-image": 0.039,       # 1290 output tokens @ $30/M
 }
 
 
@@ -28,7 +37,7 @@ class CostTracker:
         db = await get_db()
         today = date.today().isoformat()
         estimated_cost = self._estimate_cost(
-            model, input_tokens, output_tokens
+            model, input_tokens, output_tokens, images_generated
         )
 
         # UPSERT: increment counters if row exists, insert if not
@@ -90,14 +99,21 @@ class CostTracker:
         return [dict(r) for r in rows]
 
     def _estimate_cost(
-        self, model: str, input_tokens: int, output_tokens: int
+        self,
+        model: str,
+        input_tokens: int,
+        output_tokens: int,
+        images_generated: int = 0,
     ) -> float:
+        cost = 0.0
         pricing = MODEL_PRICING.get(model)
-        if not pricing:
-            return 0.0
-        input_cost = (input_tokens / 1_000_000) * pricing["input"]
-        output_cost = (output_tokens / 1_000_000) * pricing["output"]
-        return round(input_cost + output_cost, 6)
+        if pricing:
+            cost += (input_tokens / 1_000_000) * pricing["input"]
+            cost += (output_tokens / 1_000_000) * pricing["output"]
+        if images_generated > 0:
+            per_image = IMAGE_COST_PER_IMAGE.get(model, 0.0)
+            cost += images_generated * per_image
+        return round(cost, 6)
 
 
 cost_tracker = CostTracker()
