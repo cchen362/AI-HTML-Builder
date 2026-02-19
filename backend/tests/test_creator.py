@@ -119,13 +119,13 @@ async def test_create_fallback_on_primary_failure(
     mock_provider.generate.side_effect = RuntimeError("API error")
     mock_fallback.generate.return_value = GenerationResult(
         text=SAMPLE_HTML,
-        model="claude-sonnet-4-5-20250929",
+        model="claude-sonnet-4-6-20260217",
     )
 
     html, result = await creator.create("Create a page")
 
     assert "<!DOCTYPE html>" in html
-    assert result.model == "claude-sonnet-4-5-20250929"
+    assert result.model == "claude-sonnet-4-6-20260217"
     mock_fallback.generate.assert_called_once()
 
 

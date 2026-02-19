@@ -2,7 +2,7 @@
 
 > Three AI models, one chat interface. Create, edit, and export professional HTML documents through conversation.
 
-**Claude Sonnet 4.5** surgically edits your documents without content drift. **Gemini 2.5 Pro** generates new documents with top-tier aesthetics. **Nano Banana Pro** creates images and infographics on demand. All outputs are single-file HTML with CSS/JS inlined — no external dependencies, ready to share.
+**Claude Sonnet 4.6** surgically edits your documents without content drift. **Gemini 2.5 Pro** generates new documents with top-tier aesthetics. **Nano Banana Pro** creates images and infographics on demand. All outputs are single-file HTML with CSS/JS inlined — no external dependencies, ready to share.
 
 ## How It Works
 
@@ -11,7 +11,7 @@ React 19 (SSE) ──POST──> FastAPI ──> SQLite WAL
                               |
                  ┌────────────┼────────────┐
                  v            v            v
-          Claude 4.5    Gemini 2.5 Pro  Nano Banana Pro
+          Claude 4.6    Gemini 2.5 Pro  Nano Banana Pro
           (edit)        (create)        (image)
                               |            |
                               └──────┬─────┘
@@ -25,11 +25,11 @@ A lightweight **Haiku 4.5** classifier routes each request to the right model �
 | You say... | What happens | Model |
 |------------|-------------|-------|
 | First message (no document yet) | Creates a new HTML document | Gemini 2.5 Pro |
-| "Remove the sidebar", "Delete the footer" | Surgically removes content | Claude Sonnet 4.5 |
+| "Remove the sidebar", "Delete the footer" | Surgically removes content | Claude Sonnet 4.6 |
 | "Create an infographic about..." | Generates a visual infographic | Gemini 2.5 Pro + Nano Banana Pro |
 | "Turn this into a dashboard" | Transforms the current document | Gemini 2.5 Pro |
 | "Generate an image of...", "Add a photo..." | Generates and embeds an image | Nano Banana Pro |
-| Everything else (with existing document) | Surgically edits your current document | Claude Sonnet 4.5 |
+| Everything else (with existing document) | Surgically edits your current document | Claude Sonnet 4.6 |
 
 ### The Surgical Editing Engine
 
@@ -64,7 +64,7 @@ Result: edit #50 is just as precise as edit #1.
 
 - **Node.js** 22+ (frontend)
 - **Python** 3.11+ (backend)
-- **Anthropic API key** (for Claude Sonnet 4.5 — edits + Haiku 4.5 — routing)
+- **Anthropic API key** (for Claude Sonnet 4.6 — edits + Haiku 4.5 — routing)
 - **Google API key** (one key covers Gemini 2.5 Pro, Nano Banana Pro, and Flash fallback)
 
 ### Development
@@ -100,14 +100,14 @@ Create a `.env` file in the project root (or use `--env-file` with Docker):
 
 ```bash
 # Required
-ANTHROPIC_API_KEY=sk-ant-...          # Claude Sonnet 4.5 (edits) + Haiku 4.5 (routing)
+ANTHROPIC_API_KEY=sk-ant-...          # Claude Sonnet 4.6 (edits) + Haiku 4.5 (routing)
 GOOGLE_API_KEY=AIza...                # One key covers Gemini 2.5 Pro + Nano Banana Pro + Flash
 
 # Optional (defaults shown)
 DATABASE_PATH=./data/app.db
 LOG_LEVEL=info
 MAX_UPLOAD_SIZE_MB=50
-EDIT_MODEL=claude-sonnet-4-5-20250929
+EDIT_MODEL=claude-sonnet-4-6-20260217
 CREATION_MODEL=gemini-2.5-pro
 IMAGE_MODEL=gemini-3-pro-image-preview
 IMAGE_FALLBACK_MODEL=gemini-2.5-flash-image
@@ -121,7 +121,7 @@ ROUTER_MODEL=claude-haiku-4-5-20251001
 |-------|-----------|-------|
 | Frontend | React 19, TypeScript 5.8, Vite 7.1 | CodeMirror 6 editor, SSE streaming |
 | Backend | FastAPI, Python 3.11+, aiosqlite | SQLite WAL mode, sse-starlette |
-| AI (Edit) | Claude Sonnet 4.5 | Tool-use with `html_replace` / `html_insert_after` |
+| AI (Edit) | Claude Sonnet 4.6 | Tool-use with `html_replace` / `html_insert_after` |
 | AI (Create) | Gemini 2.5 Pro | Streaming creation, infographic art direction |
 | AI (Image) | Nano Banana Pro | Raster image + infographic rendering, Flash fallback |
 | AI (Route) | Claude Haiku 4.5 | Single-token intent classification |
@@ -146,7 +146,7 @@ backend/app/
     costs.py                 # Token usage + cost tracking
   providers/
     base.py                  # LLMProvider / ImageProvider ABCs
-    anthropic_provider.py    # Claude Sonnet 4.5 with tool_use
+    anthropic_provider.py    # Claude Sonnet 4.6 with tool_use
     gemini_provider.py       # Gemini 2.5 Pro streaming
     gemini_image_provider.py # Nano Banana Pro image generation
   services/

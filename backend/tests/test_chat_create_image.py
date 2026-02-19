@@ -111,7 +111,7 @@ async def test_create_route_fallback_to_claude(tmp_path):
             from app.api.chat import chat, ChatRequest
 
             mock_anthropic = MagicMock()
-            mock_anthropic.model = "claude-sonnet-4-5-20250929"
+            mock_anthropic.model = "claude-sonnet-4-6-20260217"
 
             mock_creator = MagicMock()
 
@@ -800,7 +800,7 @@ async def test_edit_route_unchanged(tmp_path):
                 error_count=0,
                 input_tokens=100,
                 output_tokens=50,
-                model="claude-sonnet-4-5-20250929",
+                model="claude-sonnet-4-6-20260217",
             )
 
             mock_editor = AsyncMock()

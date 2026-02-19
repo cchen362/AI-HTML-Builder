@@ -1,6 +1,6 @@
 # AI HTML Builder v2
 
-AI-powered HTML/CSS document generator for 2-5 corporate users on a private Debian server. Users chat in natural language; the system creates, edits, and exports single-file HTML documents with all CSS/JS inlined. Four AI models collaborate: **Haiku 4.5** classifies intent, **Gemini 2.5 Pro** creates new documents, **Claude Sonnet 4.5** surgically edits them via `tool_use`, and **Nano Banana Pro (Gemini 3 Pro Image)** generates images.
+AI-powered HTML/CSS document generator for 2-5 corporate users on a private Debian server. Users chat in natural language; the system creates, edits, and exports single-file HTML documents with all CSS/JS inlined. Four AI models collaborate: **Haiku 4.5** classifies intent, **Gemini 2.5 Pro** creates new documents, **Claude Sonnet 4.6** surgically edits them via `tool_use`, and **Nano Banana Pro (Gemini 3 Pro Image)** generates images.
 
 ## Quick Start
 
@@ -33,7 +33,7 @@ React 19 (SSE) ──POST──> FastAPI ──> SQLite WAL
                               |
                  ┌────────────┼────────────┐
                  v            v            v
-          Claude 4.5    Gemini 2.5 Pro  Nano Banana Pro
+          Claude 4.6    Gemini 2.5 Pro  Nano Banana Pro
           (edit)        (create)        (image)
                               |            |
                               └──────┬─────┘
@@ -95,7 +95,7 @@ Server: text/event-stream
 | Backend | google-genai SDK | 1.0.0+ |
 | Backend | Playwright (PDF/PNG) | 1.49.0+ |
 | Backend | structlog | 24.4.0+ |
-| AI Edit | Claude Sonnet 4.5 | `claude-sonnet-4-5-20250929` |
+| AI Edit | Claude Sonnet 4.6 | `claude-sonnet-4-6-20260217` |
 | AI Create | Gemini 2.5 Pro | `gemini-2.5-pro` |
 | AI Image | Nano Banana Pro (Gemini 3 Pro Image) | `gemini-3-pro-image-preview` |
 | AI Router | Claude Haiku 4.5 | `claude-haiku-4-5-20251001` |
@@ -121,7 +121,7 @@ backend/app/
     costs.py                 # Token usage + cost tracking
   providers/
     base.py                  # LLMProvider, ImageProvider ABCs; ToolCall, ToolResult, GenerationResult
-    anthropic_provider.py    # Claude Sonnet 4.5 with tool_use
+    anthropic_provider.py    # Claude Sonnet 4.6 with tool_use
     gemini_provider.py       # Gemini 2.5 Pro streaming
     gemini_image_provider.py # Nano Banana Pro image generation
   services/
@@ -240,7 +240,7 @@ From `backend/app/config.py` (pydantic-settings, loaded from `.env`):
 
 ```bash
 # Required
-ANTHROPIC_API_KEY=sk-ant-...          # Claude Sonnet 4.5 for surgical edits
+ANTHROPIC_API_KEY=sk-ant-...          # Claude Sonnet 4.6 for surgical edits
 GOOGLE_API_KEY=AIza...                # ONE key covers Gemini 2.5 Pro, Nano Banana Pro, AND Flash
 
 # Optional (defaults shown)
@@ -250,7 +250,7 @@ DEV_MODE=false                        # Set true for local dev (disables secure 
 DATABASE_PATH=./data/app.db
 LOG_LEVEL=info
 MAX_UPLOAD_SIZE_MB=50
-EDIT_MODEL=claude-sonnet-4-5-20250929
+EDIT_MODEL=claude-sonnet-4-6-20260217
 CREATION_MODEL=gemini-2.5-pro
 IMAGE_MODEL=gemini-3-pro-image-preview
 IMAGE_FALLBACK_MODEL=gemini-2.5-flash-image
@@ -403,6 +403,6 @@ All plans in `IMPLEMENTATION_PLANS/` directory:
 
 **Last Updated**: February 2026
 **Architecture**: v2 rebuild (Plans 001-021 complete)
-**AI Models**: Haiku 4.5 (routing) + Claude Sonnet 4.5 (edits) + Gemini 2.5 Pro (creation + infographic art direction) + Nano Banana Pro (images + infographic rendering)
+**AI Models**: Haiku 4.5 (routing) + Claude Sonnet 4.6 (edits) + Gemini 2.5 Pro (creation + infographic art direction) + Nano Banana Pro (images + infographic rendering)
 **Database**: SQLite WAL (no Redis)
 **Communication**: SSE + HTTP POST (no WebSocket)

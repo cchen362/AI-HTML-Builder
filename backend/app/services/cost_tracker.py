@@ -6,7 +6,8 @@ logger = structlog.get_logger()
 
 # Pricing per 1M tokens (USD) - update as providers change rates
 MODEL_PRICING: dict[str, dict[str, float]] = {
-    "claude-sonnet-4-5-20250929": {"input": 3.0, "output": 15.0},
+    "claude-sonnet-4-6-20260217": {"input": 3.0, "output": 15.0},
+    "claude-sonnet-4-5-20250929": {"input": 3.0, "output": 15.0},  # historical
     "gemini-2.5-pro": {"input": 1.25, "output": 10.0},
     "gemini-3-pro-image-preview": {"input": 0.0, "output": 120.0},
     "gemini-2.5-flash-image": {"input": 0.0, "output": 30.0},
