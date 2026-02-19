@@ -183,7 +183,7 @@ async def _handle_create(
     title = _extract_title(request.message)
 
     new_doc_id = await session_service.create_document(
-        session_id, title
+        session_id, title, doc_type="document"
     )
 
     # Estimate tokens (streaming doesn't return usage metadata)
@@ -437,7 +437,7 @@ async def _handle_infographic(
         summary = "Regenerated infographic"
     else:
         # New infographic document
-        doc_id = await session_service.create_document(session_id, title)
+        doc_id = await session_service.create_document(session_id, title, doc_type="infographic")
         version = await session_service.save_version(
             doc_id,
             infographic_html,
@@ -559,6 +559,25 @@ async def chat(session_id: str, request: ChatRequest, user: dict = Depends(get_c
                     "type": "error",
                     "content": "Unable to process your request. Please try again.",
                 })
+
+            # AI title generation (non-critical — never breaks the stream)
+            try:
+                from app.services.title_generator import generate_session_title
+
+                _metadata = await session_service.get_session_metadata(session_id)
+                title_source = _metadata.get("title_source")
+
+                # Only generate for "auto" (raw text) or None (legacy sessions)
+                # Never overwrite "ai" (already done) or "manual" (user chose)
+                if title_source in ("auto", None):
+                    ai_title = await generate_session_title(request.message)
+                    if ai_title:
+                        await session_service.update_session_title(
+                            session_id, ai_title, source="ai"
+                        )
+                        yield _sse({"type": "title", "content": ai_title})
+            except Exception:
+                logger.debug("[TITLE] Title generation skipped", exc_info=True)
 
             yield _sse({"type": "done"})
 

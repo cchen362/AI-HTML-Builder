@@ -40,7 +40,7 @@ class SessionService:
         return await self.create_session(user_id=user_id)
 
     async def create_document(
-        self, session_id: str, title: str = "Untitled"
+        self, session_id: str, title: str = "Untitled", doc_type: str = "document"
     ) -> str:
         db = await get_db()
         doc_id = str(uuid.uuid4())
@@ -50,8 +50,8 @@ class SessionService:
             (session_id,),
         )
         await db.execute(
-            "INSERT INTO documents (id, session_id, title, is_active) VALUES (?, ?, ?, 1)",
-            (doc_id, session_id, title),
+            "INSERT INTO documents (id, session_id, title, is_active, doc_type) VALUES (?, ?, ?, 1, ?)",
+            (doc_id, session_id, title, doc_type),
         )
         await db.commit()
         logger.info(
@@ -294,6 +294,7 @@ class SessionService:
                  s.last_active,
                  s.metadata,
                  COUNT(d.id) as doc_count,
+                 SUM(CASE WHEN d.doc_type = 'infographic' THEN 1 ELSE 0 END) as infographic_count,
                  (SELECT content FROM chat_messages
                   WHERE session_id = s.id AND role = 'user'
                   ORDER BY id ASC LIMIT 1) as first_message
@@ -322,9 +323,11 @@ class SessionService:
                     "id": r["id"],
                     "title": title,
                     "doc_count": r["doc_count"],
+                    "infographic_count": r["infographic_count"] or 0,
                     "first_message_preview": (r.get("first_message") or "")[:80],
                     "last_active": r["last_active"],
                     "created_at": r["created_at"],
+                    "title_source": metadata.get("title_source"),
                 }
             )
         return result
@@ -350,8 +353,19 @@ class SessionService:
         metadata = json_mod.loads(row["metadata"] or "{}")
         return metadata.get("title", "Untitled Session")
 
+    async def get_session_metadata(self, session_id: str) -> dict:
+        """Get parsed metadata dict for a session."""
+        db = await get_db()
+        cursor = await db.execute(
+            "SELECT metadata FROM sessions WHERE id = ?", (session_id,)
+        )
+        row = await cursor.fetchone()
+        if not row:
+            return {}
+        return json_mod.loads(row["metadata"] or "{}")
+
     async def update_session_title(
-        self, session_id: str, title: str
+        self, session_id: str, title: str, source: str = "manual"
     ) -> bool:
         """Update the title stored in session metadata JSON."""
         db = await get_db()
@@ -363,6 +377,7 @@ class SessionService:
             return False
         metadata = json_mod.loads(row["metadata"] or "{}")
         metadata["title"] = title
+        metadata["title_source"] = source
         await db.execute(
             "UPDATE sessions SET metadata = ? WHERE id = ?",
             (json_mod.dumps(metadata), session_id),
@@ -414,6 +429,7 @@ class SessionService:
                     else:
                         auto_title = content[:80]
                     metadata["title"] = auto_title
+                    metadata["title_source"] = "auto"
                     await db.execute(
                         "UPDATE sessions SET metadata = ? WHERE id = ?",
                         (json_mod.dumps(metadata), session_id),

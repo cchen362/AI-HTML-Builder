@@ -39,6 +39,10 @@ async def init_db() -> None:
                 raise
 
     await _db.commit()
+
+    # Backfill doc_type for existing infographic documents
+    await _backfill_doc_types()
+
     logger.info("Database initialized", path=str(db_path))
 
 
@@ -119,4 +123,42 @@ _MIGRATIONS = [
     "ALTER TABLE chat_messages ADD COLUMN user_content TEXT",
     "ALTER TABLE sessions ADD COLUMN user_id TEXT",
     "CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)",
+    "ALTER TABLE documents ADD COLUMN doc_type TEXT DEFAULT 'document'",
 ]
+
+
+async def _backfill_doc_types() -> None:
+    """Detect existing infographic documents and set doc_type accordingly.
+
+    Idempotent: only updates documents that still have the default
+    'document' type and whose latest HTML matches infographic structure.
+    """
+    from app.utils.html_validator import is_infographic_html
+
+    if _db is None:
+        return
+
+    cursor = await _db.execute(
+        """SELECT d.id, dv.html_content
+           FROM documents d
+           JOIN document_versions dv ON dv.document_id = d.id
+           WHERE d.doc_type = 'document'
+             AND dv.version = (
+                 SELECT MAX(version) FROM document_versions
+                 WHERE document_id = d.id
+             )"""
+    )
+    rows = await cursor.fetchall()
+
+    updated = 0
+    for row in rows:
+        if is_infographic_html(row["html_content"]):
+            await _db.execute(
+                "UPDATE documents SET doc_type = 'infographic' WHERE id = ?",
+                (row["id"],),
+            )
+            updated += 1
+
+    if updated > 0:
+        await _db.commit()
+        logger.info("Backfilled doc_type for infographic documents", count=updated)
