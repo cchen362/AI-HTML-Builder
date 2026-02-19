@@ -378,6 +378,8 @@ All plans in `IMPLEMENTATION_PLANS/` directory:
 | 020a | Architecture Refactoring (dead code, shared utils, safety hardening, version pinning) | COMPLETE |
 | 021 | Auth, Session History & UX Polish (auth layer, session browser, version history, error UX, export UX) | COMPLETE |
 | 022 | Post-Implementation UI/UX Polish (login hero, session cards, editable title, modal redesign) | COMPLETE |
+| 023 | My Sessions Modal Overhaul (AI titles, card grid, doc types, timezone fix) | COMPLETE |
+| 024 | Home Screen Three-Path Clarity (zone tints, heading hierarchy, template reorder, title fix) | COMPLETE |
 
 ## Known Issues
 
@@ -398,11 +400,13 @@ All plans in `IMPLEMENTATION_PLANS/` directory:
 - ~~"Turn this into X" creates document with hallucinated content~~ — **RESOLVED in Plan 016** (existing HTML passed as context to creator with base64 stripping)
 - ~~Token estimation wrong for transformation requests~~ — **RESOLVED in Plan 016** (input estimate now includes context HTML size)
 - ~~Document endpoints accessible without session validation~~ — **RESOLVED in Plan 016** (all document endpoints moved to `/api/sessions/{sid}/documents/{docId}/*` with ownership validation)
+- ~~AI session titles echo template name instead of user topic~~ — **RESOLVED in Plan 024** (title generator now uses user content, not template prompt blob)
+- ~~Home screen sections visually indistinguishable~~ — **RESOLVED in Plan 024** (zone tints, heading hierarchy, template reorder + toggle)
 
 ---
 
 **Last Updated**: February 2026
-**Architecture**: v2 rebuild (Plans 001-021 complete)
+**Architecture**: v2 rebuild (Plans 001-024 complete)
 **AI Models**: Haiku 4.5 (routing) + Claude Sonnet 4.6 (edits) + Gemini 2.5 Pro (creation + infographic art direction) + Nano Banana Pro (images + infographic rendering)
 **Database**: SQLite WAL (no Redis)
 **Communication**: SSE + HTTP POST (no WebSocket)
