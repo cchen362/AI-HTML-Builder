@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     max_upload_size_mb: int = 50
 
     # Models (configurable without code change)
-    edit_model: str = "claude-sonnet-4-6-20260217"
+    edit_model: str = "claude-sonnet-4-6"
     creation_model: str = "gemini-2.5-pro"
     image_model: str = "gemini-3-pro-image-preview"
     image_fallback_model: str = "gemini-2.5-flash-image"

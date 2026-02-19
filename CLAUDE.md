@@ -95,7 +95,7 @@ Server: text/event-stream
 | Backend | google-genai SDK | 1.0.0+ |
 | Backend | Playwright (PDF/PNG) | 1.49.0+ |
 | Backend | structlog | 24.4.0+ |
-| AI Edit | Claude Sonnet 4.6 | `claude-sonnet-4-6-20260217` |
+| AI Edit | Claude Sonnet 4.6 | `claude-sonnet-4-6` |
 | AI Create | Gemini 2.5 Pro | `gemini-2.5-pro` |
 | AI Image | Nano Banana Pro (Gemini 3 Pro Image) | `gemini-3-pro-image-preview` |
 | AI Router | Claude Haiku 4.5 | `claude-haiku-4-5-20251001` |
@@ -250,7 +250,7 @@ DEV_MODE=false                        # Set true for local dev (disables secure 
 DATABASE_PATH=./data/app.db
 LOG_LEVEL=info
 MAX_UPLOAD_SIZE_MB=50
-EDIT_MODEL=claude-sonnet-4-6-20260217
+EDIT_MODEL=claude-sonnet-4-6
 CREATION_MODEL=gemini-2.5-pro
 IMAGE_MODEL=gemini-3-pro-image-preview
 IMAGE_FALLBACK_MODEL=gemini-2.5-flash-image

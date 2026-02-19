@@ -22,7 +22,7 @@ SAMPLE_HTML = "<!DOCTYPE html><html><body><h1>Test</h1></body></html>"
 @pytest.fixture
 def mock_provider():
     provider = AsyncMock(spec=LLMProvider)
-    provider.model = "claude-sonnet-4-6-20260217"
+    provider.model = "claude-sonnet-4-6"
     return provider
 
 
