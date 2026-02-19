@@ -192,6 +192,10 @@ export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
               assistantSummary = event.content || '';
               break;
 
+            case 'title':
+              if (event.content) setSessionTitle(event.content);
+              break;
+
             case 'error':
               onError?.(event.content || 'Unknown error');
               setCurrentStatus('');

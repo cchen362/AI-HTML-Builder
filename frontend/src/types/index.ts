@@ -60,14 +60,16 @@ export interface SessionSummary {
   id: string;
   title: string;
   doc_count: number;
+  infographic_count: number;
   first_message_preview: string;
   last_active: string;
   created_at: string;
+  title_source?: 'auto' | 'ai' | 'manual';
 }
 
 /** SSE event from POST /api/chat/{sid} stream */
 export interface SSEEvent {
-  type: 'status' | 'chunk' | 'html' | 'summary' | 'error' | 'done';
+  type: 'status' | 'chunk' | 'html' | 'summary' | 'error' | 'done' | 'title';
   content?: string;
   version?: number;
 }
