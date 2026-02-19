@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { promptTemplates, type PromptTemplate } from '../../data/promptTemplates';
 import './TemplateCards.css';
 
@@ -19,13 +20,13 @@ const TEMPLATE_ICONS: Record<string, string> = {
 const TemplateCards: React.FC<TemplateCardsProps> = ({
   onSelectTemplate,
 }) => {
+  const [showAll, setShowAll] = useState(false);
+  const visibleTemplates = showAll ? promptTemplates : promptTemplates.slice(0, 4);
+
   return (
     <div className="template-cards">
-      <p className="template-cards-heading">
-        Quick start with a template, or type your own prompt below
-      </p>
       <div className="template-cards-grid">
-        {promptTemplates.map((t) => (
+        {visibleTemplates.map((t) => (
           <button
             key={t.id}
             className="template-card"
@@ -40,6 +41,15 @@ const TemplateCards: React.FC<TemplateCardsProps> = ({
           </button>
         ))}
       </div>
+      {!showAll && promptTemplates.length > 4 && (
+        <button
+          type="button"
+          className="template-show-all"
+          onClick={() => setShowAll(true)}
+        >
+          Browse all templates &rarr;
+        </button>
+      )}
     </div>
   );
 };

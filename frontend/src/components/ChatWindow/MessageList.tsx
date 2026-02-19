@@ -62,8 +62,10 @@ const MessageList: React.FC<MessageListProps> = ({
             <h1 className="home-welcome">Welcome back, {displayName}</h1>
           )}
           {showHomeScreen && recentSessions && recentSessions.length > 0 && (
-            <section className="home-section">
-              <div className="home-section-label">PICK UP WHERE YOU LEFT OFF</div>
+            <section className="home-section home-zone home-zone--sessions">
+              <h2 className="home-section-heading home-section-heading--sessions">
+                Continue a session
+              </h2>
               <div className="home-sessions-row">
                 {recentSessions.map((session, i) => (
                   <SessionCard
@@ -83,14 +85,17 @@ const MessageList: React.FC<MessageListProps> = ({
               </button>
             </section>
           )}
-          <section className="home-section">
-            <div className="home-section-label">
-              {showHomeScreen && recentSessions?.length
-                ? 'OR START SOMETHING NEW'
-                : 'QUICK START WITH A TEMPLATE, OR TYPE YOUR OWN PROMPT BELOW'}
-            </div>
+          <section className="home-section home-zone home-zone--templates">
+            <h2 className="home-section-heading home-section-heading--templates">
+              Start with a template
+            </h2>
             <TemplateCards onSelectTemplate={onSelectTemplate} />
           </section>
+          <div className="home-prompt-bridge">
+            <span className="home-prompt-bridge-line" />
+            <span className="home-prompt-bridge-label">or just describe what you need</span>
+            <span className="home-prompt-bridge-line" />
+          </div>
         </div>
       )}
 

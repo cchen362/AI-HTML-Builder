@@ -7,61 +7,41 @@ export interface PromptTemplate {
   template: string;
 }
 
+// Ordered by usage value: strong performers first (shown by default), niche/weak last (behind toggle)
 export const promptTemplates: PromptTemplate[] = [
   {
-    id: 'impact-assessment',
-    name: 'Impact Assessment Report',
+    id: 'stakeholder-brief',
+    name: 'Stakeholder Brief',
     category: 'Business Reports',
-    description: 'Professional report with tabbed navigation, analysis sections, and risk assessment',
-    template: `Create a professional impact assessment report about: {{TOPIC}}
+    description: 'Turn rough notes and loose documents into polished stakeholder-ready summaries',
+    template: `Create a polished stakeholder brief from the following content: {{CONTENT}}
+
+IMPORTANT: This template is designed for converting rough notes, bullet points, and loose documents into a well-organized professional summary. Analyze the content provided and create the most appropriate structure.
 
 HTML STRUCTURE:
-- Header: Gradient banner with report title and date
-- Tab Navigation: <nav> with <button> elements for each major section. JavaScript click handlers toggle active class and show/hide tab panels.
-- Tab Panels: <div class="tab-panel"> containers, only one visible at a time. First tab auto-activated on page load.
-- Executive Summary: Highlighted card at top with key findings in bullet points
+- Header: Clean banner with brief title (derived from content), date, and intended audience if apparent.
+- Adaptive Sections: Choose ONLY sections that match the actual content. Common sections include:
+  - Key Takeaways / Summary
+  - Current Status / Progress
+  - Decisions Made or Pending
+  - Recommendations
+  - Next Steps / Action Items
+  - Open Items / Risks
+  - Background / Context
+- If multiple distinct topics exist, use tab navigation (same pattern as Impact Assessment: <nav> with <button> tabs, <div> panels, JavaScript switching).
+- If content is a single topic, use a clean single-page layout with <section> elements.
 
-CONTENT SECTIONS (create tabs only for sections that match the provided content):
-- Executive Summary: Key findings, highlighted metrics, overall assessment
-- Analysis: Organized findings with <section> blocks, data tables where applicable
-- Recommendations: Numbered action items with priority badges (High/Medium/Low)
-- Risk Assessment: Risk cards with severity indicators using color-coded borders
+DESIGN COMPONENTS:
+- Callout boxes: Highlighted <div> with left border (4px colored) for critical items, decisions, or deadlines
+- Action items: Formatted as a list with owner name in bold and due date if provided
+- Status indicators: Pill-shaped badges (green = complete, yellow = in progress, red = blocked, gray = not started)
+- Summary cards: Key metrics or counts in small cards at the top if the content contains quantitative data
 
-INTERACTIVE ELEMENTS:
-- Tab switching via JavaScript (addEventListener on buttons, toggle display of panels)
-- Status badges: Pill-shaped <span> elements (green for low risk, yellow for medium, red for high)
-- Solution comparison: Two-column layout for pros vs cons
-- Collapsible details sections using <details><summary> for lengthy analysis
-
-Do NOT force sections that don't match the provided content. Adapt the structure to fit the actual material.`
-  },
-  {
-    id: 'documentation',
-    name: 'Technical Documentation',
-    category: 'Technical',
-    description: 'Documentation site with sidebar navigation, code examples, and collapsible sections',
-    template: `Create comprehensive technical documentation for: {{SYSTEM_NAME}}
-
-HTML STRUCTURE:
-- Fixed Sidebar: <aside> with nested <ul> navigation tree. Each <li> contains an <a> with href="#section-id" for smooth scrolling.
-- Main Content: <main> with scroll-margin-top on each <section> to account for any fixed header.
-- Code Blocks: <pre><code> elements with dark background and monospace font. Use CSS to style keywords, strings, and comments in different colors.
-- Collapsible Sections: <details><summary> for FAQ items, troubleshooting steps, and optional deep-dives.
-
-CONTENT SECTIONS (include only those relevant to the provided material):
-- Overview / Getting Started: Introduction, prerequisites, quick start steps
-- Core Concepts: Key terminology and architecture explained
-- API Reference / Usage: Methods, endpoints, or procedures in definition lists (<dl><dt><dd>)
-- Code Examples: Inline examples in styled <pre> blocks
-- Troubleshooting / FAQ: Common issues in collapsible <details> elements
-
-DESIGN DETAILS:
-- Sidebar: 240px width, light background, sticky positioning, collapses to hamburger menu below 768px
-- Code blocks: Dark background (#1e1e1e or similar), 14px monospace font, horizontal scroll for long lines
-- Inline code: <code> tags with light blue background and slight padding
-- Section headings: Clear hierarchy (h1 > h2 > h3) with anchor links
-
-Adapt the documentation structure to fit the actual technical content provided.`
+CRITICAL INSTRUCTIONS:
+- Do NOT force sections that don't match the content. If there are no "risks" in the notes, don't create a risks section.
+- Do NOT add information beyond what the user provided. Organize and format only.
+- If the content is brief, create a brief output. Don't pad with boilerplate.
+- Preserve the user's intent and key points. This is about formatting, not rewriting.`
   },
   {
     id: 'dashboard',
@@ -89,6 +69,70 @@ DESIGN DETAILS:
 - Hover effects: Cards lift slightly on hover, chart elements show tooltips via title attribute
 
 Use realistic placeholder data if the user provides general metrics. Adapt chart types to match the actual data structure provided.`
+  },
+  {
+    id: 'presentation',
+    name: 'Presentation Slides',
+    category: 'Presentation',
+    description: 'Slide presentation with keyboard navigation, slide counter, and professional layouts',
+    template: `Create an engaging slide presentation about: {{TOPIC}}
+
+HTML STRUCTURE:
+- Slide Container: Each slide is a full-viewport <div class="slide"> element. Only one slide visible at a time.
+- Slide Counter: Fixed position element showing "3 / 12" format (current / total).
+- Navigation: Arrow buttons (left/right) fixed at viewport sides. JavaScript handles: button clicks, keyboard arrow keys, and slide counter updates.
+- Progress Bar: Fixed top bar whose width represents current position as percentage.
+
+SLIDE TYPES (organize content into appropriate types):
+- Title Slide: Large centered title, subtitle, author/date at bottom
+- Section Header: Full background color, large centered heading to introduce a new topic
+- Content Slide: Heading + 3-5 bullet points with adequate font size (24px+ for body)
+- Two-Column: Content split into left and right halves (text + visual, or two lists)
+- Quote Slide: Large centered quote text with citation below
+- Summary Slide: Key takeaways in a numbered or icon-based grid
+
+JAVASCRIPT REQUIREMENTS:
+- Track currentSlide index (starting at 0)
+- Show/hide slides by toggling display or transform
+- Arrow key listeners (ArrowLeft = prev, ArrowRight = next)
+- Update slide counter text and progress bar width on every navigation
+- Prevent navigation beyond first/last slide
+
+DESIGN DETAILS:
+- Slide aspect ratio: Full viewport width and height (100vw x 100vh)
+- Typography: Large headings (48px), readable body (24px), consistent across slides
+- Alternate backgrounds: White and light colored slides for visual rhythm
+- Transitions: Smooth CSS transform (translateX or opacity) between slides, 0.4s ease
+- Navigation arrows: Large semi-transparent circles (60px), enlarge on hover
+
+Create 8-12 slides. Opening: title + agenda. Body: 1 topic per slide. Closing: summary + next steps.`
+  },
+  {
+    id: 'impact-assessment',
+    name: 'Impact Assessment Report',
+    category: 'Business Reports',
+    description: 'Professional report with tabbed navigation, analysis sections, and risk assessment',
+    template: `Create a professional impact assessment report about: {{TOPIC}}
+
+HTML STRUCTURE:
+- Header: Gradient banner with report title and date
+- Tab Navigation: <nav> with <button> elements for each major section. JavaScript click handlers toggle active class and show/hide tab panels.
+- Tab Panels: <div class="tab-panel"> containers, only one visible at a time. First tab auto-activated on page load.
+- Executive Summary: Highlighted card at top with key findings in bullet points
+
+CONTENT SECTIONS (create tabs only for sections that match the provided content):
+- Executive Summary: Key findings, highlighted metrics, overall assessment
+- Analysis: Organized findings with <section> blocks, data tables where applicable
+- Recommendations: Numbered action items with priority badges (High/Medium/Low)
+- Risk Assessment: Risk cards with severity indicators using color-coded borders
+
+INTERACTIVE ELEMENTS:
+- Tab switching via JavaScript (addEventListener on buttons, toggle display of panels)
+- Status badges: Pill-shaped <span> elements (green for low risk, yellow for medium, red for high)
+- Solution comparison: Two-column layout for pros vs cons
+- Collapsible details sections using <details><summary> for lengthy analysis
+
+Do NOT force sections that don't match the provided content. Adapt the structure to fit the actual material.`
   },
   {
     id: 'project-report',
@@ -154,75 +198,32 @@ CONTENT SECTIONS (adapt based on the material provided):
 Do NOT add steps or decisions not present in the user's material.`
   },
   {
-    id: 'presentation',
-    name: 'Presentation Slides',
-    category: 'Presentation',
-    description: 'Slide presentation with keyboard navigation, slide counter, and professional layouts',
-    template: `Create an engaging slide presentation about: {{TOPIC}}
+    id: 'documentation',
+    name: 'Technical Documentation',
+    category: 'Technical',
+    description: 'Documentation site with sidebar navigation, code examples, and collapsible sections',
+    template: `Create comprehensive technical documentation for: {{SYSTEM_NAME}}
 
 HTML STRUCTURE:
-- Slide Container: Each slide is a full-viewport <div class="slide"> element. Only one slide visible at a time.
-- Slide Counter: Fixed position element showing "3 / 12" format (current / total).
-- Navigation: Arrow buttons (left/right) fixed at viewport sides. JavaScript handles: button clicks, keyboard arrow keys, and slide counter updates.
-- Progress Bar: Fixed top bar whose width represents current position as percentage.
+- Fixed Sidebar: <aside> with nested <ul> navigation tree. Each <li> contains an <a> with href="#section-id" for smooth scrolling.
+- Main Content: <main> with scroll-margin-top on each <section> to account for any fixed header.
+- Code Blocks: <pre><code> elements with dark background and monospace font. Use CSS to style keywords, strings, and comments in different colors.
+- Collapsible Sections: <details><summary> for FAQ items, troubleshooting steps, and optional deep-dives.
 
-SLIDE TYPES (organize content into appropriate types):
-- Title Slide: Large centered title, subtitle, author/date at bottom
-- Section Header: Full background color, large centered heading to introduce a new topic
-- Content Slide: Heading + 3-5 bullet points with adequate font size (24px+ for body)
-- Two-Column: Content split into left and right halves (text + visual, or two lists)
-- Quote Slide: Large centered quote text with citation below
-- Summary Slide: Key takeaways in a numbered or icon-based grid
-
-JAVASCRIPT REQUIREMENTS:
-- Track currentSlide index (starting at 0)
-- Show/hide slides by toggling display or transform
-- Arrow key listeners (ArrowLeft = prev, ArrowRight = next)
-- Update slide counter text and progress bar width on every navigation
-- Prevent navigation beyond first/last slide
+CONTENT SECTIONS (include only those relevant to the provided material):
+- Overview / Getting Started: Introduction, prerequisites, quick start steps
+- Core Concepts: Key terminology and architecture explained
+- API Reference / Usage: Methods, endpoints, or procedures in definition lists (<dl><dt><dd>)
+- Code Examples: Inline examples in styled <pre> blocks
+- Troubleshooting / FAQ: Common issues in collapsible <details> elements
 
 DESIGN DETAILS:
-- Slide aspect ratio: Full viewport width and height (100vw x 100vh)
-- Typography: Large headings (48px), readable body (24px), consistent across slides
-- Alternate backgrounds: White and light colored slides for visual rhythm
-- Transitions: Smooth CSS transform (translateX or opacity) between slides, 0.4s ease
-- Navigation arrows: Large semi-transparent circles (60px), enlarge on hover
+- Sidebar: 240px width, light background, sticky positioning, collapses to hamburger menu below 768px
+- Code blocks: Dark background (#1e1e1e or similar), 14px monospace font, horizontal scroll for long lines
+- Inline code: <code> tags with light blue background and slight padding
+- Section headings: Clear hierarchy (h1 > h2 > h3) with anchor links
 
-Create 8-12 slides. Opening: title + agenda. Body: 1 topic per slide. Closing: summary + next steps.`
-  },
-  {
-    id: 'stakeholder-brief',
-    name: 'Stakeholder Brief',
-    category: 'Business Reports',
-    description: 'Turn rough notes and loose documents into polished stakeholder-ready summaries',
-    template: `Create a polished stakeholder brief from the following content: {{CONTENT}}
-
-IMPORTANT: This template is designed for converting rough notes, bullet points, and loose documents into a well-organized professional summary. Analyze the content provided and create the most appropriate structure.
-
-HTML STRUCTURE:
-- Header: Clean banner with brief title (derived from content), date, and intended audience if apparent.
-- Adaptive Sections: Choose ONLY sections that match the actual content. Common sections include:
-  - Key Takeaways / Summary
-  - Current Status / Progress
-  - Decisions Made or Pending
-  - Recommendations
-  - Next Steps / Action Items
-  - Open Items / Risks
-  - Background / Context
-- If multiple distinct topics exist, use tab navigation (same pattern as Impact Assessment: <nav> with <button> tabs, <div> panels, JavaScript switching).
-- If content is a single topic, use a clean single-page layout with <section> elements.
-
-DESIGN COMPONENTS:
-- Callout boxes: Highlighted <div> with left border (4px colored) for critical items, decisions, or deadlines
-- Action items: Formatted as a list with owner name in bold and due date if provided
-- Status indicators: Pill-shaped badges (green = complete, yellow = in progress, red = blocked, gray = not started)
-- Summary cards: Key metrics or counts in small cards at the top if the content contains quantitative data
-
-CRITICAL INSTRUCTIONS:
-- Do NOT force sections that don't match the content. If there are no "risks" in the notes, don't create a risks section.
-- Do NOT add information beyond what the user provided. Organize and format only.
-- If the content is brief, create a brief output. Don't pad with boilerplate.
-- Preserve the user's intent and key points. This is about formatting, not rewriting.`
+Adapt the documentation structure to fit the actual technical content provided.`
   },
   {
     id: 'brd',
@@ -273,4 +274,3 @@ export const getTemplatesByCategory = () => {
 
   return categories;
 };
-

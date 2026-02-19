@@ -3,18 +3,7 @@
    ========================================================================== */
 
 .template-cards {
-  padding: 24px 16px 16px;
-}
-
-.template-cards-heading {
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-regular);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-widest);
-  color: var(--text-tertiary);
-  text-align: center;
-  margin: 0 0 16px;
+  padding: 0;
 }
 
 .template-cards-grid {
@@ -98,6 +87,25 @@
   font-size: var(--fs-sm);
   color: var(--text-tertiary);
   line-height: var(--leading-normal);
+}
+
+/* --- Browse All Toggle --- */
+.template-show-all {
+  display: inline-block;
+  margin-top: 0.75rem;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--accent-primary);
+  cursor: pointer;
+  letter-spacing: var(--tracking-wide);
+  transition: color var(--duration-fast);
+}
+
+.template-show-all:hover {
+  color: var(--accent-primary-hover);
 }
 
 /* --- Responsive --- */

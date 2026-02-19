@@ -220,7 +220,7 @@
 /* --- Home Content (inside empty message list) --- */
 .home-content {
   width: 100%;
-  padding: 1rem 0;
+  padding: 1rem 0.5rem;
 }
 
 /* --- Responsive --- */

@@ -25,23 +25,51 @@
   animation: fade-up var(--duration-normal) var(--ease-out-expo);
 }
 
-/* Sections */
+/* ==========================================================================
+   Section Headings — visible navigation signposts
+   ========================================================================== */
 
-.home-section {
-  margin-bottom: 2.5rem;
+.home-section-heading {
+  font-family: var(--font-display);
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-md);
+  letter-spacing: var(--tracking-tight);
+  text-transform: none;
+  margin: 0 0 1rem;
+  line-height: var(--leading-tight);
 }
 
-.home-section-label {
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
-  letter-spacing: var(--tracking-widest);
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  margin-bottom: 1rem;
+.home-section-heading--sessions {
+  color: var(--text-secondary);
 }
 
-/* Recent sessions row */
+.home-section-heading--templates {
+  color: var(--accent-primary);
+}
+
+/* ==========================================================================
+   Zone Containers — subtle tinted backgrounds for spatial grouping
+   ========================================================================== */
+
+.home-zone {
+  padding: 1.25rem 1.5rem;
+  border-radius: var(--radius-lg);
+  margin-bottom: 1.5rem;
+}
+
+.home-zone--sessions {
+  background: rgba(168, 230, 160, 0.03);
+  border: 1px solid rgba(168, 230, 160, 0.08);
+}
+
+.home-zone--templates {
+  background: rgba(229, 184, 0, 0.03);
+  border: 1px solid rgba(229, 184, 0, 0.06);
+}
+
+/* ==========================================================================
+   Recent Sessions Row
+   ========================================================================== */
 
 .home-sessions-row {
   display: flex;
@@ -121,7 +149,9 @@
   align-items: center;
 }
 
-/* View all sessions link */
+/* ==========================================================================
+   View All Sessions Link
+   ========================================================================== */
 
 .home-view-all {
   display: inline-block;
@@ -141,7 +171,34 @@
   color: var(--accent-primary-hover);
 }
 
-/* Chat input at bottom */
+/* ==========================================================================
+   Prompt Bridge — connects home content to chat input below
+   ========================================================================== */
+
+.home-prompt-bridge {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem 0 0.5rem;
+}
+
+.home-prompt-bridge-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border-subtle);
+}
+
+.home-prompt-bridge-label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text-tertiary);
+  letter-spacing: var(--tracking-wide);
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   Chat Input at Bottom (legacy, used by full-page HomeScreen)
+   ========================================================================== */
 
 .home-chat-input {
   margin-top: 1rem;
