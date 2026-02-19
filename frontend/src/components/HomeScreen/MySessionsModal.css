@@ -1,3 +1,7 @@
+/* =========================================================================
+   My Sessions Modal — Card Grid Layout (Plan 023 Phase 3)
+   ========================================================================= */
+
 /* Overlay */
 .sessions-overlay {
   position: fixed;
@@ -11,13 +15,13 @@
   animation: materialize var(--duration-fast) var(--ease-out-expo);
 }
 
-/* Panel */
+/* Panel — wider for 3-column grid */
 .sessions-panel {
   background: var(--surface-overlay);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
   width: 100%;
-  max-width: 860px;
+  max-width: 1060px;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
@@ -25,7 +29,9 @@
   overflow: hidden;
 }
 
-/* Header */
+/* ---------------------------------------------------------------------------
+   Header
+   --------------------------------------------------------------------------- */
 .sessions-header {
   display: flex;
   align-items: center;
@@ -39,6 +45,40 @@
   font-weight: var(--fw-bold);
   font-size: var(--fs-md);
   color: var(--text-primary);
+  margin: 0;
+}
+
+.sessions-count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text-tertiary);
+  font-weight: var(--fw-regular);
+  margin-left: 0.35rem;
+}
+
+.sessions-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sessions-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sessions-select-all {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.sessions-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-primary);
+  cursor: pointer;
   margin: 0;
 }
 
@@ -57,19 +97,33 @@
   color: var(--text-primary);
 }
 
-.sessions-header-left {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.sessions-select-all {
-  display: flex;
-  align-items: center;
+/* Select toggle button */
+.sessions-select-btn {
+  background: transparent;
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: var(--tracking-wide);
   cursor: pointer;
+  transition: all var(--duration-fast);
 }
 
-/* Policy note */
+.sessions-select-btn:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.sessions-select-btn--active {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+/* ---------------------------------------------------------------------------
+   Policy note
+   --------------------------------------------------------------------------- */
 .sessions-policy {
   padding: 0.75rem 1.5rem;
   font-family: var(--font-mono);
@@ -79,7 +133,9 @@
   border-bottom: 1px solid var(--border-subtle);
 }
 
-/* Search bar */
+/* ---------------------------------------------------------------------------
+   Search bar
+   --------------------------------------------------------------------------- */
 .sessions-search {
   display: flex;
   align-items: center;
@@ -108,16 +164,26 @@
   font-style: italic;
 }
 
-/* Error */
+.sessions-filter-count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Error / Loading / Empty states
+   --------------------------------------------------------------------------- */
 .sessions-error {
   padding: 0.75rem 1.5rem;
   color: var(--signal-error);
   font-size: var(--fs-sm);
 }
 
-/* Loading / Empty */
 .sessions-loading,
 .sessions-empty {
+  grid-column: 1 / -1;
   padding: 2rem 1.5rem;
   text-align: center;
   color: var(--text-tertiary);
@@ -125,167 +191,91 @@
   font-size: var(--fs-sm);
 }
 
-/* Session list */
-.sessions-list {
+/* ---------------------------------------------------------------------------
+   Card grid
+   --------------------------------------------------------------------------- */
+.sessions-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  padding: 1rem 1.5rem;
   overflow-y: auto;
   flex: 1;
-  padding: 0;
 }
 
-/* Session row */
-.session-row {
-  display: flex;
-  align-items: center;
-  padding: 0.875rem 1.5rem;
-  border-left: 3px solid transparent;
-  border-bottom: 1px solid var(--border-subtle);
-  transition: background var(--duration-fast);
-}
-
-.session-row:last-of-type {
-  border-bottom: none;
-}
-
-.session-row:hover {
-  background: var(--surface-highlight);
-}
-
-.session-row--current {
-  border-left-color: var(--accent-primary);
-  background: var(--accent-primary-muted);
-}
-
-.session-row--selected {
-  background: var(--accent-primary-muted);
-}
-
-/* Row checkbox */
-.session-row-checkbox-label {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  flex-shrink: 0;
-  margin-right: 0.5rem;
-}
-
-.session-row-checkbox {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--accent-primary);
-  cursor: pointer;
-  margin: 0;
-}
-
-/* Row icon */
-.session-row-icon {
-  width: 36px;
-  height: 36px;
-  background: var(--signal-active-muted);
-  color: var(--signal-active);
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-right: 0.75rem;
-}
-
-.session-row-info {
-  flex: 1;
-  min-width: 0;
-  cursor: pointer;
-}
-
-.session-row-title-line {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.25rem;
-}
-
-.session-row-title {
-  font-family: var(--font-body);
-  font-weight: var(--fw-medium);
-  font-size: var(--fs-sm);
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.session-current-badge {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  color: var(--accent-primary);
-  background: var(--accent-primary-muted);
-  padding: 0.1rem 0.4rem;
-  border-radius: var(--radius-sm);
-  flex-shrink: 0;
-}
-
-/* Doc count badge */
-.session-doc-badge {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  letter-spacing: var(--tracking-wide);
-  color: var(--text-tertiary);
-  background: var(--surface-highlight);
-  padding: 0.1rem 0.5rem;
-  border-radius: var(--radius-full);
-  margin-left: auto;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-/* Inline rename input */
-.session-rename-input {
-  background: var(--surface-base);
-  border: 1px solid var(--accent-primary);
-  border-radius: var(--radius-sm);
-  padding: 0.2rem 0.5rem;
-  font-family: var(--font-body);
-  font-size: var(--fs-sm);
-  color: var(--text-primary);
-  width: 100%;
-  outline: none;
-}
-
-.session-rename-input:focus {
-  box-shadow: 0 0 0 2px var(--accent-primary-muted);
-}
-
-/* Meta line */
-.session-row-meta {
+/* ---------------------------------------------------------------------------
+   Time group headers — span full width
+   --------------------------------------------------------------------------- */
+.session-group-header {
+  grid-column: 1 / -1;
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
   color: var(--text-tertiary);
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
+  padding: 0.5rem 0 0.25rem;
+  border-bottom: 1px solid var(--border-subtle);
+  position: sticky;
+  top: 0;
+  background: var(--surface-overlay);
+  z-index: 1;
 }
 
-.session-row-dot {
+/* ---------------------------------------------------------------------------
+   Individual card
+   --------------------------------------------------------------------------- */
+.session-card-modal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out-expo);
+  animation: card-enter var(--duration-normal) var(--ease-out-expo) both;
+  min-height: 160px;
+}
+
+.session-card-modal:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-primary-muted);
+  box-shadow: var(--shadow-md), 0 0 12px var(--accent-primary-muted);
+}
+
+.session-card-modal--current {
+  border-left: 3px solid var(--accent-primary);
+}
+
+.session-card-modal--selected {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary-muted);
+}
+
+.session-card-modal--empty {
   opacity: 0.5;
 }
 
-/* Action buttons */
-.session-row-actions {
+/* ---------------------------------------------------------------------------
+   Card: hover actions (top-right)
+   --------------------------------------------------------------------------- */
+.session-card-modal-actions {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
   display: flex;
   gap: 0.25rem;
-  margin-left: 0.75rem;
-  flex-shrink: 0;
   opacity: 0;
   transition: opacity var(--duration-fast);
 }
 
-.session-row:hover .session-row-actions {
+.session-card-modal:hover .session-card-modal-actions {
   opacity: 1;
 }
 
 .session-action-btn {
-  background: none;
+  background: var(--surface-overlay);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-sm);
   color: var(--text-tertiary);
@@ -308,8 +298,137 @@
   border-color: var(--signal-error);
 }
 
-/* Load more */
+/* ---------------------------------------------------------------------------
+   Card: checkbox (top-left, select mode only)
+   --------------------------------------------------------------------------- */
+.session-card-modal-checkbox {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------------------------
+   Card: current badge
+   --------------------------------------------------------------------------- */
+.session-card-modal-current {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--accent-primary);
+  background: var(--accent-primary-muted);
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius-sm);
+  align-self: flex-start;
+  margin-bottom: 0.25rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Card: title
+   --------------------------------------------------------------------------- */
+.session-card-modal-title {
+  font-family: var(--font-display);
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 0.25rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Card: subtitle (preview)
+   --------------------------------------------------------------------------- */
+.session-card-modal-subtitle {
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: auto;
+}
+
+/* ---------------------------------------------------------------------------
+   Card: doc type badges
+   --------------------------------------------------------------------------- */
+.session-card-modal-badges {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.session-card-modal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: var(--tracking-wide);
+  padding: 0.15rem 0.4rem;
+  border-radius: var(--radius-full);
+}
+
+.session-card-modal-badge--doc {
+  background: rgba(168, 230, 160, 0.12);
+  color: var(--signal-active);
+}
+
+.session-card-modal-badge--infographic {
+  background: rgba(212, 160, 160, 0.12);
+  color: var(--text-secondary);
+}
+
+.session-card-modal-badge--empty {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+/* ---------------------------------------------------------------------------
+   Card: footer (time + expiry)
+   --------------------------------------------------------------------------- */
+.session-card-modal-footer {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+  margin-top: auto;
+}
+
+/* ---------------------------------------------------------------------------
+   Inline rename input (reused from row layout)
+   --------------------------------------------------------------------------- */
+.session-rename-input {
+  background: var(--surface-base);
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-sm);
+  padding: 0.2rem 0.5rem;
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+  width: 100%;
+  outline: none;
+}
+
+.session-rename-input:focus {
+  box-shadow: 0 0 0 2px var(--accent-primary-muted);
+}
+
+/* ---------------------------------------------------------------------------
+   Load more — span full grid width
+   --------------------------------------------------------------------------- */
 .sessions-load-more {
+  grid-column: 1 / -1;
   display: block;
   width: 100%;
   padding: 0.75rem;
@@ -333,7 +452,9 @@
   cursor: default;
 }
 
-/* Bulk action bar */
+/* ---------------------------------------------------------------------------
+   Bulk action bar
+   --------------------------------------------------------------------------- */
 .sessions-bulk-bar {
   display: flex;
   align-items: center;
@@ -397,4 +518,18 @@
   opacity: 0.6;
   cursor: default;
   filter: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Card entrance animation
+   --------------------------------------------------------------------------- */
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

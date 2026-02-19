@@ -1,3 +1,5 @@
+import type { SessionSummary } from '../../types';
+
 /** Parse a SQLite UTC timestamp (which lacks 'Z' suffix) as UTC. */
 function parseUTC(dateStr: string): number {
   return new Date(dateStr.endsWith('Z') ? dateStr : dateStr + 'Z').getTime();
@@ -38,4 +40,56 @@ export function expiryColor(daysLeft: number): string {
   if (daysLeft > 14) return 'var(--signal-success)';
   if (daysLeft > 7) return 'var(--accent-primary)';
   return 'var(--signal-error)';
+}
+
+// ---------------------------------------------------------------------------
+// Time grouping for card grid (Plan 023 Phase 3)
+// ---------------------------------------------------------------------------
+
+export type TimeGroup = 'Today' | 'This Week' | 'This Month' | 'Earlier';
+
+/** Determine which time group a session belongs to. */
+export function getTimeGroup(dateStr: string): TimeGroup {
+  const now = new Date();
+  const then = toUTCDate(dateStr);
+
+  // Today: same calendar date (local timezone)
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (then >= todayStart) return 'Today';
+
+  // This Week: within last 7 calendar days
+  const weekAgo = new Date(todayStart.getTime() - 6 * 86400000);
+  if (then >= weekAgo) return 'This Week';
+
+  // This Month: same calendar month
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  if (then >= monthStart) return 'This Month';
+
+  return 'Earlier';
+}
+
+/** Group sessions by time period, preserving order within each group. */
+export function groupSessionsByTime(
+  sessions: SessionSummary[]
+): Map<TimeGroup, SessionSummary[]> {
+  const groupMap = new Map<TimeGroup, SessionSummary[]>();
+  const order: TimeGroup[] = ['Today', 'This Week', 'This Month', 'Earlier'];
+
+  for (const session of sessions) {
+    const group = getTimeGroup(session.last_active);
+    if (!groupMap.has(group)) {
+      groupMap.set(group, []);
+    }
+    groupMap.get(group)!.push(session);
+  }
+
+  // Return in chronological order, omitting empty groups
+  const result = new Map<TimeGroup, SessionSummary[]>();
+  for (const key of order) {
+    const items = groupMap.get(key);
+    if (items && items.length > 0) {
+      result.set(key, items);
+    }
+  }
+  return result;
 }

@@ -29,7 +29,16 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, onClick, style }) =>
       </span>
       <div className="session-card-title">{session.title}</div>
       <div className="session-card-meta">
-        <span>{session.doc_count} {session.doc_count === 1 ? 'doc' : 'docs'}</span>
+        <span>
+          {(() => {
+            const docCount = session.doc_count - (session.infographic_count || 0);
+            const infraCount = session.infographic_count || 0;
+            const parts: string[] = [];
+            if (docCount > 0) parts.push(`${docCount} doc${docCount === 1 ? '' : 's'}`);
+            if (infraCount > 0) parts.push(`${infraCount} infographic${infraCount === 1 ? '' : 's'}`);
+            return parts.length > 0 ? parts.join(' + ') : 'empty';
+          })()}
+        </span>
         <span>&middot;</span>
         <span>{timeAgo}</span>
         <span>&middot;</span>
