@@ -134,6 +134,58 @@ async def test_generate_title_strips_quotes():
 
 
 # ---------------------------------------------------------------------------
+# Template-aware title generation tests
+# ---------------------------------------------------------------------------
+
+
+async def test_template_only_returns_none():
+    """Template with no user content should skip AI generation entirely."""
+    result = await generate_session_title(
+        "Create a polished stakeholder brief from: {{CONTENT}}",
+        template_name="Stakeholder Brief",
+        user_content="(template only)",
+    )
+    assert result is None
+
+
+async def test_template_empty_user_content_returns_none():
+    """Template with empty user content should skip AI generation."""
+    result = await generate_session_title(
+        "Create a stakeholder brief...",
+        template_name="Stakeholder Brief",
+        user_content="",
+    )
+    assert result is None
+
+
+async def test_template_with_user_content_uses_content():
+    """Template with real user content should title from the content, not the prompt blob."""
+    user_notes = "Why Change Management\nAn enabling framework for managing the people side of change"
+    with _mock_haiku("Change Management Framework") as (client, _tracker):
+        result = await generate_session_title(
+            f"Create a polished stakeholder brief from: {{{{CONTENT}}}}\n\n{user_notes}",
+            template_name="Stakeholder Brief",
+            user_content=user_notes,
+        )
+        assert result == "Change Management Framework"
+        # Verify Haiku received the user content, NOT the full template prompt
+        call_args = client.messages.create.call_args
+        sent_content = call_args.kwargs["messages"][0]["content"]
+        assert "Why Change Management" in sent_content
+        assert "Create a polished stakeholder brief" not in sent_content
+
+
+async def test_no_template_uses_full_message():
+    """Without template, should use the full user message as before."""
+    with _mock_haiku("Q3 Sales Dashboard") as (client, _tracker):
+        result = await generate_session_title("Build me a Q3 sales dashboard")
+        assert result == "Q3 Sales Dashboard"
+        call_args = client.messages.create.call_args
+        sent_content = call_args.kwargs["messages"][0]["content"]
+        assert "Build me a Q3 sales dashboard" in sent_content
+
+
+# ---------------------------------------------------------------------------
 # Session service integration tests (title_source + doc_type + infographic_count)
 # ---------------------------------------------------------------------------
 

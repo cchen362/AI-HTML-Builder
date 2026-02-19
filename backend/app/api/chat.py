@@ -570,7 +570,11 @@ async def chat(session_id: str, request: ChatRequest, user: dict = Depends(get_c
                 # Only generate for "auto" (raw text) or None (legacy sessions)
                 # Never overwrite "ai" (already done) or "manual" (user chose)
                 if title_source in ("auto", None):
-                    ai_title = await generate_session_title(request.message)
+                    ai_title = await generate_session_title(
+                        request.message,
+                        template_name=request.template_name,
+                        user_content=request.user_content,
+                    )
                     if ai_title:
                         await session_service.update_session_title(
                             session_id, ai_title, source="ai"

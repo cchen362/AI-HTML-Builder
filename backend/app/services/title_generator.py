@@ -54,15 +54,32 @@ EXAMPLES:
 Respond with ONLY the title, nothing else."""
 
 
-async def generate_session_title(user_message: str) -> str | None:
-    """Generate a 3-5 word session title from the user's first message.
+async def generate_session_title(
+    user_message: str,
+    template_name: str | None = None,
+    user_content: str | None = None,
+) -> str | None:
+    """Generate a 3-5 word session title from the user's message.
+
+    When a template is used, titles are based on user content (not the
+    template prompt blob).  If the user sent a template with no custom
+    content, returns None so the caller keeps the template-name title.
 
     Returns the title string on success, None on any failure.
     Never raises exceptions — safe for fire-and-forget usage.
     """
     try:
+        # Template with no real user content — nothing to improve on
+        if template_name and (not user_content or user_content == "(template only)"):
+            return None
+
+        # Pick the best input for title generation:
+        # - With template + user content: use the user content (the actual topic)
+        # - Without template: use the raw message
+        raw = user_content if (template_name and user_content) else user_message
+
         # Clean input: strip base64 images and template placeholders
-        cleaned = _BASE64_RE.sub("[image]", user_message)
+        cleaned = _BASE64_RE.sub("[image]", raw)
         cleaned = _PLACEHOLDER_RE.sub("", cleaned).strip()
 
         if not cleaned:
