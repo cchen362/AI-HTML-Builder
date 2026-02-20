@@ -44,6 +44,13 @@ BEST PRACTICES:
 - Shadows: box-shadow: 0 2px 4px rgba(0,0,0,0.1)
 - Animations: transform, opacity (avoid layout shifts)
 
+NEVER INCLUDE:
+- Dates, timestamps, or "Date:" metadata headers
+- "Audience:" or "Prepared for:" metadata
+- Company names, logos, copyright notices, or "© 20XX Company" footers
+- "Company Logo" placeholders or branding watermarks
+- "Confidential and Proprietary" disclaimers
+
 OUTPUT: Return ONLY complete HTML starting with <!DOCTYPE html>. \
 No markdown fences, no explanation."""
 
@@ -72,7 +79,7 @@ class DocumentCreator:
         """
         system = CREATION_SYSTEM_PROMPT
         if brand_spec:
-            system += f"\n\nBRAND GUIDELINES (override the default styling above with these):\n{brand_spec}"
+            system += f"\n\nBRAND GUIDELINES (use ONLY the colors, fonts, and style below — do NOT include the brand's company name, logo, copyright, or any branding):\n{brand_spec}"
 
         messages = self._build_messages(user_message, template_content)
 
@@ -114,7 +121,7 @@ class DocumentCreator:
         """
         system = CREATION_SYSTEM_PROMPT
         if brand_spec:
-            system += f"\n\nBRAND GUIDELINES (override the default styling above with these):\n{brand_spec}"
+            system += f"\n\nBRAND GUIDELINES (use ONLY the colors, fonts, and style below — do NOT include the brand's company name, logo, copyright, or any branding):\n{brand_spec}"
 
         messages = self._build_messages(user_message, template_content)
 

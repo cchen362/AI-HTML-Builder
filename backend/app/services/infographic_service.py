@@ -58,6 +58,8 @@ AVOID:
 - Vague text placeholders ("add a title here")
 - More than 200 words of body text total in the infographic — it must be VISUAL
 - Tiny text that would be illegible at 2560x1440
+- Company names, logos, copyright notices, or branding watermarks
+- Dates, "Prepared for:", or audience metadata
 
 OUTPUT: Return ONLY the visual prompt. No markdown, no code fences, no explanation.\
 """
@@ -98,7 +100,7 @@ class InfographicService:
 
         system = ART_DIRECTOR_SYSTEM_PROMPT
         if brand_spec:
-            system += f"\n\nBRAND GUIDELINES (use these colors, fonts, and style):\n{brand_spec}"
+            system += f"\n\nBRAND GUIDELINES (use ONLY the colors, fonts, and style below — do NOT include the brand's company name, logo, copyright, or any branding):\n{brand_spec}"
 
         logger.info(
             "Infographic art director generating visual prompt",

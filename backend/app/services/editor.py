@@ -241,7 +241,7 @@ class SurgicalEditor:
         if brand_spec:
             system_blocks.append({
                 "type": "text",
-                "text": f"\nBRAND GUIDELINES (apply to any new or modified styles):\n{brand_spec}",
+                "text": f"\nBRAND GUIDELINES (use ONLY the colors, fonts, and style below — do NOT include the brand's company name, logo, copyright, or any branding):\n{brand_spec}",
             })
 
         # Call Claude with tools (temperature=0 for deterministic precision)
