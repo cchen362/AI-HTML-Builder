@@ -17,7 +17,7 @@ npm install
 npm run dev                                        # http://localhost:5173
 
 # Quality checks
-cd backend && pytest                               # 375+ tests
+cd backend && pytest                               # 414+ tests
 ruff check backend/ && mypy backend/               # Lint + types
 cd frontend && npm run lint && npm run build        # ESLint + TypeScript + Vite
 
@@ -229,6 +229,11 @@ Indexes: `idx_documents_session`, `idx_versions_document`, `idx_messages_session
 - `GET /api/admin/invite-code` - Get current invite code
 - `POST /api/admin/invite-code` - Regenerate invite code
 
+### Brands (requires cookie; admin for create/delete)
+- `GET /api/brands` - List all brand profiles (any user)
+- `POST /api/brands` - Create brand profile (admin-only)
+- `DELETE /api/brands/{brand_id}` - Delete brand profile (admin-only)
+
 ### Costs & Health
 - `GET /api/costs` - Cost summary (admin-only, default 30 days)
 - `GET /api/costs/today` - Today's costs (admin-only)
@@ -340,7 +345,7 @@ For generated HTML documents, unless user specifies otherwise:
 - 401 interceptor: `api.ts` dispatches `window.dispatchEvent(new Event('auth:unauthorized'))`, AuthContext listens
 
 ### Testing
-- 375+ tests across 25+ test files, `asyncio_mode = "auto"` in pyproject.toml
+- 414+ tests across 25+ test files, `asyncio_mode = "auto"` in pyproject.toml
 - Patches must target source module, not consumer (e.g., `app.utils.file_processors.*`, not `app.api.upload.*`)
 - `pytest-asyncio` auto mode: no need for `@pytest.mark.asyncio` decorators
 - **Auth override in conftest.py**: `dependency_overrides` for `get_current_user` and `require_admin` — all existing tests run as admin
@@ -380,6 +385,7 @@ All plans in `IMPLEMENTATION_PLANS/` directory:
 | 022 | Post-Implementation UI/UX Polish (login hero, session cards, editable title, modal redesign) | COMPLETE |
 | 023 | My Sessions Modal Overhaul (AI titles, card grid, doc types, timezone fix) | COMPLETE |
 | 024 | Home Screen Three-Path Clarity (zone tints, heading hierarchy, template reorder, title fix) | COMPLETE |
+| 025 | Brand Profiles + Template-File Flow (brand selector, admin brand mgmt, template-file fix) | COMPLETE |
 
 ## Known Issues
 
@@ -406,7 +412,7 @@ All plans in `IMPLEMENTATION_PLANS/` directory:
 ---
 
 **Last Updated**: February 2026
-**Architecture**: v2 rebuild (Plans 001-024 complete)
+**Architecture**: v2 rebuild (Plans 001-025 complete)
 **AI Models**: Haiku 4.5 (routing) + Claude Sonnet 4.6 (edits) + Gemini 2.5 Pro (creation + infographic art direction) + Nano Banana Pro (images + infographic rendering)
 **Database**: SQLite WAL (no Redis)
 **Communication**: SSE + HTTP POST (no WebSocket)

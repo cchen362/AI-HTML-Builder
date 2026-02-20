@@ -63,17 +63,22 @@ class DocumentCreator:
         self,
         user_message: str,
         template_content: str | None = None,
+        brand_spec: str | None = None,
     ) -> tuple[str, GenerationResult]:
         """Create a new document (non-streaming).
 
         Returns:
             (html_content, generation_result) for the caller to save.
         """
+        system = CREATION_SYSTEM_PROMPT
+        if brand_spec:
+            system += f"\n\nBRAND GUIDELINES (override the default styling above with these):\n{brand_spec}"
+
         messages = self._build_messages(user_message, template_content)
 
         try:
             result = await self.provider.generate(
-                system=CREATION_SYSTEM_PROMPT,
+                system=system,
                 messages=messages,
                 max_tokens=24000,
                 temperature=0.7,
@@ -85,7 +90,7 @@ class DocumentCreator:
                     error=str(exc),
                 )
                 result = await self.fallback.generate(
-                    system=CREATION_SYSTEM_PROMPT,
+                    system=system,
                     messages=messages,
                     max_tokens=24000,
                     temperature=0.7,
@@ -100,17 +105,22 @@ class DocumentCreator:
         self,
         user_message: str,
         template_content: str | None = None,
+        brand_spec: str | None = None,
     ) -> AsyncIterator[str]:
         """Stream document creation. Yields text chunks.
 
         The caller is responsible for accumulating chunks, extracting HTML,
         and saving to the database.
         """
+        system = CREATION_SYSTEM_PROMPT
+        if brand_spec:
+            system += f"\n\nBRAND GUIDELINES (override the default styling above with these):\n{brand_spec}"
+
         messages = self._build_messages(user_message, template_content)
 
         try:
             async for chunk in self.provider.stream(
-                system=CREATION_SYSTEM_PROMPT,
+                system=system,
                 messages=messages,
                 max_tokens=24000,
                 temperature=0.7,
@@ -123,7 +133,7 @@ class DocumentCreator:
                     error=str(exc),
                 )
                 async for chunk in self.fallback.stream(
-                    system=CREATION_SYSTEM_PROMPT,
+                    system=system,
                     messages=messages,
                     max_tokens=24000,
                     temperature=0.7,

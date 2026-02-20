@@ -77,11 +77,26 @@ def _sse(data: dict) -> str:
     return f"data: {json.dumps(data)}\n\n"
 
 
+async def _resolve_brand_spec(brand_id: str | None) -> str | None:
+    """Look up brand spec text from auth.db. Returns None for default/missing."""
+    if not brand_id:
+        return None
+    from app.auth_database import get_auth_db
+
+    db = await get_auth_db()
+    cursor = await db.execute(
+        "SELECT spec_text FROM brand_profiles WHERE id = ?", (brand_id,)
+    )
+    row = await cursor.fetchone()
+    return row["spec_text"] if row else None
+
+
 class ChatRequest(BaseModel):
     message: str
     document_id: str | None = None  # If None, uses active document
     template_name: str | None = None
     user_content: str | None = None
+    brand_id: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -95,6 +110,7 @@ async def _handle_edit(
     session_id: str,
     active_doc: dict,
     current_html: str,
+    brand_spec: str | None = None,
 ) -> AsyncIterator[dict]:
     """Surgical edit via Claude tool_use."""
     from app.services.editor import SurgicalEditor
@@ -109,7 +125,8 @@ async def _handle_edit(
     )
 
     result = await editor.edit(
-        current_html, request.message, chat_history
+        current_html, request.message, chat_history,
+        brand_spec=brand_spec,
     )
 
     # Save new version
@@ -147,6 +164,7 @@ async def _handle_create(
     request: ChatRequest,
     session_id: str,
     current_html: str | None = None,
+    brand_spec: str | None = None,
 ) -> AsyncIterator[dict]:
     """New document via Gemini (Claude fallback)."""
     from app.services.creator import DocumentCreator, extract_html
@@ -174,7 +192,8 @@ async def _handle_create(
     # Stream creation
     chunks: list[str] = []
     async for chunk in creator.stream_create(
-        request.message, template_content=context_html
+        request.message, template_content=context_html,
+        brand_spec=brand_spec,
     ):
         chunks.append(chunk)
         yield {"type": "chunk", "content": chunk}
@@ -329,6 +348,7 @@ async def _handle_infographic(
     session_id: str,
     active_doc: dict | None,
     current_html: str | None,
+    brand_spec: str | None = None,
 ) -> AsyncIterator[dict]:
     """Infographic generation via Gemini 2.5 Pro (art director) + Nano Banana Pro (renderer)."""
     from app.services.infographic_service import (
@@ -393,6 +413,7 @@ async def _handle_infographic(
             request.message,
             content_context=content_context,
             previous_visual_prompt=previous_visual_prompt,
+            brand_spec=brand_spec,
         )
     )
     timer_task = asyncio.create_task(asyncio.sleep(8))
@@ -508,6 +529,9 @@ async def chat(session_id: str, request: ChatRequest, user: dict = Depends(get_c
         user_content=request.user_content,
     )
 
+    # Resolve brand spec (if any)
+    brand_spec = await _resolve_brand_spec(request.brand_id)
+
     # Classify request
     route = await classify_request(request.message, current_html is not None)
 
@@ -527,16 +551,19 @@ async def chat(session_id: str, request: ChatRequest, user: dict = Depends(get_c
                 handler = _handle_edit(
                     session_service, request, session_id,
                     active_doc, current_html,
+                    brand_spec=brand_spec,
                 )
             elif route == "create":
                 handler = _handle_create(
                     session_service, request, session_id,
                     current_html=current_html,
+                    brand_spec=brand_spec,
                 )
             elif route == "infographic":
                 handler = _handle_infographic(
                     session_service, request, session_id,
                     active_doc, current_html,
+                    brand_spec=brand_spec,
                 )
             elif route == "image":
                 handler = _handle_image(

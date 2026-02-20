@@ -14,7 +14,7 @@ function getInitials(name: string): string {
 
 interface ChatWindowProps {
   messages: ChatMessage[];
-  onSendMessage: (message: string, files?: File[], templateName?: string, userContent?: string) => void;
+  onSendMessage: (message: string, files?: File[], templateName?: string, userContent?: string, brandId?: string) => void;
   isStreaming?: boolean;
   streamingContent?: string;
   error?: string | null;

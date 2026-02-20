@@ -213,6 +213,7 @@ class SurgicalEditor:
         current_html: str,
         user_request: str,
         conversation_context: list[dict] | None = None,
+        brand_spec: str | None = None,
     ) -> EditResult:
         """
         Perform surgical edit on HTML using tool-based approach.
@@ -221,6 +222,7 @@ class SurgicalEditor:
             current_html: The current HTML document
             user_request: What the user wants changed
             conversation_context: Recent chat messages for context
+            brand_spec: Brand guidelines to apply to new/modified styles
 
         Returns:
             EditResult with modified HTML, applied edits, and metadata
@@ -234,9 +236,17 @@ class SurgicalEditor:
             stripped_html, user_request, conversation_context
         )
 
+        # Build system prompt, optionally appending brand guidelines
+        system_blocks = list(EDIT_SYSTEM_PROMPT)
+        if brand_spec:
+            system_blocks.append({
+                "type": "text",
+                "text": f"\nBRAND GUIDELINES (apply to any new or modified styles):\n{brand_spec}",
+            })
+
         # Call Claude with tools (temperature=0 for deterministic precision)
         tool_result = await self.provider.generate_with_tools(
-            system=EDIT_SYSTEM_PROMPT,  # type: ignore[arg-type]
+            system=system_blocks,  # type: ignore[arg-type]
             messages=messages,  # type: ignore[arg-type]
             tools=EDIT_TOOLS,  # type: ignore[arg-type]
             max_tokens=4096,

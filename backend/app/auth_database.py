@@ -62,6 +62,14 @@ CREATE TABLE IF NOT EXISTS settings (
     value TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS brand_profiles (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    accent_color TEXT NOT NULL DEFAULT '#64748B',
+    spec_text TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_token ON auth_sessions(token);
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions(user_id);
 """

@@ -224,7 +224,7 @@ const ChatApp = ({ user }: { user: User }) => {
     }
   }, [showHomeScreen]);
 
-  const handleSendMessage = useCallback((message: string, _files?: File[], templateName?: string, userContent?: string) => {
+  const handleSendMessage = useCallback((message: string, _files?: File[], templateName?: string, userContent?: string, brandId?: string) => {
     if (isCodeViewDirty && viewMode === 'code') {
       setError('Save or discard your HTML changes before sending a message.')
       return
@@ -233,9 +233,9 @@ const ChatApp = ({ user }: { user: User }) => {
       setError(null)
       if (!sessionId) {
         // No session yet (home screen) — create one first
-        sendFirstMessage(message, templateName, userContent)
+        sendFirstMessage(message, templateName, userContent, brandId)
       } else {
-        sendMessage(message, activeDocument?.id, templateName, userContent)
+        sendMessage(message, activeDocument?.id, templateName, userContent, brandId)
       }
     }
   }, [sendMessage, sendFirstMessage, sessionId, activeDocument, isCodeViewDirty, viewMode])

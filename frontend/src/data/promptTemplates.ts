@@ -47,7 +47,7 @@ CRITICAL INSTRUCTIONS:
     id: 'dashboard',
     name: 'Business Dashboard',
     category: 'Analytics',
-    description: 'Interactive dashboard with KPI cards, SVG charts, and data tables',
+    description: 'Turn data and spreadsheets into interactive dashboards with KPI cards and charts',
     template: `Create an interactive business dashboard for: {{METRICS_OR_DATA}}
 
 HTML STRUCTURE:
@@ -74,7 +74,7 @@ Use realistic placeholder data if the user provides general metrics. Adapt chart
     id: 'presentation',
     name: 'Presentation Slides',
     category: 'Presentation',
-    description: 'Slide presentation with keyboard navigation, slide counter, and professional layouts',
+    description: 'Transform notes and content into polished slide decks with navigation and transitions',
     template: `Create an engaging slide presentation about: {{TOPIC}}
 
 HTML STRUCTURE:

@@ -74,4 +74,9 @@ export interface SSEEvent {
   version?: number;
 }
 
-
+/** Brand profile from GET /api/brands */
+export interface BrandProfile {
+  id: string;
+  name: string;
+  accent_color: string;
+}

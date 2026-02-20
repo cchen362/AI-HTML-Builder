@@ -103,9 +103,10 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="AI HTML Builder", lifespan=lifespan)
 
 # Import and register API routers
-from app.api import auth, chat, sessions, health, costs, export, upload  # noqa: E402
+from app.api import auth, brands, chat, sessions, health, costs, export, upload  # noqa: E402
 
 app.include_router(auth.router)
+app.include_router(brands.router)
 app.include_router(chat.router)
 app.include_router(sessions.router)
 app.include_router(health.router)

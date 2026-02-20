@@ -81,6 +81,7 @@ class InfographicService:
         user_message: str,
         content_context: str | None = None,
         previous_visual_prompt: str | None = None,
+        brand_spec: str | None = None,
     ) -> InfographicResult:
         """Generate an infographic via the two-LLM pipeline.
 
@@ -90,9 +91,14 @@ class InfographicService:
                             Passed when transforming an existing document into an infographic.
             previous_visual_prompt: The art director's previous visual prompt, for iteration.
                                   Passed when user is refining an existing infographic.
+            brand_spec: Brand guidelines (colors, fonts, tone) to influence visual design.
         """
         # Step 1: Art Director — generate visual prompt
         messages = self._build_messages(user_message, content_context, previous_visual_prompt)
+
+        system = ART_DIRECTOR_SYSTEM_PROMPT
+        if brand_spec:
+            system += f"\n\nBRAND GUIDELINES (use these colors, fonts, and style):\n{brand_spec}"
 
         logger.info(
             "Infographic art director generating visual prompt",
@@ -106,7 +112,7 @@ class InfographicService:
         visual_prompt = ""
         for art_attempt in range(2):
             result = await self.prompt_provider.generate(
-                system=ART_DIRECTOR_SYSTEM_PROMPT,
+                system=system,
                 messages=messages,
                 max_tokens=2000,
                 temperature=0.7,

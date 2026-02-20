@@ -1,4 +1,4 @@
-import type { Session, Version, VersionDetail, ChatMessage, User, SessionSummary } from '../types';
+import type { Session, Version, VersionDetail, ChatMessage, User, SessionSummary, BrandProfile } from '../types';
 
 const BASE = '';
 
@@ -85,6 +85,7 @@ export const api = {
     signal?: AbortSignal,
     templateName?: string,
     userContent?: string,
+    brandId?: string,
   ): Promise<Response> {
     const body: Record<string, string> = { message };
     if (documentId) {
@@ -95,6 +96,9 @@ export const api = {
     }
     if (userContent) {
       body.user_content = userContent;
+    }
+    if (brandId) {
+      body.brand_id = brandId;
     }
 
     const res = await fetch(`${BASE}/api/chat/${sessionId}`, {
@@ -215,6 +219,11 @@ export const api = {
       body: JSON.stringify({ title }),
     });
   },
+
+  /** List all available brand profiles. */
+  fetchBrands(): Promise<{ brands: BrandProfile[] }> {
+    return json('/api/brands');
+  },
 };
 
 // === Auth API ===
@@ -307,5 +316,17 @@ export const adminApi = {
     }>;
   }> {
     return json('/api/costs/today');
+  },
+
+  createBrand(name: string, specText: string): Promise<BrandProfile> {
+    return json('/api/brands', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, spec_text: specText }),
+    });
+  },
+
+  deleteBrand(brandId: string): Promise<{ deleted: boolean }> {
+    return json(`/api/brands/${brandId}`, { method: 'DELETE' });
   },
 };

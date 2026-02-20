@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import PromptLibraryButton from './PromptLibraryButton';
 import PromptLibraryModal from './PromptLibraryModal';
+import BrandSelector from './BrandSelector';
 import { uploadFile, validateFileClient, type UploadResponse } from '../../services/uploadService';
 import type { PromptTemplate } from '../../data/promptTemplates';
 import './ChatInput.css';
 
 interface ChatInputProps {
-  onSendMessage: (message: string, files?: File[], templateName?: string, userContent?: string) => void;
+  onSendMessage: (message: string, files?: File[], templateName?: string, userContent?: string, brandId?: string) => void;
   isProcessing?: boolean;
   placeholder?: string;
   externalTemplate?: PromptTemplate | null;
@@ -117,6 +118,20 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const dragCountRef = useRef(0);
 
+  // Brand selection state (persisted in localStorage)
+  const [activeBrandId, setActiveBrandId] = useState<string | null>(
+    () => localStorage.getItem('selected_brand_id')
+  );
+
+  const handleBrandChange = useCallback((brandId: string | null) => {
+    setActiveBrandId(brandId);
+    if (brandId) {
+      localStorage.setItem('selected_brand_id', brandId);
+    } else {
+      localStorage.removeItem('selected_brand_id');
+    }
+  }, []);
+
   // Use the custom hook for auto-resize
   useAutosizeTextArea(textareaRef, message);
 
@@ -141,14 +156,14 @@ const ChatInput: React.FC<ChatInputProps> = ({
       const fullMessage = userContent
         ? `${activeTemplate.template}\n\n${userContent}`
         : activeTemplate.template;
-      onSendMessage(fullMessage, undefined, activeTemplate.name, userContent || '(template only)');
+      onSendMessage(fullMessage, undefined, activeTemplate.name, userContent || '(template only)', activeBrandId ?? undefined);
       setMessage('');
       setActiveTemplate(null);
       setPopoverOpen(false);
       setShowLargeContentHint(false);
       setAttachedFile(null);
     } else if (message.trim()) {
-      onSendMessage(message.trim());
+      onSendMessage(message.trim(), undefined, undefined, undefined, activeBrandId ?? undefined);
       setMessage('');
       setShowLargeContentHint(false);
       setAttachedFile(null);
@@ -205,7 +220,11 @@ const ChatInput: React.FC<ChatInputProps> = ({
     setUploadError(null);
     try {
       const result: UploadResponse = await uploadFile(file);
-      setMessage(result.suggested_prompt);
+      if (activeTemplate) {
+        setMessage(result.data.content);
+      } else {
+        setMessage(result.suggested_prompt);
+      }
       setAttachedFile({ name: result.data.filename });
       textareaRef.current?.focus();
     } catch (err) {
@@ -259,7 +278,11 @@ const ChatInput: React.FC<ChatInputProps> = ({
     setUploadError(null);
     try {
       const result: UploadResponse = await uploadFile(file);
-      setMessage(result.suggested_prompt);
+      if (activeTemplate) {
+        setMessage(result.data.content);
+      } else {
+        setMessage(result.suggested_prompt);
+      }
       setAttachedFile({ name: result.data.filename });
       textareaRef.current?.focus();
     } catch (err) {
@@ -280,7 +303,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
     >
       {isDragging && (
         <div className="drop-overlay">
-          <span>Drop file here</span>
+          <span>{activeTemplate ? `Drop file for ${activeTemplate.name}` : 'Drop file here'}</span>
         </div>
       )}
       {uploadError && (
@@ -352,9 +375,12 @@ const ChatInput: React.FC<ChatInputProps> = ({
           value={message}
           onChange={handleMessageChange}
           onKeyDown={handleKeyDown}
-          placeholder={activeTemplate
-            ? `Add your content for "${activeTemplate.name}"... (or send directly to use template defaults)`
-            : placeholder
+          placeholder={
+            activeTemplate && attachedFile
+              ? 'Add extra instructions (optional) — file content will be used as source material'
+              : activeTemplate
+                ? `Add your content for "${activeTemplate.name}"... (or send directly to use template defaults)`
+                : placeholder
           }
           disabled={isProcessing}
           className="chat-textarea"
@@ -409,6 +435,11 @@ const ChatInput: React.FC<ChatInputProps> = ({
           </button>
           <PromptLibraryButton
             onClick={() => setIsModalOpen(true)}
+            disabled={isProcessing}
+          />
+          <BrandSelector
+            activeBrandId={activeBrandId}
+            onBrandChange={handleBrandChange}
             disabled={isProcessing}
           />
         </div>

@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { adminApi } from '../../services/api';
-import type { User } from '../../types';
+import { api, adminApi } from '../../services/api';
+import type { User, BrandProfile } from '../../types';
 import CostDashboard from './CostDashboard';
 import './Auth.css';
 
-type AdminTab = 'settings' | 'costs';
+type AdminTab = 'settings' | 'costs' | 'brands';
 
 interface AdminPanelProps {
   isOpen: boolean;
@@ -19,6 +19,51 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, currentUserId 
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Brand management state
+  const [brands, setBrands] = useState<BrandProfile[]>([]);
+  const [brandName, setBrandName] = useState('');
+  const [brandSpec, setBrandSpec] = useState('');
+  const [brandError, setBrandError] = useState<string | null>(null);
+  const [brandSaving, setBrandSaving] = useState(false);
+
+  const loadBrands = useCallback(async () => {
+    try {
+      const { brands: list } = await api.fetchBrands();
+      setBrands(list);
+    } catch {
+      // silent
+    }
+  }, []);
+
+  const handleCreateBrand = useCallback(async () => {
+    const name = brandName.trim();
+    const spec = brandSpec.trim();
+    if (!name) { setBrandError('Brand name is required'); return; }
+    if (!spec) { setBrandError('Brand spec is required'); return; }
+    setBrandSaving(true);
+    setBrandError(null);
+    try {
+      const brand = await adminApi.createBrand(name, spec);
+      setBrands(prev => [...prev, brand]);
+      setBrandName('');
+      setBrandSpec('');
+    } catch (err) {
+      setBrandError(err instanceof Error ? err.message : 'Failed to create brand');
+    } finally {
+      setBrandSaving(false);
+    }
+  }, [brandName, brandSpec]);
+
+  const handleDeleteBrand = useCallback(async (brandId: string) => {
+    if (!confirm('Delete this brand profile? Users with this brand selected will revert to Default.')) return;
+    try {
+      await adminApi.deleteBrand(brandId);
+      setBrands(prev => prev.filter(b => b.id !== brandId));
+    } catch (err) {
+      setBrandError(err instanceof Error ? err.message : 'Failed to delete brand');
+    }
+  }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -41,8 +86,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, currentUserId 
     if (isOpen) {
       setActiveTab('settings');
       loadData();
+      loadBrands();
     }
-  }, [isOpen, loadData]);
+  }, [isOpen, loadData, loadBrands]);
 
   const handleCopyCode = useCallback(async () => {
     try {
@@ -97,6 +143,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, currentUserId 
             onClick={() => setActiveTab('costs')}
           >
             Costs
+          </button>
+          <button
+            type="button"
+            className={activeTab === 'brands' ? 'active' : ''}
+            onClick={() => setActiveTab('brands')}
+          >
+            Brands
           </button>
         </div>
 
@@ -163,8 +216,73 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, currentUserId 
               </>
             )}
           </>
-        ) : (
+        ) : activeTab === 'costs' ? (
           <CostDashboard isOpen={isOpen} />
+        ) : (
+          /* Brands tab */
+          <div className="admin-section">
+            <h3 className="admin-section-title">Brand Profiles</h3>
+            {brandError && <div className="auth-error" style={{ marginBottom: '0.75rem' }}>{brandError}</div>}
+
+            {brands.length === 0 ? (
+              <div style={{ color: 'var(--text-tertiary)', fontSize: 'var(--fs-sm)', marginBottom: '1rem' }}>
+                No brand profiles yet. Add one below.
+              </div>
+            ) : (
+              <div className="brand-list">
+                {brands.map(b => (
+                  <div key={b.id} className="brand-list-item">
+                    <span className="brand-dot" style={{ backgroundColor: b.accent_color }} />
+                    <span className="brand-list-name">{b.name}</span>
+                    <button
+                      type="button"
+                      className="admin-btn admin-btn--danger"
+                      onClick={() => handleDeleteBrand(b.id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="brand-form">
+              <h4 className="admin-section-title" style={{ fontSize: 'var(--fs-xs)' }}>Add Brand</h4>
+              <input
+                type="text"
+                className="brand-name-input"
+                placeholder="Brand name (max 50 chars)"
+                value={brandName}
+                onChange={e => setBrandName(e.target.value)}
+                maxLength={50}
+              />
+              <textarea
+                className="brand-spec-input"
+                rows={8}
+                placeholder={`Paste brand colors, fonts, and style guidelines. Example:\n\nCOLORS:\n- Primary: #006FCF (headers, CTAs)\n- Dark: #003478 (backgrounds, text)\n- Accent: #00A3A1 (highlights, charts)\n\nTYPOGRAPHY:\n- Headings: 'Helvetica Neue', sans-serif\n- Body: 'Inter', sans-serif\n\nTONE: Corporate-premium, data-forward, confident.`}
+                value={brandSpec}
+                onChange={e => setBrandSpec(e.target.value)}
+                maxLength={5000}
+              />
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="admin-btn"
+                  onClick={handleCreateBrand}
+                  disabled={brandSaving}
+                >
+                  {brandSaving ? 'Saving...' : 'Save'}
+                </button>
+                <button
+                  type="button"
+                  className="admin-btn"
+                  onClick={() => { setBrandName(''); setBrandSpec(''); setBrandError(null); }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

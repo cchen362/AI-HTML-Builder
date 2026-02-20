@@ -20,13 +20,13 @@ interface UseSSEChatReturn {
   isInitializing: boolean;
   showHomeScreen: boolean;
   sessionTitle: string;
-  sendMessage: (content: string, documentId?: string, templateName?: string, userContent?: string) => Promise<void>;
+  sendMessage: (content: string, documentId?: string, templateName?: string, userContent?: string, brandId?: string) => Promise<void>;
   cancelRequest: () => void;
   switchDocument: (docId: string) => Promise<void>;
   refreshDocuments: () => Promise<void>;
   startNewSession: () => void;
   loadSession: (sessionId: string) => Promise<void>;
-  sendFirstMessage: (content: string, templateName?: string, userContent?: string) => Promise<void>;
+  sendFirstMessage: (content: string, templateName?: string, userContent?: string, brandId?: string) => Promise<void>;
   renameSession: (title: string) => Promise<void>;
 }
 
@@ -102,7 +102,7 @@ export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
     }
   }, [documents, onHtmlUpdate, onError]);
 
-  const sendMessage = useCallback(async (content: string, documentId?: string, templateName?: string, userContent?: string) => {
+  const sendMessage = useCallback(async (content: string, documentId?: string, templateName?: string, userContent?: string, brandId?: string) => {
     const sid = sessionIdRef.current;
     if (!sid || !content.trim() || sendingRef.current) return;
     sendingRef.current = true;
@@ -128,7 +128,7 @@ export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
     setStreamingContent('');
 
     try {
-      const response = await api.sendChatMessage(sid, content, documentId, controller.signal, templateName, userContent);
+      const response = await api.sendChatMessage(sid, content, documentId, controller.signal, templateName, userContent, brandId);
 
       if (!response.body) {
         throw new Error('Response body is null');
@@ -295,7 +295,7 @@ export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
   }, [onHtmlUpdate, onError]);
 
   const sendFirstMessage = useCallback(async (
-    content: string, templateName?: string, userContent?: string
+    content: string, templateName?: string, userContent?: string, brandId?: string
   ) => {
     try {
       // Create session first
@@ -306,7 +306,7 @@ export function useSSEChat(options: UseSSEChatOptions = {}): UseSSEChatReturn {
       setShowHomeScreen(false);
 
       // Send message (sendMessage reads from sessionIdRef.current)
-      await sendMessage(content, undefined, templateName, userContent);
+      await sendMessage(content, undefined, templateName, userContent, brandId);
     } catch (err) {
       onError?.(humanizeError(err));
     }

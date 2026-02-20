@@ -169,7 +169,7 @@ async def test_create_route_with_existing_html_passes_context(tmp_path):
 
             captured_calls: list = []
 
-            async def fake_stream(msg, template_content=None):
+            async def fake_stream(msg, template_content=None, brand_spec=None):
                 captured_calls.append({"msg": msg, "template_content": template_content})
                 yield SAMPLE_HTML
 
@@ -216,7 +216,7 @@ async def test_create_route_without_html_no_context(tmp_path):
 
             captured_calls: list = []
 
-            async def fake_stream(msg, template_content=None):
+            async def fake_stream(msg, template_content=None, brand_spec=None):
                 captured_calls.append({"msg": msg, "template_content": template_content})
                 yield SAMPLE_HTML
 
@@ -275,7 +275,7 @@ async def test_create_route_strips_base64_from_context(tmp_path):
 
             captured_calls: list = []
 
-            async def fake_stream(msg, template_content=None):
+            async def fake_stream(msg, template_content=None, brand_spec=None):
                 captured_calls.append({"msg": msg, "template_content": template_content})
                 yield SAMPLE_HTML
 
